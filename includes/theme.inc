@@ -6,6 +6,8 @@
  * @param $variables
  */
 function islandora_webform_preprocess_solution_pack_module(&$variables) {
+  drupal_add_library('system', 'drupal.ajax');
+
   if (!empty($variables['islandora_object']->id)) {
     $pid = $variables['islandora_object']->id;
     $sql = 'SELECT w.*, n.title as title FROM {islandora_webform_webforms} w JOIN {node} n ON (n.nid = w.entity_id) WHERE w.enabled = :enabled AND (:pid REGEXP w.pid_filter OR w.pid_filter = \'\')';
@@ -19,11 +21,12 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
       $destination = drupal_get_destination();
 
       $webform_link_options = array(
-        'query' => array($destination),
-        'attributes' => array(
-          'class' => array(
-            'webform-link'
-          ),
+        'query' => array(
+          'pid' => $pid,
+          $destination,
+        ),
+        'class' => array(
+          'webform-link'
         ),
       );
       $tag_link_options = array(
@@ -43,7 +46,7 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
         'html' => TRUE,
       );
 
-      foreach($variables['webforms'] as $webform) {
+      foreach ($variables['webforms'] as $webform) {
 
         $output .= '<div class="webform-links">';
 
@@ -55,7 +58,7 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
         }
         else {
           // Determine if this webform is tagged to this object.
-          $tagged = db_select('islandora_webform_object_tags','t')
+          $tagged = db_select('islandora_webform_object_tags', 't')
             ->condition('pid', $pid)
             ->condition('entity_id', $webform->entity_id)
             ->countQuery()->execute()->fetchField();

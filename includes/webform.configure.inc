@@ -101,8 +101,11 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
  * @param $form_state
  */
 function islandora_webform_configure_form_submit($node, $form_state) {
+
+  $nid = $node['nid']['#value'];
+  _islandora_webform_insert_pid_component($nid);
   if (db_merge('islandora_webform_webforms')
-    ->key(array('entity_id' => $node['nid']['#value']))
+    ->key(array('entity_id' => $nid))
     ->fields(array(
       'enabled' => $form_state['values']['enabled'],
       'pid_filter' => $form_state['values']['pid_filter'],
@@ -115,5 +118,51 @@ function islandora_webform_configure_form_submit($node, $form_state) {
   }
   else {
     drupal_set_message(t('Islandora configuration could not be saved.'));
+  }
+}
+
+
+/**
+ * Adds an islandora_object_pid textfield to a webform if one does not
+ * already exist.
+ *
+ * @param $nid
+ * @throws Exception
+ */
+function _islandora_webform_insert_pid_component($nid) {
+
+  $webform = node_load($nid);
+  if($webform) {
+    $component = FALSE;
+
+    // Look to see if the component already exists, if so, then do nothing
+    if (!empty($webform->webform['components'])) {
+      foreach($webform->webform['components'] as $test_component) {
+        if($test_component['form_key'] == 'islandora_object_pid') {
+          $component = $test_component;
+          break;
+        }
+      }
+    }
+
+    // If no component found, then add it and save
+    if(!$component) {
+      $component = array(
+        'name' => 'Islandora object PID',
+        'form_key' => 'islandora_object_pid',
+        'type' => 'textfield',
+        'mandatory' => 0,
+        'weight' => 15,
+        'extra' => array(
+          'title_display' => 'inline',
+          'private' => 0,
+        )
+      );
+      webform_component_defaults($component);
+
+      $webform->webform['components'][] = $component;
+      node_save($webform);
+      dpm($webform);
+    }
   }
 }
