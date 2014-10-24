@@ -1,3 +1,88 @@
 <?php
 
-function
+
+/**
+ * Implements hook_schema().
+ *
+ * @return mixed
+ */
+function islandora_webform_schema() {
+
+  $schema['islandora_webform_webforms'] = array(
+    'description' => 'Holds webform configuration for use with islandora_webform functionality',
+    'fields' => array(
+      'entity_id' => array(
+        'description' => 'The node id of the webform that this configuration is associated with',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'enabled' => array(
+        'description' => 'Is the webform enabled to be tagged to islandora objects? 0 = No; 1 = Yes',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'pid_filter' => array(
+        'description' => 'If set, restricts eligible fedora objects which can be associated with this webform by the object\'s pid',
+        'type' => 'varchar',
+        'length' => 2000,
+      ),
+      'scope' => array(
+        'description' => 'Defines whether the link should appear on all objects matching the filters, or only on objects tagged for this webform. Options are "all" and "tagged"',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => 'tagged'
+      ),
+      'link_text' => array(
+        'description' => 'Sets the text for the link that appears on the object page',
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'link_help' => array(
+        'description' => 'Defines help text that appears with the link or as hover text',
+        'type' => 'varchar',
+        'length' => 2000,
+      ),
+    ),
+    'indexes' => array(
+      'enabled' => array('enabled'),
+      'pid_filter' => array('pid_filter'),
+    ),
+    'primary key' => array( 'entity_id'),
+  );
+
+  $schema['islandora_webform_object_tags'] = array(
+    'description' => 'Holds webform object relations',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Unique ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'entity_id' => array(
+        'description' => 'The node id of the webform that this object is associated with',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'pid' => array(
+        'description' => 'The object\'s pid',
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => 2000,
+        'default' => '',
+      ),
+    ),
+    'indexes' => array(
+      'entity_id' => array('entity_id'),
+      'pid' => array('pid'),
+    ),
+    'primary key' => array( 'id'),
+  );
+  return $schema;
+}
