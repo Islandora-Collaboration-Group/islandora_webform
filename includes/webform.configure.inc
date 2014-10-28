@@ -37,12 +37,30 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
 
     $defaults = array(
       'enabled' => variable_get('islandora_webform_default_enabled', 1),
+      'cmodel_filter' => variable_get('islandora_webform_default_cmodel_filter', ''),
+      'collection_filter' => variable_get('islandora_webform_default_collection_filter', ''),
       'pid_filter' => variable_get('islandora_webform_default_pid_filter', ''),
       'scope' => variable_get('islandora_webform_default_scope', 'tagged'),
       'link_text' => variable_get('islandora_webform_default_link_text', 'Go to web form'),
       'link_help' => variable_get('islandora_webform_default_link_help', 'Your input is requested!'),
     );
   }
+
+  $cmodel_options = array('' => '- Any -');
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $cmodels = islandora_get_content_models();
+  asort($cmodels);
+  foreach ($cmodels as $cmodel) {
+    $cmodel_options[$cmodel['pid']] = $cmodel['label'];
+  }
+
+  $collection_options = array('' => '- Any -');
+  module_load_include('inc', 'islandora_webform', 'includes/utilities');
+  $collections = iw_get_collections_or_content_models('collections');
+  asort($collections);
+  $collection_options = array_merge($collection_options, $collections);
+  dpm($collection_options);
+
   $form['islandora'] = array(
     '#type' => 'fieldset',
     '#title' => 'Islandora Options',
@@ -53,6 +71,20 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
       '#title' => 'Enabled',
       '#description' => t('Check to permit this webform to be linked from Islandora objects'),
       '#default_value' => $defaults['enabled'],
+    ),
+    'cmodel_filter' => array(
+      '#type' => 'select',
+      '#title' => t('Content model filter'),
+      '#description' => t(''),
+      '#default_value' => $defaults['cmodel_filter'],
+      '#options' => $cmodel_options,
+    ),
+    'collection_filter' => array(
+      '#type' => 'select',
+      '#title' => t('Collection filter'),
+      '#description' => t(''),
+      '#default_value' => $defaults['collection_filter'],
+      '#options' => $collection_options,
     ),
     'pid_filter' => array(
       '#type' => 'textfield',
@@ -108,6 +140,8 @@ function islandora_webform_configure_form_submit($node, $form_state) {
     ->key(array('entity_id' => $nid))
     ->fields(array(
       'enabled' => $form_state['values']['enabled'],
+      'cmodel_filter' => $form_state['values']['cmodel_filter'],
+      'collection_filter' => $form_state['values']['collection_filter'],
       'pid_filter' => $form_state['values']['pid_filter'],
       'scope' => $form_state['values']['scope'],
       'link_text' => $form_state['values']['link_text'],

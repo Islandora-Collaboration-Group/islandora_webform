@@ -10,8 +10,31 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
 
   if (!empty($variables['islandora_object']->id)) {
     $pid = $variables['islandora_object']->id;
-    $sql = 'SELECT w.*, n.title as title FROM {islandora_webform_webforms} w JOIN {node} n ON (n.nid = w.entity_id) WHERE w.enabled = :enabled AND (:pid REGEXP w.pid_filter OR w.pid_filter = \'\')';
-    $result = db_query($sql, array(':enabled' => 1, ':pid' => $pid));
+    module_load_include('inc', 'islandora_webform', 'includes/utilities');
+    $in_cmodels = _iw_content_models($variables['islandora_object']->models);
+    $in_collections = $variables['islandora_object']->getParents();
+    $sql = "SELECT w.*, n.title as title FROM {islandora_webform_webforms} w JOIN {node} n ON (n.nid = w.entity_id)
+            WHERE w.enabled = :enabled AND ( :pid REGEXP w.pid_filter OR w.pid_filter = '' )
+            AND ( w.cmodel_filter = '' OR w.cmodel_filter IN (:cmodels) )
+            ";
+    $query_args = array(
+      ':enabled' => 1,
+      ':pid' => $pid,
+      ':cmodels' => $in_cmodels,
+    );
+
+    // If the object is in a collection, then add the collections filter
+    if (!empty($in_collections)) {
+      $sql .= "AND ( w.collection_filter = '' OR w.collection_filter IN (:collections) )";
+      $query_args[':collections'] = $in_collections;
+    }
+    // If the object is not a member of a collection,
+    // then filter by collection_filter is "Any"
+    else {
+      $sql .= "AND ( w.collection_filter = '' )";
+    }
+
+    $result = db_query($sql, $query_args);
     $variables['webforms'] = $result->fetchAll();
     // TODO Get webform tags existing in object datastreams
     if (!empty($variables['webforms'])) {
