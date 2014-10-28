@@ -4,6 +4,7 @@ function islandora_webform_test_page() {
   module_load_include('inc', 'islandora', 'includes/solution_packs');
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/Object');
+  module_load_include('inc', 'islandora_webform', 'includes/utilities');
 
   $connection = islandora_get_tuque_connection();
 
@@ -21,8 +22,17 @@ function islandora_webform_test_page() {
       }
     }
   }
-  dpm($cmodels);
-  dpm($datastreams);
+//  dpm($cmodels);
+//  dpm($datastreams);
+
+  $content_models = islandora_get_content_models();
+  foreach($content_models as $content_model_id => $content_model) {
+    $content_models[$content_model_id]['datastream_requirements'] = islandora_get_datastreams_requirements_from_models(array($content_model_id));
+    $content_models[$content_model_id]['object'] = islandora_object_load($content_model_id);
+  }
+//  $datastreams = islandora_get_datastreams_requirements_from_models(array_keys($content_models));
+  dpm($content_models);
+//  dpm($datastreams);
 
   $enabled_solution_packs = islandora_solution_packs_get_required_objects();
   $output = array();
@@ -32,6 +42,8 @@ function islandora_webform_test_page() {
     $output[$solution_pack_name] = $solution_pack_info;
   }
 
+  dpm(iw_get_collections_or_content_models('collections'));
+  dpm(iw_get_collections_or_content_models('cmodels'));
   dpm($output);
 
   $object = islandora_object_load('islandora:2');
