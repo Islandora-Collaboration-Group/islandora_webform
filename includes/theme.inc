@@ -36,9 +36,10 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
 
     $result = db_query($sql, $query_args);
     $variables['webforms'] = $result->fetchAll();
-    // TODO Get webform tags existing in object datastreams
+
     if (!empty($variables['webforms'])) {
 
+      // TODO refactor this to call a theme function
       $output = '<div id="islandora_webform_object_tag_links">';
 
       $destination = drupal_get_destination();
@@ -59,6 +60,9 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
           ),
         ),
         'html' => TRUE,
+        'query' => array(
+          $destination
+        ),
       );
       $untag_link_options = array(
         'attributes' => array(
@@ -67,6 +71,9 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
           ),
         ),
         'html' => TRUE,
+        'query' => array(
+          $destination
+        ),
       );
 
       foreach ($variables['webforms'] as $webform) {
@@ -81,10 +88,8 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
         }
         else {
           // Determine if this webform is tagged to this object.
-          $tagged = db_select('islandora_webform_object_tags', 't')
-            ->condition('pid', $pid)
-            ->condition('entity_id', $webform->entity_id)
-            ->countQuery()->execute()->fetchField();
+          module_load_include('inc', 'islandora_webform', 'includes/tag_object');
+          $tagged = islandora_webform_is_webform_tagged($variables['islandora_object'], $webform->entity_id);
 
           // If so, add the webform link and the remove-tag link for content managers.
           if ($tagged) {
@@ -105,8 +110,7 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
 
             // Check access
             if (drupal_valid_path($path, TRUE)) {
-              $tag_link_options['query'] = $destination;
-              $tag_link = l(t('add webform link "%title"', array('%title' => $webform->link_text)), $path, $tag_link_options);
+              $tag_link = l(t('add webform link: "%title"', array('%title' => $webform->link_text)), $path, $tag_link_options);
 
               $output .= $tag_link;
             }
@@ -116,6 +120,8 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
       }
       $output .= '</div>';
 
+      // TODO: Make template variable to hold output, and only append to metadata
+      // if configured to do so on admin page.
       $variables['metadata'] .= $output;
     }
   }
