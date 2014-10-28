@@ -25,6 +25,16 @@ function islandora_webform_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'cmodel_filter' => array(
+        'description' => 'If set, restricts eligible fedora objects which can be associated with this webform by the object\'s content model',
+        'type' => 'varchar',
+        'length' => 500,
+      ),
+      'collection_filter' => array(
+        'description' => 'If set, restricts eligible fedora objects which can be associated with this webform by which collection the object is a member of',
+        'type' => 'varchar',
+        'length' => 500,
+      ),
       'pid_filter' => array(
         'description' => 'If set, restricts eligible fedora objects which can be associated with this webform by the object\'s pid',
         'type' => 'varchar',
@@ -49,40 +59,11 @@ function islandora_webform_schema() {
     ),
     'indexes' => array(
       'enabled' => array('enabled'),
+      'cmodel_filter' => array('cmodel_filter'),
       'pid_filter' => array('pid_filter'),
     ),
     'primary key' => array( 'entity_id'),
   );
 
-  $schema['islandora_webform_object_tags'] = array(
-    'description' => 'Holds webform object relations',
-    'fields' => array(
-      'id' => array(
-        'description' => 'Unique ID',
-        'type' => 'serial',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'entity_id' => array(
-        'description' => 'The node id of the webform that this object is associated with',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'pid' => array(
-        'description' => 'The object\'s pid',
-        'type' => 'varchar',
-        'not null' => TRUE,
-        'length' => 2000,
-        'default' => '',
-      ),
-    ),
-    'indexes' => array(
-      'entity_id' => array('entity_id'),
-      'pid' => array('pid'),
-    ),
-    'primary key' => array( 'id'),
-  );
   return $schema;
 }
