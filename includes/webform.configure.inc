@@ -59,8 +59,7 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
   $collections = iw_get_collections_or_content_models('collections');
   asort($collections);
   $collection_options = array_merge($collection_options, $collections);
-  dpm($collection_options);
-
+  
   $form['islandora'] = array(
     '#type' => 'fieldset',
     '#title' => 'Islandora Options',

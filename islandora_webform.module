@@ -15,6 +15,16 @@
  * @return mixed
  */
 function islandora_webform_menu() {
+  $items['admin/islandora/configure/iw'] = array(
+    'title' => 'Islandora Webform',
+    'description' => 'Configuration page for Islandora Webform module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_webform_admin'),
+    'file' => 'includes/admin.form.inc',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => -1,
+  );
   $items['admin/config/islandora_webform/test'] = array(
     'title' => 'Test Page',
     'description' => 'Utility page for testing development work',
@@ -78,6 +88,19 @@ function islandora_webform_permission() {
 }
 
 
+function islandora_webform_theme() {
+  return array(
+    'islandora_webform_links' => array(
+      'file' => 'theme.inc',
+      'path' => drupal_get_path('module', 'islandora_webform') . '/theme',
+      'variables' => array(
+        'webform_data' => NULL,
+        'islandora_object' => NULL,
+      ),
+    ),
+  );
+}
+
 /**
  * Implements hook_form_alter().
  *
@@ -103,14 +126,36 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
  */
 
 /**
- * theme_preprocess for islandora_basic_image
- *
- * @param $variables
+ *  Implements hook_preprocess().
  */
-function islandora_webform_preprocess_islandora_basic_image(&$variables) {
-  module_load_include('inc', 'islandora_webform', 'includes/theme');
-  islandora_webform_preprocess_solution_pack_module($variables);
+function islandora_webform_preprocess(&$variables, $hook) {
+  module_load_include('inc', 'islandora_webform', 'includes/utilities');
+  $enabled_hooks = _iw_get_solution_packs();
+  if (in_array($hook, $enabled_hooks)) {
+   module_load_include('inc', 'islandora_webform', 'theme/theme');
+
+    islandora_webform_preprocess_solution_pack_module($variables);
+  }
 }
+///**
+// * theme_preprocess for islandora_basic_image
+// *
+// * @param $variables
+// */
+//function islandora_webform_preprocess_islandora_basic_image(&$variables) {
+//  module_load_include('inc', 'islandora_webform', 'theme/theme');
+////  islandora_webform_preprocess_solution_pack_module($variables);
+//}
+//
+///**
+// * theme_preprocess for islandora_pdf
+// *
+// * @param $variables
+// */
+//function islandora_webform_preprocess_islandora_pdf(&$variables) {
+//  module_load_include('inc', 'islandora_webform', 'theme/theme');
+////  islandora_webform_preprocess_solution_pack_module($variables);
+//}
 
 /**
  * Utility functions

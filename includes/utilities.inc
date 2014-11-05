@@ -54,3 +54,25 @@ function iw_get_collections_or_content_models($type) {
   }
   return $ret;
 }
+
+
+/**
+ * Get a list of enabled solution packs
+ *
+ * @return array
+ */
+function _iw_get_solution_packs() {
+  $solution_packs = &drupal_static(__FUNCTION__);
+  if (!isset($solution_packs)) {
+    $solution_packs = cache_get('iw_solution_packs');
+    if (empty($solution_packs)) {
+      $connection = islandora_get_tuque_connection();
+
+      // All solution packs implement hook_islandora_required_objects
+      $result = module_invoke_all('islandora_required_objects', $connection);
+      $solution_packs = array_keys($result);
+      cache_set('iw_solution_packs', $solution_packs, CACHE_TEMPORARY);
+    }
+  }
+  return $solution_packs;
+}
