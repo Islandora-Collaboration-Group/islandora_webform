@@ -16,6 +16,7 @@
  * @return array
  */
 function _iw_content_models($models) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
   return array_intersect(array_keys(islandora_get_content_models()), array_values($models));
 }
 
@@ -75,4 +76,48 @@ function _iw_get_solution_packs() {
     }
   }
   return $solution_packs;
+}
+
+function islandora_webform_object_get_webforms(IslandoraFedoraObject $object) {
+
+  if (get_class($object) == 'IslandoraFedoraObject') {
+
+    $pid = $object->id;
+    $in_cmodels = _iw_content_models($object->models);
+    $in_collections = $object->getParents();
+    $sql = "SELECT w.*, n.title as title FROM {islandora_webform_webforms} w JOIN {node} n ON (n.nid = w.entity_id)
+            WHERE w.enabled = :enabled AND ( :pid REGEXP w.pid_filter OR w.pid_filter = '' )
+            AND ( w.cmodel_filter = '' OR w.cmodel_filter IN (:cmodels) )
+            ";
+    $query_args = array(
+      ':enabled' => 1,
+      ':pid' => $pid,
+      ':cmodels' => $in_cmodels,
+    );
+
+    // If the object is in a collection, then add the collections filter
+    if (!empty($in_collections)) {
+      $sql .= "AND ( w.collection_filter = '' OR w.collection_filter IN (:collections) )";
+      $query_args[':collections'] = $in_collections;
+    }
+    // If the object is not a member of a collection,
+    // then filter by collection_filter is "Any"
+    else {
+      $sql .= "AND ( w.collection_filter = '' )";
+    }
+
+    $result = db_query($sql, $query_args);
+
+    return $result->fetchAll();
+  }
+}
+
+function islandora_webform_pid_get_webforms($pid) {
+  $object = islandora_object_load($pid);
+  if ($object) {
+    return islandora_webform_object_get_webforms($object);
+  }
+  else {
+    return FALSE;
+  }
 }

@@ -18,9 +18,41 @@ define('ISLANDORA_WEBFORM_WEBFORM_LINK_DATASTREAM_ID', 'WF');
  * @string $pid
  *  The fedora object id
  */
-function islandora_webform_action_tag_object($webform_id, $pid) {
+function islandora_webform_action_tag_object($webform_id, $pid, $ajax) {
+
+  $is_ajax = $ajax === 'ajax';
+
+  // Since clicking this link updates the database, we used drupal_get_token() for security.
+  if (empty($_GET['tok']) || !drupal_valid_token($_GET['tok'], 'tag_link_' . $pid . '_' . $webform_id)) {
+    return MENU_ACCESS_DENIED;
+  }
+
+  // Do the deed...
   islandora_webform_webform_link_update($pid, $webform_id, 'add');
-  drupal_goto();
+
+  // If ajax, then replace the links in place
+  if ($is_ajax) {
+    module_load_include('inc', 'islandora_webform', 'includes/utilities');
+    $commands = array();
+
+    $html = theme('islandora_webform_links', array(
+      'webform_data' => islandora_webform_pid_get_webforms($pid),
+      'islandora_object' => islandora_object_load($pid),
+    ));
+
+    $commands[] = ajax_command_replace('#islandora_webform_object_tag_links', $html);
+
+    watchdog('debug', 'tag', $commands, WATCHDOG_DEBUG);
+
+//    ajax_deliver($commands);
+    return array(
+      '#type' => 'ajax',
+      '#commands' => $commands,
+    );
+  }
+  else {
+    drupal_goto();
+  }
 }
 
 /**
@@ -32,9 +64,39 @@ function islandora_webform_action_tag_object($webform_id, $pid) {
  * @string $pid
  *  The fedora object id
  */
-function islandora_webform_action_untag_object($webform, $pid) {
-  islandora_webform_webform_link_update($pid, $webform, 'delete');
-  drupal_goto();
+function islandora_webform_action_untag_object($webform_id, $pid, $ajax) {
+  $is_ajax = $ajax === 'ajax';
+
+  // Since clicking this link updates the database, we used drupal_get_token() for security.
+  if (empty($_GET['tok']) || !drupal_valid_token($_GET['tok'], 'untag_link_' . $pid . '_' . $webform_id)) {
+    return MENU_ACCESS_DENIED;
+  }
+
+  // Do the deed...
+  islandora_webform_webform_link_update($pid, $webform_id, 'delete');
+
+  // If ajax, then replace the links in place
+  if ($is_ajax) {
+    module_load_include('inc', 'islandora_webform', 'includes/utilities');
+    $commands = array();
+
+    $html = theme('islandora_webform_links', array(
+      'webform_data' => islandora_webform_pid_get_webforms($pid),
+      'islandora_object' => islandora_object_load($pid),
+    ));
+
+    $commands[] = ajax_command_replace('#islandora_webform_object_tag_links', $html);
+    watchdog('debug', 'untag', $commands, WATCHDOG_DEBUG);
+
+//    ajax_deliver($commands);
+    return array(
+      '#type' => 'ajax',
+      '#commands' => $commands,
+    );
+  }
+  else {
+    drupal_goto();
+  }
 }
 
 /**

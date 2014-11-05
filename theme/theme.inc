@@ -35,18 +35,21 @@ function theme_islandora_webform_links(array $vars) {
   $tag_link_options = array(
     'attributes' => array(
       'class' => array(
-        'tag-link'
+        'tag-link',
+        'use-ajax',
       ),
     ),
     'html' => TRUE,
     'query' => array(
-      $destination
+      $destination,
+
     ),
   );
   $untag_link_options = array(
     'attributes' => array(
       'class' => array(
-        'untag-link'
+        'untag-link',
+        'use-ajax',
       ),
     ),
     'html' => TRUE,
@@ -74,7 +77,9 @@ function theme_islandora_webform_links(array $vars) {
       // If so, add the webform link and the remove-tag link for content managers.
       if ($tagged) {
         $output .= $webform_link;
-        $path = 'islandora_webform/' . $webform->entity_id . '/untag_object/' . $pid;
+        $path = 'islandora_webform/' . $webform->entity_id . '/untag_object/' . $pid . '/nojs';
+
+        $untag_link_options['query']['tok'] = drupal_get_token('untag_link_' . $pid . '_' . $webform->entity_id);
 
         // drupal_valid_path() checks to see if the current user has access to the add/remove tag links
         if (drupal_valid_path($path, TRUE)) {
@@ -86,7 +91,10 @@ function theme_islandora_webform_links(array $vars) {
       }
       else {
         // Otherwise, add the add-tag link for managers.
-        $path = 'islandora_webform/' . $webform->entity_id . '/tag_object/' . $pid;
+        $path = 'islandora_webform/' . $webform->entity_id . '/tag_object/' . $pid . '/nojs';
+
+        // Add a token to the query to prevent
+        $tag_link_options['query']['tok'] = drupal_get_token('tag_link_' . $pid . '_' . $webform->entity_id);
 
         // Check access
         if (drupal_valid_path($path, TRUE)) {
@@ -110,34 +118,9 @@ function theme_islandora_webform_links(array $vars) {
  */
 function islandora_webform_preprocess_solution_pack_module(&$variables) {
 
-  if (!empty($variables['islandora_object']->id)) {
-    $pid = $variables['islandora_object']->id;
+  if (!empty($variables['islandora_object'])) {
     module_load_include('inc', 'islandora_webform', 'includes/utilities');
-    $in_cmodels = _iw_content_models($variables['islandora_object']->models);
-    $in_collections = $variables['islandora_object']->getParents();
-    $sql = "SELECT w.*, n.title as title FROM {islandora_webform_webforms} w JOIN {node} n ON (n.nid = w.entity_id)
-            WHERE w.enabled = :enabled AND ( :pid REGEXP w.pid_filter OR w.pid_filter = '' )
-            AND ( w.cmodel_filter = '' OR w.cmodel_filter IN (:cmodels) )
-            ";
-    $query_args = array(
-      ':enabled' => 1,
-      ':pid' => $pid,
-      ':cmodels' => $in_cmodels,
-    );
-
-    // If the object is in a collection, then add the collections filter
-    if (!empty($in_collections)) {
-      $sql .= "AND ( w.collection_filter = '' OR w.collection_filter IN (:collections) )";
-      $query_args[':collections'] = $in_collections;
-    }
-    // If the object is not a member of a collection,
-    // then filter by collection_filter is "Any"
-    else {
-      $sql .= "AND ( w.collection_filter = '' )";
-    }
-
-    $result = db_query($sql, $query_args);
-    $variables['webforms'] = $result->fetchAll();
+    $variables['webforms'] = islandora_webform_object_get_webforms($variables['islandora_object']);
 
     if (!empty($variables['webforms'])) {
 
