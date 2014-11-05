@@ -97,7 +97,11 @@ function islandora_webform_permission() {
   );
 }
 
-
+/**
+ * Implements hook_theme
+ *
+ * @return array
+ */
 function islandora_webform_theme() {
   return array(
     'islandora_webform_links' => array(
@@ -122,12 +126,47 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['#node']->type) && $form['#node']->type == 'webform' && !empty($form['submitted']['islandora_object_pid'])) {
     $args = drupal_get_query_parameters();
     if (!empty($args['pid'])) {
+      $object = islandora_object_load($args['pid']);
+      $form['submitted']['#prefix'] = '<h2 class="object-label">In regards to: <em>' . $object->label . '</em></h2>';
       $form['submitted']['islandora_object_pid']['#default_value'] = $args['pid'];
       if(!user_access('manage islandora webform')) {
-        $form['submitted']['islandora_object_pid']['#disabled'] = TRUE;
+        $form['submitted']['islandora_object_pid']['#type'] = 'hidden';
+        $form['submitted']['islandora_object_pid']['#title_display'] = 'invisible';
       }
     }
   }
+}
+
+/**
+ * Implements hook_node_access().
+ *
+ * Do not allow users to view an islandora webform without the object's PID being
+ * predefined.
+ * Exception if user has 'manage islandora webform' permissions.
+ *
+ * @param $node
+ * @param $op
+ * @param $account
+ * @return null|string
+ */
+function islandora_webform_node_access($node, $op, $account) {
+  if ($op == 'view' && isset($node->type) && $node->type == 'webform' && isset($node->webform['components']) && !user_access('manage islandora webform', $account)) {
+    $is_islandora_webform = FALSE;
+    foreach ($node->webform['components'] as $component) {
+      if ($component['form_key'] == 'islandora_object_pid') {
+        $is_islandora_webform = TRUE;
+        break;
+      }
+    }
+    if ($is_islandora_webform ) {
+      $args = drupal_get_query_parameters();
+      if (!isset($args['pid'])) {
+        drupal_set_message(t('No fedora object PID was defined'), 'error');
+        return NODE_ACCESS_DENY;
+      }
+    }
+  }
+  return NODE_ACCESS_IGNORE;
 }
 
 
@@ -137,6 +176,15 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
 
 /**
  *  Implements hook_preprocess().
+ *
+ * Look to see if the preprocess hook is the name of an islandora solution pack
+ * and if so, run it through our own preprocess function which adds the webform
+ * links.
+ *
+ * @param $variables
+ *  Standard preprocess variable passed by reference and modified by this function
+ * @param $hook
+ *  The name of the implementing module
  */
 function islandora_webform_preprocess(&$variables, $hook) {
   module_load_include('inc', 'islandora_webform', 'includes/utilities');
@@ -147,25 +195,6 @@ function islandora_webform_preprocess(&$variables, $hook) {
     islandora_webform_preprocess_solution_pack_module($variables);
   }
 }
-///**
-// * theme_preprocess for islandora_basic_image
-// *
-// * @param $variables
-// */
-//function islandora_webform_preprocess_islandora_basic_image(&$variables) {
-//  module_load_include('inc', 'islandora_webform', 'theme/theme');
-////  islandora_webform_preprocess_solution_pack_module($variables);
-//}
-//
-///**
-// * theme_preprocess for islandora_pdf
-// *
-// * @param $variables
-// */
-//function islandora_webform_preprocess_islandora_pdf(&$variables) {
-//  module_load_include('inc', 'islandora_webform', 'theme/theme');
-////  islandora_webform_preprocess_solution_pack_module($variables);
-//}
 
 /**
  * Utility functions
