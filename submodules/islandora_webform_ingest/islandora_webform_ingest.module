@@ -5,9 +5,11 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
     module_load_include('inc', 'islandora_webform', 'includes/utilities');
     module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
     if (!empty($form['#submission']->islandora_object)) {
-      dpm($form);
-      $datastreams = iwi_ingestable_datastreams($form['#submission']->islandora_object);
-      foreach($datastreams as $datastream) {
+      $cmodels = _iw_content_models($form['#submission']->islandora_object->models);
+      $cmodel = islandora_object_load(array_shift($cmodels));
+      $field_ingest_form_elements = islandora_webform_ingest_form_ingest_mapping_fields($cmodel);
+//      $datastreams = iwi_ingestable_datastreams($form['#submission']->islandora_object);
+//      foreach($datastreams as $datastream) {
         /*
           label
           controlGroup
@@ -24,33 +26,48 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
           location
           logMessage
          */
-        dpm($datastream->label);
-        dpm($datastream->mimetype);
-        dpm($datastream->content);
-        dpm(module_invoke_all('islandora_edit_datastream_registry', $datastream->parent, $datastream));
-      }
+//        dpm($datastream->label);
+//        dpm($datastream->mimetype);
+//        dpm($datastream->content);
+//        dpm(module_invoke_all('islandora_edit_datastream_registry', $datastream->parent, $datastream));
+//      }
 
       // This is how solr settings gets its list of fields - not useful here, unfortunately
 //      module_load_include('inc', 'islandora_solr_search', 'includes/luke');
 //      dpm(islandora_solr_get_luke());
     }
 
-    dpm(XMLFormRepository::GetValidNames());
-    dpm(module_invoke_all('islandora_xml_form_builder_forms'));
+//    dpm(XMLFormRepository::GetValidNames());
+//    dpm(module_invoke_all('islandora_xml_form_builder_forms'));
+    foreach(element_children($form['submitted']) as $index) {
+      if($index != 'islandora_object_pid') {
+        // TODO Set up field ingest form with correct wrapper, action, etc.
+        $form['submitted'][$index]['#suffix'] = render($field_ingest_form_elements);
+      }
+    }
+//    dpm($form);
   }
   elseif($form_id == 'webform_component_edit_form') {
-    dpm($form);
-    $form['ingest'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'Islandora Ingest Configuration',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#weight' => 7,
-      'datastream' => array(
-        '#type' => 'select',
+    $cmodel = db_select('islandora_webform_webforms', 'iw')
+      ->fields('iw', array('cmodel_filter'))
+      ->condition('iw.entity_id', $form['#node']->nid)
+      ->execute()->fetchField();
+    if($cmodel) {
+      $cmodel = islandora_object_load($cmodel);
+//      dpm($cmodel);
 
-      ),
-    );
+      $form['ingest'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Islandora Ingest Defaults',
+        '#description' => t('Choose the datastream and field that this component should be ingested to. Note that this only sets the default, and can be overridden during the actual ingestion of a submission.'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#weight' => 5,
+      );
+
+        $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
+    }
+//    dpm($form);
   }
 }
 
@@ -75,4 +92,68 @@ function islandora_webform_ingest_webform_submission_load(&$submissions) {
       $submission->islandora_object = islandora_object_load($submission->data[$islandora_component_id][0]);
     }
   }
+}
+
+function islandora_webform_ingest_form_ingest_mapping_fields($cmodel) {
+
+  // TODO Do stuff to figure out the datastreams and fields here
+  // TODO This is just dummy placeholder stuff!!
+
+  $form = array(
+    'mode' => array(
+      '#title' => 'Ingest?',
+      '#description' => t('Do you want to ingest this component? If so, do you want to replace existing content in this field, or append to it if possible?'),
+      '#type' => 'select',
+      '#options' => array(
+        '' => 'Do not ingest',
+        'replace' => 'Replace',
+        'append' => 'Append'
+      ),
+    ),
+    'datastream' => array(
+      '#title' => 'DataStream',
+      '#type' => 'select',
+      '#options' => array(
+        'MODS' => 'MODS',
+        'DC' => 'DC'
+      ),
+    ),
+    'field' => array(
+      '#title' => 'Field',
+      '#type' => 'select',
+      '#options' => array(
+        'Title',
+        'Sub Title',
+        'Name-Type',
+        'Name-Name',
+        'Name-Role',
+        'Type of Resource',
+        'Genre',
+        'Origin-Date Issued',
+        'Origin-Publisher',
+        'Origin-Country',
+        'Origin-Place',
+        'Language',
+        'Description',
+        'Identifier (local)',
+        'Physical-Form',
+        'Physical-Extent',
+        'Note',
+        'Subject-Topic',
+        'Subject-Geographic',
+        'Subject-Temporal',
+        'Subject-Continent',
+        'Subject-Country',
+        'Subject-Province',
+        'Subject-Region',
+        'Subject-County',
+        'Subject-City',
+        'Subject-City',
+        'Subject-Section',
+        'Cartographics-Coordinates'
+      ),
+    ),
+  );
+
+  return $form;
 }
