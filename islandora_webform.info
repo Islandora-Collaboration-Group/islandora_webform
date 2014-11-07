@@ -5,4 +5,3 @@ package = Islandora
 dependencies[] = islandora
 dependencies[] = islandora_basic_collection
 dependencies[] = webform
-files[] = inc/islandora_webform.inc

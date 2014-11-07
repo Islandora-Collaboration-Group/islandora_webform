@@ -43,6 +43,18 @@ function islandora_webform_menu() {
     'weight' => 5,
     'type' => MENU_LOCAL_TASK,
   );
+
+  $items['islandora/object/%islandora_object/submissions'] = array(
+    'title' => 'Submissions',
+    'page callback' => 'islandora_webform_results_object_submissions_page',
+    'page arguments' => array(2),
+    'access callback' => 'islandora_webform_object_results_access',
+    'access arguments' => array(2),
+    'file' => 'includes/islandora_webform.report.inc',
+    'weight' => 4,
+    'type' => MENU_LOCAL_TASK,
+  );
+
   $items['islandora_webform/%/tag_object/%/nojs'] = array(
     'page callback' => 'islandora_webform_action_tag_object',
     'page arguments' => array(1, 3,4),
@@ -220,6 +232,31 @@ function _islandora_webform_user_access_or($permissions) {
     if (user_access($permission)) {
       return TRUE;
     }
+  }
+  return FALSE;
+}
+
+/**
+ * Access callback for viewing the submissions tab for a given object
+ *
+ * We hide the tab if there are no submissions. This makes more sense than showing
+ * the tab for all objects that could in theory have a submission.
+ *
+ * @param AbstractObject $object
+ * @return bool
+ */
+function islandora_webform_object_results_access(AbstractObject $object) {
+
+  // Check if user has permissions
+  if (user_access('access all webform results')) {
+
+    // If so, then if the count of webform submissions associated with this object
+    // is greater than zero, then grant access
+    $query = db_select('webform_submissions', 's');
+    $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
+    $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
+    $query->condition('d.data', $object->id);
+    return $query->countQuery()->execute()->fetchField() > 0 ? TRUE : FALSE;
   }
   return FALSE;
 }

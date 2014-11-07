@@ -78,6 +78,12 @@ function _iw_get_solution_packs() {
   return $solution_packs;
 }
 
+/**
+ * Get a list of all islandora_webforms applicable to a given IslandoraFedoraObject
+ *
+ * @param IslandoraFedoraObject $object
+ * @return mixed
+ */
 function islandora_webform_object_get_webforms(IslandoraFedoraObject $object) {
 
   if (get_class($object) == 'IslandoraFedoraObject') {
@@ -112,6 +118,13 @@ function islandora_webform_object_get_webforms(IslandoraFedoraObject $object) {
   }
 }
 
+
+/**
+ * Get a list of all islandora_webforms applicable to a given PID
+ *
+ * @param string $pid
+ * @return mixed
+ */
 function islandora_webform_pid_get_webforms($pid) {
   $object = islandora_object_load($pid);
   if ($object) {
@@ -120,4 +133,16 @@ function islandora_webform_pid_get_webforms($pid) {
   else {
     return FALSE;
   }
+}
+
+/**
+ * Get the islandora configuration for a given webform
+ *
+ * @param $node
+ * @return mixed
+ */
+function iw_node_islandora_webform($node) {
+
+  return db_select('islandora_webform_webforms', 'w')->fields('w')->condition('w.entity_id', $node->nid)->execute()->fetch();
+
 }
