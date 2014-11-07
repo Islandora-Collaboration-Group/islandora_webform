@@ -98,8 +98,8 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
       '#description' => t(''),
       '#default_value' => $defaults['scope'],
       '#options' => array(
-        'all' => 'All matched objectives',
-        'tagged' => 'Only those objectives that are manually tagged for this webform',
+        'all' => 'All matched objects',
+        'tagged' => 'Only those objects that are manually tagged for this webform',
       ),
     ),
     'link_text' => array(
@@ -113,7 +113,7 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
       '#type' => 'textfield',
       '#title' => 'Link help text',
       '#description' => t('The text that will appear as help/description text for the link'),
-      '#maxlength' => 60,
+      '#maxlength' => 2000,
       '#default_value' => $defaults['link_help'],
     ),
   );

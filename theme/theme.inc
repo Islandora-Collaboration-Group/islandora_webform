@@ -13,6 +13,7 @@
  */
 function theme_islandora_webform_links(array $vars) {
   drupal_add_library('system', 'drupal.ajax');
+  drupal_add_css(drupal_get_path('module', 'islandora_webform') . '/css/islandora_webform.css');
 
   $webforms = $vars['webform_data'];
   $object = $vars['islandora_object'];
