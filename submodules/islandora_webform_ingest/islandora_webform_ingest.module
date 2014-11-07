@@ -1,0 +1,78 @@
+<?php
+
+function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
+  if($form_id == 'webform_client_form_2' && isset($form['#node'])) {
+    module_load_include('inc', 'islandora_webform', 'includes/utilities');
+    module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+    if (!empty($form['#submission']->islandora_object)) {
+      dpm($form);
+      $datastreams = iwi_ingestable_datastreams($form['#submission']->islandora_object);
+      foreach($datastreams as $datastream) {
+        /*
+          label
+          controlGroup
+          versionable
+          state
+          mimetype
+          format
+          size
+          checksum
+          checksumType
+          createdDate
+          content
+          url
+          location
+          logMessage
+         */
+        dpm($datastream->label);
+        dpm($datastream->mimetype);
+        dpm($datastream->content);
+        dpm(module_invoke_all('islandora_edit_datastream_registry', $datastream->parent, $datastream));
+      }
+
+      // This is how solr settings gets its list of fields - not useful here, unfortunately
+//      module_load_include('inc', 'islandora_solr_search', 'includes/luke');
+//      dpm(islandora_solr_get_luke());
+    }
+
+    dpm(XMLFormRepository::GetValidNames());
+    dpm(module_invoke_all('islandora_xml_form_builder_forms'));
+  }
+  elseif($form_id == 'webform_component_edit_form') {
+    dpm($form);
+    $form['ingest'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Islandora Ingest Configuration',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => 7,
+      'datastream' => array(
+        '#type' => 'select',
+
+      ),
+    );
+  }
+}
+
+/**
+ * Implements hook_webform_submission_load().
+ *
+ * Add IslandoraFedoraObject to islandora webform submissions
+ *
+ * @param $submissions
+ *   An array of Webform submissions that are being loaded, keyed by the
+ *   submission ID. Modifications to the submissions are done by reference.
+ */
+function islandora_webform_ingest_webform_submission_load(&$submissions) {
+  foreach ($submissions as &$submission) {
+    $submission->islandora_object = FALSE;
+    $islandora_component_id = db_select('webform_component', 'wc')
+      ->fields('wc', array('cid'))
+      ->condition('nid', $submission->nid)
+      ->condition('form_key', 'islandora_object_pid')
+      ->execute()->fetchField();
+    if ($islandora_component_id && !empty($submission->data[$islandora_component_id][0])) {
+      $submission->islandora_object = islandora_object_load($submission->data[$islandora_component_id][0]);
+    }
+  }
+}

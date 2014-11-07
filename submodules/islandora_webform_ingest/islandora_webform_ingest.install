@@ -1,0 +1,64 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ *
+ * @return mixed
+ */
+function islandora_webform_ingest_schema() {
+
+  $schema['islandora_webform_ingestions'] = array(
+    'description' => 'Tracks information about webform ingests to islandora objects',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Unique row ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'description' => 'Webform node id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'sid' => array(
+        'description' => 'Submission id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'cid' => array(
+        'description' => 'Component id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'pid' => array(
+        'description' => 'Fedora object ID',
+        'type' => 'varchar',
+        'length' => 500,
+        'default' => '',
+      ),
+      'data' => array(
+        'description' => 'Serialized transaction data',
+        'type' => 'text',
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'sid' => array('sid'),
+      'cid' => array('cid'),
+      'pid' => array('pid'),
+    ),
+    'primary key' => array( 'id'),
+  );
+
+  watchdog('debug','iwi scdruhema ran');
+
+  return $schema;
+
+}
