@@ -1,58 +1,66 @@
 <?php
 
 function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
-  if($form_id == 'webform_client_form_2' && isset($form['#node'])) {
+  if (!empty($form['#submission']->islandora_object)) {
     module_load_include('inc', 'islandora_webform', 'includes/utilities');
     module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
-    if (!empty($form['#submission']->islandora_object)) {
-      $cmodels = _iw_content_models($form['#submission']->islandora_object->models);
-      $cmodel = islandora_object_load(array_shift($cmodels));
-      $field_ingest_form_elements = islandora_webform_ingest_form_ingest_mapping_fields($cmodel);
+    $cmodels = _iw_content_models($form['#submission']->islandora_object->models);
+    $cmodel = islandora_object_load(array_shift($cmodels));
+    $field_ingest_form_elements = array(
+      '#type' => 'fieldset',
+      '#title' => 'Islandora Ingest Settings',
+      '#description' => t('Choose the datastream and field that this component should be ingested to.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => 0,
+
+    );
+    $field_ingest_form_elements = array_merge($field_ingest_form_elements, islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
+
 //      $datastreams = iwi_ingestable_datastreams($form['#submission']->islandora_object);
 //      foreach($datastreams as $datastream) {
-        /*
-          label
-          controlGroup
-          versionable
-          state
-          mimetype
-          format
-          size
-          checksum
-          checksumType
-          createdDate
-          content
-          url
-          location
-          logMessage
-         */
+    /*
+      label
+      controlGroup
+      versionable
+      state
+      mimetype
+      format
+      size
+      checksum
+      checksumType
+      createdDate
+      content
+      url
+      location
+      logMessage
+     */
 //        dpm($datastream->label);
 //        dpm($datastream->mimetype);
 //        dpm($datastream->content);
 //        dpm(module_invoke_all('islandora_edit_datastream_registry', $datastream->parent, $datastream));
 //      }
 
-      // This is how solr settings gets its list of fields - not useful here, unfortunately
+    // This is how solr settings gets its list of fields - not useful here, unfortunately
 //      module_load_include('inc', 'islandora_solr_search', 'includes/luke');
 //      dpm(islandora_solr_get_luke());
-    }
 
 //    dpm(XMLFormRepository::GetValidNames());
 //    dpm(module_invoke_all('islandora_xml_form_builder_forms'));
-    foreach(element_children($form['submitted']) as $index) {
-      if($index != 'islandora_object_pid') {
+    foreach (element_children($form['submitted']) as $index) {
+      if ($index != 'islandora_object_pid') {
         // TODO Set up field ingest form with correct wrapper, action, etc.
         $form['submitted'][$index]['#suffix'] = render($field_ingest_form_elements);
       }
-    }
 //    dpm($form);
+    }
   }
-  elseif($form_id == 'webform_component_edit_form') {
+  elseif ($form_id == 'webform_component_edit_form') {
     $cmodel = db_select('islandora_webform_webforms', 'iw')
       ->fields('iw', array('cmodel_filter'))
       ->condition('iw.entity_id', $form['#node']->nid)
       ->execute()->fetchField();
-    if($cmodel) {
+    if ($cmodel) {
       $cmodel = islandora_object_load($cmodel);
 //      dpm($cmodel);
 
@@ -65,7 +73,7 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
         '#weight' => 5,
       );
 
-        $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
+      $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
     }
 //    dpm($form);
   }
