@@ -1,6 +1,20 @@
 <?php
 
+/**
+ * @file
+ */
+
+
+/**
+ * Implements hook_form_alter().
+ *
+ * @param $form
+ * @param $form_state
+ * @param $form_id
+ */
 function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
+
+  // Adds datastream mapping options to webform submission edit form
   if (!empty($form['#submission']->islandora_object)) {
     module_load_include('inc', 'islandora_webform', 'includes/utilities');
     module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
@@ -56,24 +70,28 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
     }
   }
   elseif ($form_id == 'webform_component_edit_form') {
-    $cmodel = db_select('islandora_webform_webforms', 'iw')
-      ->fields('iw', array('cmodel_filter'))
-      ->condition('iw.entity_id', $form['#node']->nid)
-      ->execute()->fetchField();
-    if ($cmodel) {
-      $cmodel = islandora_object_load($cmodel);
+    if (!empty($form['type']['#value']) && in_array($form['type']['#value'], islandora_webform_ingest_get_component_types())) {
+      // Adds datastream mapping defaults options to webform component edit form
+      $cmodel = db_select('islandora_webform_webforms', 'iw')
+        ->fields('iw', array('cmodel_filter'))
+        ->condition('iw.entity_id', $form['#node']->nid)
+        ->execute()->fetchField();
+      if ($cmodel) {
+        $cmodel = islandora_object_load($cmodel);
 //      dpm($cmodel);
 
-      $form['ingest'] = array(
-        '#type' => 'fieldset',
-        '#title' => 'Islandora Ingest Defaults',
-        '#description' => t('Choose the datastream and field that this component should be ingested to. Note that this only sets the default, and can be overridden during the actual ingestion of a submission.'),
-        '#collapsible' => TRUE,
-        '#collapsed' => TRUE,
-        '#weight' => 5,
-      );
+        $form['ingest'] = array(
+          '#type' => 'fieldset',
+          '#title' => 'Islandora Ingest Defaults',
+          '#description' => t('Choose the datastream and field that this component should be ingested to. Note that this only sets the default, and can be overridden during the actual ingestion of a submission.'),
+          '#collapsible' => TRUE,
+          '#collapsed' => TRUE,
+          '#weight' => 5,
+        );
 
-      $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
+        $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
+
+      }
     }
 //    dpm($form);
   }
@@ -164,4 +182,22 @@ function islandora_webform_ingest_form_ingest_mapping_fields($cmodel) {
   );
 
   return $form;
+}
+
+function islandora_webform_ingest_get_component_types() {
+
+  $eligible_component_types = array(
+    'date',
+    'email',
+    'file',
+    'hidden',
+    'number',
+    'select',
+    'textarea',
+    'textfield',
+    'time',
+  );
+
+  return array_intersect($eligible_component_types, array_keys(webform_components()));
+
 }
