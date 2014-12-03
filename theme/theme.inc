@@ -65,12 +65,12 @@ function theme_islandora_webform_links(array $vars) {
   );
 
 
-  $output .= '<div class="webform-links">';
 
   foreach ($webforms as $webform) {
 
     $webform_link_options['attributes']['title'] = $webform->link_help;
     $webform_link = l($webform->link_text, drupal_get_path_alias('node/' . $webform->entity_id), $webform_link_options);
+    $output .= '<div class="webform-links">';
 
     if ($webform->scope != 'tagged') {
       $output .= $webform_link;
@@ -110,8 +110,8 @@ function theme_islandora_webform_links(array $vars) {
         }
       }
     }
+    $output .= '</div>';
   }
-  $output .= '</div>';
 
   return $output;
 }
