@@ -32,6 +32,13 @@ function islandora_webform_admin(array $form, array &$form_state) {
           '#description' => t('Uncheck to use your own template files to add the webform link on islandora solution pack object display pages. Check this box to insert the links immediately after the table of metadata.'),
           '#required' => FALSE,
         ),
+        'islandora_webform_link_target_new_page' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Open webforms in new window'),
+          '#default_value' => variable_get('islandora_webform_link_target_new_page', 0),
+          '#description' => t('Check if you want islandora webform links to open in a new page. This allows the user to have the object page and the webform page open at the same time.'),
+          '#required' => FALSE,
+        ),
       ),
     ),
   );

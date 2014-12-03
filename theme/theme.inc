@@ -33,6 +33,11 @@ function theme_islandora_webform_links(array $vars) {
       'webform-link'
     ),
   );
+
+  if(variable_get('islandora_webform_link_target_new_page', 0)) {
+    $webform_link_options['attributes']['target'] = '_islandora_webform_page';
+  }
+
   $tag_link_options = array(
     'attributes' => array(
       'class' => array(
