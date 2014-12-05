@@ -161,10 +161,11 @@ function islandora_webform_preprocess_solution_pack_module(&$variables) {
       $variables['webform_links'] = $output;
 
       // If webform link injection is not disabled, append to the
-      // metadata table.
+      // metadata table if present.
       if(variable_get('islandora_webform_inject_link', 1)) {
-        $variables['metadata'] .= $output;
-
+        if(!empty($variables['metadata'])) {
+          $variables['metadata'] .= $output;
+        }
       }
     }
   }
