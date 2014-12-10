@@ -143,6 +143,26 @@ function islandora_webform_pid_get_webforms($pid) {
  */
 function iw_node_islandora_webform($node) {
 
-  return db_select('islandora_webform_webforms', 'w')->fields('w')->condition('w.entity_id', $node->nid)->execute()->fetch();
+  return db_select('islandora_webform_webforms', 'w')
+    ->fields('w')
+    ->condition('w.entity_id', $node->nid)
+    ->execute()
+    ->fetch();
 
 }
+
+/**
+ * Given a submission id, get the fedora object id that it relates to
+ *
+ * @param $sid
+ * @return mixed
+ */
+function iw_get_submission_pid($sid) {
+  $query = db_select('webform_submitted_data', 'd')->fields('d', array('data'));
+  $query->join('webform_component', 'c', "c.cid = d.cid AND c.nid = d.nid");
+  $query->condition('c.form_key', 'islandora_object_pid');
+  $query->condition('d.sid', $sid);
+  return $query->execute()->fetchField();
+}
+
+
