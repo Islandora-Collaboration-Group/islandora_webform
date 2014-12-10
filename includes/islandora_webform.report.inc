@@ -84,8 +84,9 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
   }
 
   $element['#theme'] = 'webform_results_submissions';
-  // No harm in not using whatever webform node came last as the $node here
+  // No harm in using whatever webform node came last as the $node here
   $element['#node'] = $node;
+  $element['#object'] = $object;
   $element['#submissions'] = $submissions;
   $element['#total_count'] = $count;
   $element['#pager_count'] = $pager_count;
