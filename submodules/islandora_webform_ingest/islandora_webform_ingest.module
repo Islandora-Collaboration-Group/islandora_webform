@@ -6,6 +6,23 @@
 
 
 /**
+ *  Implements hook_permission().
+ */
+function islandora_webform_ingest_permission() {
+  return array(
+    'ingest islandora webform submissions' => array(
+      'title' => t('Ingest Islandora Webform Submissions'),
+      'description' => t('Add content submitted by islandora webforms to metadata on objects in the repository.'),
+    ),
+//    'bulk ingest islandora webform submissions' => array(
+//      'title' => t('Bulk Ingest Islandora Webform Submissions'),
+//      'description' => t('Add content submitted by islandora webforms to metadata on objects in the repository.'),
+//    ),
+  );
+}
+
+
+/**
  * Implements hook_form_alter().
  *
  * @param $form
