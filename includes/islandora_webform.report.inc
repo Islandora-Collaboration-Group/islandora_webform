@@ -97,6 +97,9 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
   $element['table']['#rows'] = $rows;
   $element['table']['#operation_total'] = $operation_total;
 
+  // Let other modules modify this page, e.g. for ingestion
+  drupal_alter('iw_results_object_submissions_page_element', $element);
+
   return drupal_render($element);
 
 }
