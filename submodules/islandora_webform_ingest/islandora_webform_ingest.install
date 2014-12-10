@@ -43,6 +43,12 @@ function islandora_webform_ingest_schema() {
         'length' => 500,
         'default' => '',
       ),
+      'date' => array(
+        'description' => 'The Unix timestamp when the ingestion was run.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'data' => array(
         'description' => 'Serialized transaction data',
         'type' => 'text',
@@ -56,8 +62,6 @@ function islandora_webform_ingest_schema() {
     ),
     'primary key' => array( 'id'),
   );
-
-  watchdog('debug','iwi scdruhema ran');
 
   return $schema;
 
