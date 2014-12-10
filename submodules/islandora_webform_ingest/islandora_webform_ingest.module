@@ -5,6 +5,17 @@
  */
 
 
+function islandora_webform_ingest_menu() {
+  return array(
+    'iwi_conditional_ds_fields' => array(
+      'title' => 'A page to test ajax',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('myajax_page'),
+      'access arguments' => array('access content'),
+    )
+  );
+}
+
 /**
  *  Implements hook_permission().
  */
@@ -48,36 +59,7 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
     );
     $field_ingest_form_elements = array_merge($field_ingest_form_elements, islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
 
-//      $datastreams = iwi_ingestable_datastreams($form['#submission']->islandora_object);
-//      foreach($datastreams as $datastream) {
-    /*
-      label
-      controlGroup
-      versionable
-      state
-      mimetype
-      format
-      size
-      checksum
-      checksumType
-      createdDate
-      content
-      url
-      location
-      logMessage
-     */
-//        dpm($datastream->label);
-//        dpm($datastream->mimetype);
-//        dpm($datastream->content);
-//        dpm(module_invoke_all('islandora_edit_datastream_registry', $datastream->parent, $datastream));
-//      }
 
-    // This is how solr settings gets its list of fields - not useful here, unfortunately
-//      module_load_include('inc', 'islandora_solr_search', 'includes/luke');
-//      dpm(islandora_solr_get_luke());
-
-//    dpm(XMLFormRepository::GetValidNames());
-//    dpm(module_invoke_all('islandora_xml_form_builder_forms'));
     foreach (element_children($form['submitted']) as $index) {
       if ($index != 'islandora_object_pid') {
         // TODO Set up field ingest form with correct wrapper, action, etc.
@@ -87,16 +69,26 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
     }
   }
   elseif ($form_id == 'webform_component_edit_form') {
+
+    // Adds datastream mapping options to webform component edit form
+
+    module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+
     if (!empty($form['type']['#value']) && in_array($form['type']['#value'], islandora_webform_ingest_get_component_types())) {
-      // Adds datastream mapping defaults options to webform component edit form
+
       $cmodel = db_select('islandora_webform_webforms', 'iw')
         ->fields('iw', array('cmodel_filter'))
         ->condition('iw.entity_id', $form['#node']->nid)
         ->execute()->fetchField();
-      if ($cmodel) {
-        $cmodel = islandora_object_load($cmodel);
-//      dpm($cmodel);
 
+      if ($cmodel) {
+
+        $cmodel = islandora_object_load($cmodel);
+
+        // Get datastream mimetypes
+        $dsmimetypes = iwi_datastream_mime_from_component_type($form['type']['#value']);
+
+        // Start building the form
         $form['ingest'] = array(
           '#type' => 'fieldset',
           '#title' => 'Islandora Ingest Defaults',
@@ -106,12 +98,25 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
           '#weight' => 5,
         );
 
-        $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
+        // Load most the form elements
+        $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($cmodel, $dsmimetypes, $form_state));
 
+        $form['#submit'][] = 'iwi_webform_component_edit_form_submit';
       }
     }
 //    dpm($form);
   }
+}
+
+/**
+ * Form submit hook for islandora_ingest-enabled webform_component_edit_form
+ *
+ * @param $form
+ * @param $form_state
+ */
+function iwi_webform_component_edit_form_submit($form, &$form_state) {
+  // TODO
+  dpm(get_defined_vars());
 }
 
 /**
@@ -137,10 +142,40 @@ function islandora_webform_ingest_webform_submission_load(&$submissions) {
   }
 }
 
-function islandora_webform_ingest_form_ingest_mapping_fields($cmodel) {
+/**
+ * Build the component mapping destination options
+ *
+ * @param $cmodel
+ * @param array $mimetypes
+ * @param $form_state
+ * @return array
+ */
+function islandora_webform_ingest_form_ingest_mapping_fields($cmodel, $mimetypes = array(), $form_state) {
 
-  // TODO Do stuff to figure out the datastreams and fields here
-  // TODO This is just dummy placeholder stuff!!
+  module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+
+  // Get a list of the theoretically eligible destination datastreams
+  $datastreams = iwi_ingestable_datastreams($cmodel, $mimetypes);
+
+  // The options list that we are building
+  $dsoptions = array();
+
+  // Build the datastream options by filtering the eligible datastreams
+  foreach ($datastreams as $datastream => $dsdata) {
+    $dsoptions[$datastream] = $datastream;
+    if($dsdata['mime'] == 'text/xml') {
+      $default_association = $dsdata; // dev only
+      $default_ds = $datastream; // dev only
+    }
+  }
+
+  // Now work on the fields dropdown list
+  $association = isset($form_state['values']['datastream']) ? $datastreams[$form_state['values']['datastream']] : $default_association;
+  $ds_field_options = array('- Select field -');
+  if (isset($form_state['values']['datastream'])) {
+    $ds_field_options = array_merge($ds_field_options, iwi_ds_field_options($association, $mimetypes));
+  }
+
 
   $form = array(
     'mode' => array(
@@ -156,44 +191,22 @@ function islandora_webform_ingest_form_ingest_mapping_fields($cmodel) {
     'datastream' => array(
       '#title' => 'DataStream',
       '#type' => 'select',
-      '#options' => array(
-        'MODS' => 'MODS',
-        'DC' => 'DC'
+      '#options' => array_merge(array('' => '- Select datastream -'), $dsoptions),
+      '#default_value' => $default_ds,
+      '#ajax' => array(
+        'event' => 'change',
+        'callback' => 'iwi_ds_field_options_ajax',
+        'wrapper' => 'ds_field_options',
       ),
+
     ),
-    'field' => array(
-      '#title' => 'Field',
-      '#type' => 'select',
-      '#options' => array(
-        'Title',
-        'Sub Title',
-        'Name-Type',
-        'Name-Name',
-        'Name-Role',
-        'Type of Resource',
-        'Genre',
-        'Origin-Date Issued',
-        'Origin-Publisher',
-        'Origin-Country',
-        'Origin-Place',
-        'Language',
-        'Description',
-        'Identifier (local)',
-        'Physical-Form',
-        'Physical-Extent',
-        'Note',
-        'Subject-Topic',
-        'Subject-Geographic',
-        'Subject-Temporal',
-        'Subject-Continent',
-        'Subject-Country',
-        'Subject-Province',
-        'Subject-Region',
-        'Subject-County',
-        'Subject-City',
-        'Subject-City',
-        'Subject-Section',
-        'Cartographics-Coordinates'
+    'fields_wrapper' => array(
+      '#prefix' => '<div id="ds_field_options">',
+      '#suffix' => '</div>',
+      'fields' => array(
+        '#title' => 'Field',
+        '#type' => 'select',
+        '#options' => $ds_field_options,
       ),
     ),
   );
@@ -201,12 +214,18 @@ function islandora_webform_ingest_form_ingest_mapping_fields($cmodel) {
   return $form;
 }
 
+/**
+ * Get a list of webform component types that we can use as sources for ingest
+ *
+ * @return array
+ */
 function islandora_webform_ingest_get_component_types() {
 
   $eligible_component_types = array(
     'date',
     'email',
-    'file',
+// TODO FUTURE: Work on file ingest
+//    'file',
     'hidden',
     'number',
     'select',
@@ -217,4 +236,117 @@ function islandora_webform_ingest_get_component_types() {
 
   return array_intersect($eligible_component_types, array_keys(webform_components()));
 
+}
+
+/**
+ * Function for handling ajax request
+ */
+function iwi_ds_field_options_ajax($form, &$form_state) {
+  // Return the dropdown list including the wrapper
+  return $form['ingest']['fields_wrapper'];
+}
+
+
+/**
+ * Get a list of ingestable fields from a given datastream edit form
+ *
+ * @param $association
+ *  - An xml form associated with the datastream
+ * @param array $mimefilter
+ *  - An array of mimetypes that we are going to filter by; if empty, we permit
+ *    all mimetypes.
+ * @return array
+ *  - An array to be used as the fields option list in a form
+ */
+function iwi_ds_field_options($association, $mimefilter = array()) {
+
+  module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+
+  $form_state = array();
+  $form = array();
+
+  // Get the render array for the datastream's edit form
+  $form = xml_form_builder_get_form($form, $form_state, $association['form_name']);
+
+  $field_options = array();
+
+  // Parse the form into an array with field path and mimetype for each eligible field
+  $field_paths = iwi_form_field_paths($form);
+
+  // Build the field options list, filtering out unsupported mimetypes
+  foreach($field_paths as $field) {
+    if(!empty($mimefilter)) {
+      if(count(array_intersect($field['mimes'], (array) $mimefilter))) {
+        $field_options[$field['field path']] = $field['field path'] . ' (' . implode(', ', $field['mimes']) . ')';
+      }
+    }
+    else {
+      $field_options[$field['field path']] = $field['field path'] . ' (' . implode(', ', $field['mimes']) . ')';
+    }
+  }
+  return $field_options;
+
+}
+
+/**
+ * Implements hook_iw_results_object_submissions_page_element_alter().
+ *
+ * Here we are adding ingest links for individual submissions.
+ * TODO If bulk ingest is implemented, we would add that here as well
+ *
+ * @param $element
+ */
+function islandora_webform_ingest_iw_results_object_submissions_page_element_alter(&$element) {
+  if (user_access('ingest islandora webform submissions')) {
+    drupal_add_css(drupal_get_path('module', 'islandora_webform_ingest') . '/css/islandora_webform_ingest.css');
+
+    $bulk = user_access('bulk ingest islandora webform submissions');
+    // TODO FUTURE: Remove the next line to enable bulk ingestion
+    $bulk = FALSE;
+
+    module_load_include('inc', 'islandora_webform', 'includes/utilities');
+    module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+
+    $submission_ids = array_keys($element['#submissions']);
+    $pid = $element['#object']->id;
+
+    foreach ($element['table']['#rows'] as $rownum => &$row) {
+      // Check to see if this has previously been ingested, if so, change link text
+      $ingested = iwi_get_ingestion_info($submission_ids[$rownum]);
+      $link_text = t('Ingest');
+      $link_options = array(
+        'attributes' => array(
+          'title' => t('Review and ingest this submission'),
+           'class' => 'islandora_webform_ingest',
+
+        ),
+      );
+      if ($ingested) {
+        $link_text = t('Re-Ingest');
+        $link_options['attributes']['class'][] = 'ingested';
+        $link_options['attributes']['title'] = t('This submission has previously been ingested. Click to review and re-ingest this submission');
+      }
+
+      // TODO: Set up a model ingestion preview/confirm popup and configure this link to fire it
+      $link_url = 'islandora/object/' . $pid . '/datastream/MODS/edit';
+      $link = l($link_text, $link_url, $link_options);
+      $row[] = $link;
+      if ($bulk) {
+        // TODO FUTURE: Implement bulk ingestion - this is just for UI demo
+        array_unshift($row, '<input type="checkbox">');
+      }
+    }
+    foreach ($element['table']['#header'] as $hkey => &$header) {
+      if (isset($header['data']) && isset($header['colspan']) && $header['data'] == 'Operations') {
+        $header['colspan'] += 1;
+      }
+    }
+    if ($bulk) {
+      // TODO FUTURE: Implement bulk ingestion - this is just for UI demo
+      array_unshift($element['table']['#header'], '<input type="checkbox">');
+      $element['table']['#suffix'] = '<input type="submit" value="Bulk ingest">';
+    }
+
+    $element['table']['#operation_total'] += 1;
+  }
 }
