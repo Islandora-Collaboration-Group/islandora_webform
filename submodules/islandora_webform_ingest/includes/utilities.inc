@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Get a list of datastream ids that can be ingested to
+ * Get a list of datastream identifiers that can be ingested for this object
  *
  * @param IslandoraFedoraObject $object
  * @param MIXED $mimetype
@@ -16,26 +16,37 @@ function iwi_ingestable_datastreams(IslandoraFedoraObject $object, $mimetypes = 
 
   if (!empty($object['DS-COMPOSITE-MODEL'])) {
 
+    module_load_include('inc', 'xml_form_builder', 'includes/associations');
+    module_load_include('inc', 'islandora_webform_ingest', '/includes/xml');
+
     $info = array(
       'xsl' => drupal_get_path('module', 'islandora_webform_ingest') . '/includes/cmdatastreams.xsl',
       'input' => $object['DS-COMPOSITE-MODEL']->content,
     );
 
-    module_load_include('inc', 'xml_form_builder', 'includes/associations');
+    // Run the xslt transform on the 'DS-COMPOSITE-MODEL' xml to get a list of the datastreams
+    // that this content model uses.
+    $datastreams = (array) json_decode(islandora_webform_run_xsl_transform($info));
 
-
-    module_load_include('inc', 'islandora_webform_ingest', '/includes/xml');
-    $content_models = (array) json_decode(islandora_webform_run_xsl_transform($info));
     $mimetypes = (array) $mimetypes;
     $results = array();
-    foreach ($content_models as $ds => $dsmime) {
+
+    // Build the list of ingestable datastreams. If datastream is text/xml, ingestability
+    // depends on existance of form associations. There can be more than one.
+    foreach ($datastreams as $ds => $dsmime) {
+
+      // Datastream IDs can have zero, one or many form associations. Add these to
+      // the list first.
       $associations = xml_form_builder_get_associations(array(), array($object->id), array($ds));
       if (count($associations) > 0) {
         foreach ($associations as $association) {
           $association['mime'] = $dsmime;
+          // Uniquely identify by dsid and form name
           $results[$ds . ' (' . $association['form_name'] . ')'] = $association;
         }
       }
+
+      // Add ingestable datastreams from other mimetypes (e.g. text/plain)
       foreach ($mimetypes as $type) {
         if (strpos($dsmime, $type) !== FALSE) {
           $results[$ds . ' (' . $dsmime . ')'] = array(
@@ -119,6 +130,12 @@ function iwi_recursive_form_parsing(array $input_form) {
   }
 }
 
+/**
+ * Get an array of field paths for a given form
+ *
+ * @param $form
+ * @return array
+ */
 function iwi_form_field_paths($form) {
   $data = iwi_recursive_form_parsing($form);
   $pathstack = array();
@@ -129,6 +146,19 @@ function iwi_form_field_paths($form) {
   return $paths;
 }
 
+/**
+ * Recursive function builds field paths for nested fields from form data
+ *
+ * @param $pathstack
+ *  An array passed by reference used to hold the working path stack
+ *  --
+ * @param $paths
+ *  - An array passed by reference that is populated with the paths
+ * @param $data
+ *  - The form data
+ * @param string $delimiter
+ *  - What we're inserting in between field names in the path
+ */
 function iwi_path_stack(&$pathstack, &$paths, $data, $delimiter = ':') {
   foreach($data as $rowname => $rowdata) {
     array_push($pathstack, $rowname);
