@@ -163,16 +163,12 @@ function islandora_webform_ingest_form_ingest_mapping_fields($cmodel, $mimetypes
   // Build the datastream options by filtering the eligible datastreams
   foreach ($datastreams as $datastream => $dsdata) {
     $dsoptions[$datastream] = $datastream;
-    if($dsdata['mime'] == 'text/xml') {
-      $default_association = $dsdata; // dev only
-      $default_ds = $datastream; // dev only
-    }
   }
 
   // Now work on the fields dropdown list
-  $association = isset($form_state['values']['datastream']) ? $datastreams[$form_state['values']['datastream']] : $default_association;
+  $association = isset($form_state['values']['ingest']['datastream']) ? $datastreams[$form_state['values']['ingest']['datastream']] : FALSE;
   $ds_field_options = array('- Select field -');
-  if (isset($form_state['values']['datastream'])) {
+  if ($association) {
     $ds_field_options = array_merge($ds_field_options, iwi_ds_field_options($association, $mimetypes));
   }
 
