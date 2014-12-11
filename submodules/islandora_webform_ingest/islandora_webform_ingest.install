@@ -63,6 +63,50 @@ function islandora_webform_ingest_schema() {
     'primary key' => array( 'id'),
   );
 
+  $schema['islandora_webform_ingest_map'] = array(
+    'description' => 'Tracks islandora webform ingest mappings',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Unique row ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'description' => 'Webform node id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'cid' => array(
+        'description' => 'Component id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'data' => array(
+        'description' => 'Serialized settings data (mode, datastream, field)',
+        'type' => 'text',
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'cid' => array('cid'),
+    ),
+    'primary key' => array( 'id'),
+  );
+
   return $schema;
 
+}
+
+/**
+ * Add islandora_webform_ingest_map database table
+ */
+function islandora_webform_ingest_update_7001() {
+  cache_clear_all();
+  $schema = drupal_get_schema('islandora_webform_ingest_map');
+  db_create_table('islandora_webform_ingest_map', $schema);
 }
