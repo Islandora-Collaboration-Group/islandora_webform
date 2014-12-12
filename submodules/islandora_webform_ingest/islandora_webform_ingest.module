@@ -42,33 +42,7 @@ function islandora_webform_ingest_permission() {
  */
 function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
 
-  // Adds datastream mapping options to webform submission edit form
-  if (!empty($form['#submission']->islandora_object)) {
-    module_load_include('inc', 'islandora_webform', 'includes/utilities');
-    module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
-    $cmodels = _iw_content_models($form['#submission']->islandora_object->models);
-    $cmodel = islandora_object_load(array_shift($cmodels));
-    $field_ingest_form_elements = array(
-      '#type' => 'fieldset',
-      '#title' => 'Islandora Ingest Settings',
-      '#description' => t('Choose the datastream and field that this component should be ingested to.'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#weight' => 0,
-
-    );
-    $field_ingest_form_elements = array_merge($field_ingest_form_elements, islandora_webform_ingest_form_ingest_mapping_fields($cmodel));
-
-
-    foreach (element_children($form['submitted']) as $index) {
-      if ($index != 'islandora_object_pid') {
-        // TODO Set up field ingest form with correct wrapper, action, etc.
-        $form['submitted'][$index]['#suffix'] = render($field_ingest_form_elements);
-      }
-//    dpm($form);
-    }
-  }
-  elseif ($form_id == 'webform_component_edit_form') {
+  if ($form_id == 'webform_component_edit_form') {
 
     // Adds datastream mapping options to webform component edit form
 
