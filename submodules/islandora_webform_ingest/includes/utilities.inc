@@ -93,6 +93,10 @@ function iwi_datastream_mime_from_component_type($component_type) {
  * @return array|bool
  */
 function iwi_recursive_form_parsing(array $input_form) {
+
+  if (!is_array($input_form)) {
+    return FALSE;
+  }
   $visible_children = array();
 
   foreach (element_children($input_form) as $key) {
@@ -104,7 +108,11 @@ function iwi_recursive_form_parsing(array $input_form) {
     }
 
     // Skip value and hidden elements, since they are not rendered.
-    if (isset($child['#type']) && in_array($child['#type'], array('value', 'hidden'))) {
+    if (isset($child['#type']) && in_array($child['#type'], array(
+        'value',
+        'hidden'
+      ))
+    ) {
       continue;
     }
 
@@ -112,7 +120,7 @@ function iwi_recursive_form_parsing(array $input_form) {
     $child_children = element_children($child);
     if ((is_array($child)) && (!empty($child)) && $child['#type'] == 'fieldset' && count($child_children) > 0) {
       $temp = iwi_recursive_form_parsing($child);
-      if($temp) {
+      if ($temp) {
         $visible_children[$key] = $temp;
       }
       continue;
@@ -160,11 +168,11 @@ function iwi_form_field_paths($form) {
  *  - What we're inserting in between field names in the path
  */
 function iwi_path_stack(&$pathstack, &$paths, $data, $delimiter = ':') {
-  foreach($data as $rowname => $rowdata) {
+  foreach ($data as $rowname => $rowdata) {
     array_push($pathstack, $rowname);
-    if (is_array($rowdata))  {
+    if (is_array($rowdata)) {
       iwi_path_stack($pathstack, $paths, $rowdata, $delimiter);
-		}
+    }
     else {
       $paths[] = array(
         'field path' => implode($delimiter, $pathstack),
@@ -187,5 +195,50 @@ function iwi_path_stack(&$pathstack, &$paths, $data, $delimiter = ':') {
  *  or NULL for no result.
  */
 function iwi_get_ingestion_info($sid) {
-  return db_select('islandora_webform_ingestions','i')->fields('i')->condition('i.sid', $sid)->execute()->fetchAll();
+  return db_select('islandora_webform_ingestions', 'i')
+    ->fields('i')
+    ->condition('i.sid', $sid)
+    ->execute()
+    ->fetchAll();
+}
+
+function iwi_save_component_mapping($form, $form_state) {
+  dpm(get_defined_vars());
+  $nid = $form['nid']['#value'];
+  $cid = $form['cid']['#value'];
+  $data = array(
+    'mode' => !empty($form_state['values']['ingest']['mode']) ? $form_state['values']['ingest']['mode'] : '',
+    'datastream' => !empty($form_state['values']['ingest']['datastream']) ? $form_state['values']['ingest']['datastream'] : '',
+    'field' => !empty($form_state['values']['ingest']['fields_wrapper']['fields']) ? $form_state['values']['ingest']['fields_wrapper']['fields'] : '',
+  );
+  if ($id = db_select('islandora_webform_ingest_map', 'm')
+    ->fields('m', array('id'))
+    ->condition('m.nid', $nid)
+    ->condition('m.cid', $cid)
+    ->execute()->fetchField()
+  ) {
+    db_update('islandora_webform_ingest_map')
+      ->fields(array('data' => serialize($data)))
+      ->condition('id', $id)
+      ->execute();
+  }
+  else {
+    db_insert('islandora_webform_ingest_map')
+      ->fields(array(
+          'nid' => $nid,
+          'cid' => $cid,
+          'data' => serialize($data),
+        )
+      )->execute();
+  }
+
+}
+
+function iwi_get_saved_component_mapping($webform_nid, $cid) {
+  $data = db_select('islandora_webform_ingest_map', 'm')
+    ->fields('m', array('data'))
+    ->condition('m.nid', $webform_nid)
+    ->condition('m.cid', $cid)
+    ->execute()->fetchField();
+  return unserialize($data);
 }
