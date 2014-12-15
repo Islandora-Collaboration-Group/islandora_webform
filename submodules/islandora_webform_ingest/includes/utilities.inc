@@ -203,7 +203,7 @@ function iwi_get_ingestion_info($sid) {
 }
 
 function iwi_save_component_mapping($form, $form_state) {
-  dpm(get_defined_vars());
+
   $nid = $form['nid']['#value'];
   $cid = $form['cid']['#value'];
   $data = array(
@@ -240,5 +240,5 @@ function iwi_get_saved_component_mapping($webform_nid, $cid) {
     ->condition('m.nid', $webform_nid)
     ->condition('m.cid', $cid)
     ->execute()->fetchField();
-  return unserialize($data);
+  return @unserialize($data);
 }

@@ -11,11 +11,17 @@
  */
 function islandora_webform_ingest_menu() {
   return array(
-    'iwi_conditional_ds_fields' => array(
-      'title' => 'A page to test ajax',
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('myajax_page'),
-      'access arguments' => array('access content'),
+    'islandora_webform_submission/%ctools_js/ingest/%' => array(
+      'title' => 'Islandora Webform Ingest Submission',
+      'page callback' => 'iwi_preview_ingest_submission_form_callback',
+      'page arguments' => array(1, 3),
+      'access arguments' => array('ingest islandora webform submissions'),
+    ),
+    'islandora_webform_submission/ingest/%' => array(
+      'title' => 'Islandora Webform Ingest Submission',
+      'page callback' => 'iwi_preview_ingest_submission_form_callback',
+      'page arguments' => array(FALSE, 2),
+      'access arguments' => array('ingest islandora webform submissions'),
     )
   );
 }
@@ -136,6 +142,7 @@ function iwi_webform_component_edit_form_validate($form, &$form_state) {
   }
 
 }
+
 /**
  * Build the component mapping destination options
  *
@@ -306,7 +313,19 @@ function iwi_ds_field_options($association, $mimefilter = array()) {
  */
 function islandora_webform_ingest_iw_results_object_submissions_page_element_alter(&$element) {
   if (user_access('ingest islandora webform submissions')) {
+
+    $modal = FALSE;
+
     drupal_add_css(drupal_get_path('module', 'islandora_webform_ingest') . '/css/islandora_webform_ingest.css');
+
+    if ($modal) {
+      ctools_include('modal');
+      ctools_modal_add_js();
+    }
+    else {
+      $destination = drupal_get_destination();
+    }
+
 
     $bulk = user_access('bulk ingest islandora webform submissions');
     // TODO FUTURE: Remove the next line to enable bulk ingestion
@@ -325,10 +344,19 @@ function islandora_webform_ingest_iw_results_object_submissions_page_element_alt
       $link_options = array(
         'attributes' => array(
           'title' => t('Review and ingest this submission'),
-          'class' => 'islandora_webform_ingest',
-
+          'class' => array(
+            'islandora_webform_ingest',
+          ),
         ),
       );
+      if ($modal) {
+        $link_options['attributes']['class'][] = 'ctools-use-modal';
+        $link_url = 'islandora_webform_submission/nojs/ingest/' . $submission_ids[$rownum];
+      }
+      else {
+        $link_options['query'] = $destination;
+        $link_url = 'islandora_webform_submission/ingest/' . $submission_ids[$rownum];
+      }
       if ($ingested) {
         $link_text = t('Re-Ingest');
         $link_options['attributes']['class'][] = 'ingested';
@@ -336,7 +364,6 @@ function islandora_webform_ingest_iw_results_object_submissions_page_element_alt
       }
 
       // TODO: Set up a model ingestion preview/confirm popup and configure this link to fire it
-      $link_url = 'islandora/object/' . $pid . '/datastream/MODS/edit';
       $link = l($link_text, $link_url, $link_options);
       $row[] = $link;
       if ($bulk) {
@@ -357,4 +384,41 @@ function islandora_webform_ingest_iw_results_object_submissions_page_element_alt
 
     $element['table']['#operation_total'] += 1;
   }
+}
+
+function iwi_preview_ingest_submission_form_callback($js, $sid) {
+  if ($js) {
+    ctools_include('ajax');
+    ctools_include('modal');
+    $form_state = array(
+      'ajax' => TRUE,
+      'title' => t('Ingest Webform Submission'),
+    );
+    $form_state['build_info']['args'] = array($sid);
+    $output = ctools_modal_form_wrapper('iwi_preview_ingest_submission_form', $form_state);
+    if (!empty($form_state['executed'])) {
+
+      // Add the responder javascript, required by ctools
+      ctools_add_js('ajax-responder');
+
+      // Create ajax command array, dismiss the modal window.
+      $output = array();
+      $output[] = ctools_modal_command_dismiss();
+      $output[] = ctools_ajax_command_reload();
+    }
+    watchdog('debug', 'output', $output);
+    ajax_render($output);
+    exit;
+  }
+  else {
+    return drupal_get_form('iwi_preview_ingest_submission_form', $sid);
+  }
+
+
+}
+
+function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
+  module_load_include('inc', 'islandora_webform_ingest', 'includes/ingest_page');
+  watchdog('debug', 'Sid :sid', array(':sid' => $sid));
+  return iwi_ingest_page_form($form, $form_state, $sid);
 }
