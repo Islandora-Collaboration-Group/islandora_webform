@@ -152,7 +152,7 @@ function iw_node_islandora_webform($node) {
 }
 
 /**
- * Given a submission id, get the fedora object id that it relates to
+ * Given a submission id, get the fedora object pid that it relates to
  *
  * @param $sid
  * @return mixed
@@ -163,6 +163,19 @@ function iw_get_submission_pid($sid) {
   $query->condition('c.form_key', 'islandora_object_pid');
   $query->condition('d.sid', $sid);
   return $query->execute()->fetchField();
+}
+
+/**
+ * Given a submission id, get the fedora object that it relates to
+ *
+ * @param $sid
+ * @return mixed
+ */
+function iw_get_submission_object($sid) {
+  $pid = iw_get_submission_pid($sid);
+  if($pid) {
+    return islandora_object_load($pid);;
+  }
 }
 
 

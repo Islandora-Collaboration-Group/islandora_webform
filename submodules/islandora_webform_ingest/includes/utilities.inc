@@ -12,7 +12,7 @@
  * @return array $results
  *  An array of the ingestable datastream objects
  */
-function iwi_ingestable_datastreams(IslandoraFedoraObject $object, $mimetypes = array()) {
+function iwi_ingestable_datastreams(IslandoraFedoraObject $object, $mimetypes = array('text/plain')) {
 
   if (!empty($object['DS-COMPOSITE-MODEL'])) {
 
@@ -79,8 +79,9 @@ function iwi_datastream_mime_from_component_type($component_type) {
     'textarea' => array('text/plain'),
     'textfield' => array('text/plain'),
     'time' => array('text/plain'),
+    'tag' => array('text/plain'),
   );
-  return $map[$component_type];
+  return isset($map[$component_type]) ? $map[$component_type] : array();
 }
 
 
@@ -118,7 +119,8 @@ function iwi_recursive_form_parsing(array $input_form) {
 
     // If the child has children, recursively search in it
     $child_children = element_children($child);
-    if ((is_array($child)) && (!empty($child)) && $child['#type'] == 'fieldset' && count($child_children) > 0) {
+
+    if ((is_array($child)) && (!empty($child)) && count($child_children) > 0) {
       $temp = iwi_recursive_form_parsing($child);
       if ($temp) {
         $visible_children[$key] = $temp;
@@ -174,10 +176,13 @@ function iwi_path_stack(&$pathstack, &$paths, $data, $delimiter = ':') {
       iwi_path_stack($pathstack, $paths, $rowdata, $delimiter);
     }
     else {
-      $paths[] = array(
-        'field path' => implode($delimiter, $pathstack),
-        'mimes' => iwi_datastream_mime_from_component_type($rowdata),
-      );
+      $mimes = iwi_datastream_mime_from_component_type($rowdata);
+      if (count($mimes)) {
+        $paths[] = array(
+          'field path' => implode($delimiter, $pathstack),
+          'mimes' => $mimes,
+        );
+      }
     }
     array_pop($pathstack);
   }
@@ -206,10 +211,16 @@ function iwi_save_component_mapping($form, $form_state) {
 
   $nid = $form['nid']['#value'];
   $cid = $form['cid']['#value'];
+  $mode = !empty($form_state['values']['ingest']['mode']) ? $form_state['values']['ingest']['mode'] : '';
+  $datastream_label = !empty($form_state['values']['ingest']['datastream']) ? $form_state['values']['ingest']['datastream'] : '';
+  $datastream_parts = explode(' ', $datastream_label);
+  $datastream_id = $datastream_parts[0];
+  $field = !empty($form_state['values']['ingest']['fields_wrapper']['fields']) ? $form_state['values']['ingest']['fields_wrapper']['fields'] : '';
   $data = array(
-    'mode' => !empty($form_state['values']['ingest']['mode']) ? $form_state['values']['ingest']['mode'] : '',
-    'datastream' => !empty($form_state['values']['ingest']['datastream']) ? $form_state['values']['ingest']['datastream'] : '',
-    'field' => !empty($form_state['values']['ingest']['fields_wrapper']['fields']) ? $form_state['values']['ingest']['fields_wrapper']['fields'] : '',
+    'mode' => $mode,
+    'datastream' => $datastream_label,
+    'datastream_id' => $datastream_id,
+    'field' => $field,
   );
   if ($id = db_select('islandora_webform_ingest_map', 'm')
     ->fields('m', array('id'))
@@ -241,4 +252,55 @@ function iwi_get_saved_component_mapping($webform_nid, $cid) {
     ->condition('m.cid', $cid)
     ->execute()->fetchField();
   return @unserialize($data);
+}
+
+function iwi_get_saved_component_mappings($webform_nid) {
+  $results = db_select('islandora_webform_ingest_map', 'm')
+    ->fields('m', array('cid', 'data'))
+    ->condition('m.nid', $webform_nid)
+    ->execute()->fetchAll();
+  foreach ($results as &$result) {
+    $result->data = @unserialize($result->data);
+  }
+  return $results;
+}
+
+function iwi_webform_content_model($webform_nid) {
+  return db_select('islandora_webform_webforms', 'iw')
+    ->fields('iw', array('cmodel_filter'))
+    ->condition('iw.entity_id', $webform_nid)
+    ->execute()->fetchField();
+}
+
+/**
+ * Recursive function that inserts a value into a multidimensional array at
+ * a location defined by a path
+ *
+ * @param array $array_ptr
+ * @param string $path
+ * @param mixed $value
+ * @param string $delimiter
+ * @param boolean $merge
+ */
+function iwi_array_path_set_value(&$array_ptr, $path, $value, $delimiter = ':', $merge = TRUE) {
+
+  $keys = explode($delimiter, $path);
+  // extract the last key
+  $last_key = array_pop($keys);
+
+  // walk/build the array to the specified key
+  foreach($keys as $arr_key) {
+    if (!array_key_exists($arr_key, $array_ptr)) {
+      $array_ptr[$arr_key] = array();
+    }
+    $array_ptr = &$array_ptr[$arr_key];
+  }
+
+  // set the final key
+  if($merge && isset($array_ptr[$last_key]) && is_array($array_ptr[$last_key])) {
+    $array_ptr[$last_key] = array_merge($array_ptr[$last_key], (array) $value);
+  }
+  else {
+    $array_ptr[$last_key] = $value;
+  }
 }
