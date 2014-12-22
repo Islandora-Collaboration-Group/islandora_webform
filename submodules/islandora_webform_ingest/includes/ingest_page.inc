@@ -94,20 +94,32 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
 
             // Need to set these values in form_state for the xml_form_builder_get_form function
             $new_form_state = array(
-              'method' => 'post',
-              'rebuild' => isset($form_state['rebuild']) ? $form_state['rebuild'] : FALSE,
-              'association' => $association,
-              'datastream' => $object[$association['dsid']],
               'build_info' => array(
                 'args' => array(
                   0 => $object[$association['dsid']]
                 ),
+                'form_id' => isset($form_state['build_info']['form_id']) ? $form_state['build_info']['form_id'] : 'iwi_preview_ingest_submission_form',
               ),
+              'rebuild' => isset($form_state['rebuild']) ? $form_state['rebuild'] : FALSE,
+              'rebuild_info' => array(),
+              'redirect' => NULL,
+              'temporary' => array(),
+              'submitted' => FALSE,
+              'executed' => FALSE,
+              'programmed' => FALSE,
+              'programmed_bypass_access_check' => TRUE,
+              'cache' => FALSE,
+              'method' => 'post',
+              'groups' => array(),
+              'buttons' => array(),
+              'input' => array(),
+              'datastream' => $object[$association['dsid']],
+              'association' => $association,
             );
 
             $xml = $new_form_state['datastream']->content;
             $form_name = $association['form_name'];
-            unset($form_state['storage'][FormStorage::STORAGE_ROOT]);
+//            unset($form_state['storage'][FormStorage::STORAGE_ROOT]);
 
             $new_form[$association['dsid']] = xml_form_builder_get_form($new_form, $new_form_state, $form_name, $xml);
 
@@ -119,6 +131,7 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
                 )
               )
             );
+            // Fill in the submitted value in the form
             iwi_array_path_set_value($new_form[$association['dsid']], $mapping->data['field'], $field_submitted_value);
 
 
@@ -165,6 +178,20 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
   return $aggregate_form;
 }
 
+//function xml_form_builder_edit_datastream_form_metadata_form_submit(array $form, array &$form_state) {
+//  $datastream = $form_state['datastream'];
+//  $association = $form_state['association'];
+//  $object = islandora_object_load($datastream->parent->id);
+//
+//  $title_field = drupal_array_get_nested_value($form, $association['title_field']);
+//  $label = $title_field['#value'];
+//
+//  $xml_form = new XMLForm($form_state);
+//  $document = $xml_form->submit($form, $form_state);
+//  dpm(get_defined_vars());
+//  xml_form_builder_update_object($object, $association, $document, $label);
+//  $form_state['redirect'] = "islandora/object/{$object->id}/manage";
+//}
 
 /**
  * Form-submit callback for islandora webform ingest submission page
@@ -174,15 +201,34 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
  */
 function iwi_ingest_page_form_submit($form, &$form_state) {
   if (!empty($form['#datastreams']) && !empty($form['#object'])) {
+    dqdpm($form);
+    dqdpm($form_state);
+
     foreach ($form['#datastreams'] as $dsid => $association) {
-      $datastream = islandora_datastream_load($dsid, $form['#object']);
-      if(isset($form_state['values'][$dsid])) {
-        $form_datastream = $form_state['values'][$dsid];
-//        $xml_form = new XMLForm($form_datastream);
-//        $document = $xml_form->submit($form, $form_state);
+      dqdpm($association);
+      if (isset($form_state['values'][$dsid]) && isset($form[$dsid][$dsid])) {
+        if (isset($association['form_name'])) {
+
+          // Importing through xml form
+          $sub_form = $form[$dsid][$dsid];
+          $xml_form = new XMLForm($sub_form);
+          $new_form_state = $form_state;
+          $new_form_state['input'] = $form_state['input'][$dsid];
+          $new_form_state['values'] = $form_state['values'][$dsid];
+          dqdpm($sub_form);
+          dqdpm($new_form_state);
+          dqdpm($new_form_state['values']);
+          dqdpm($xml_form);
+//        unset($sub_form['storage']);
+          $document = $xml_form->submit($sub_form, $new_form_state);
 //      xml_form_builder_update_object($form['#object'], $association, $document, $label);
-//      $form_state['redirect'] = "islandora/object/{$object->id}/manage";
+        }
+
+        // Not importing through xml form
+        // TODO
+        dqdpm(get_defined_vars());
       }
     }
   }
+  dqdpm(get_defined_vars());
 }
