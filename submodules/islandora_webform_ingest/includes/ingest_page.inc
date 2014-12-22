@@ -223,10 +223,12 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
           $document = $xml_form->submit($sub_form, $new_form_state);
 //      xml_form_builder_update_object($form['#object'], $association, $document, $label);
         }
+        else {
+          // Not importing through xml form
+          // TODO
+          dqdpm(get_defined_vars());
 
-        // Not importing through xml form
-        // TODO
-        dqdpm(get_defined_vars());
+        }
       }
     }
   }
