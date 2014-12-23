@@ -201,33 +201,36 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
  */
 function iwi_ingest_page_form_submit($form, &$form_state) {
   if (!empty($form['#datastreams']) && !empty($form['#object'])) {
-    dqdpm($form);
-    dqdpm($form_state);
-
+    $object = $form['#object'];
     foreach ($form['#datastreams'] as $dsid => $association) {
-      dqdpm($association);
       if (isset($form_state['values'][$dsid]) && isset($form[$dsid][$dsid])) {
-        if (isset($association['form_name'])) {
 
-          // Importing through xml form
+        // Get the datastream object that we'll be ingesting into
+        $datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
+
+        // Handle xml forms
+        if (isset($association['form_name'])) {
           $sub_form = $form[$dsid][$dsid];
           $xml_form = new XMLForm($sub_form);
           $new_form_state = $form_state;
           $new_form_state['input'] = $form_state['input'][$dsid];
           $new_form_state['values'] = $form_state['values'][$dsid];
-          dqdpm($sub_form);
-          dqdpm($new_form_state);
-          dqdpm($new_form_state['values']);
-          dqdpm($xml_form);
-//        unset($sub_form['storage']);
+          if(!empty($sub_form['storage'][FormStorage::STORAGE_ROOT])) {
+            $new_form_state['storage'][FormStorage::STORAGE_ROOT] = $sub_form['storage'][FormStorage::STORAGE_ROOT];
+            unset($sub_form['storage'][FormStorage::STORAGE_ROOT]);
+          }
+          dqdpm(get_defined_vars());
           $document = $xml_form->submit($sub_form, $new_form_state);
 //      xml_form_builder_update_object($form['#object'], $association, $document, $label);
         }
         else {
-          // Not importing through xml form
-          // TODO
-          dqdpm(get_defined_vars());
-
+          // Handle other mimetypes
+          switch($association['mime']) {
+            case 'text/plain':
+              $datastream->content = $form_state['values'][$dsid];
+              $object->ingestDatastream($datastream);
+              break;
+          }
         }
       }
     }
