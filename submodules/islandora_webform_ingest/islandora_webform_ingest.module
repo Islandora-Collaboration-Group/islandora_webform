@@ -104,13 +104,21 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
         );
 
         // Load most the form elements
-        $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, $cmodel, $dsmimetypes));
+       $iwi_cid = $form['cid']['#value'] ? $form['cid']['#value'] : iwi_next_cid($form['nid']);
+        $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, $iwi_cid, $cmodel, $dsmimetypes));
 
         $form['#submit'][] = 'iwi_webform_component_edit_form_submit';
         $form['#validate'][] = 'iwi_webform_component_edit_form_validate';
       }
     }
   }
+}
+
+function islandora_webform_ingest_webform_component_delete($component) {
+  db_delete('islandora_webform_ingest_map')
+    ->condition('nid', $component['nid'])
+    ->condition('cid', $component['cid'])
+    ->execute();
 }
 
 /**
@@ -148,7 +156,7 @@ function iwi_webform_component_edit_form_validate($form, &$form_state) {
  * @param $form_state
  * @return array
  */
-function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, $cmodel, $mimetypes = array()) {
+function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, $cid, $cmodel, $mimetypes = array()) {
 
   module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
 
@@ -162,8 +170,8 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
   foreach ($datastreams as $datastream => $dsdata) {
     $dsoptions[$datastream] = $datastream;
   }
-
-  $saved_values = iwi_get_saved_component_mapping($form['#node']->nid, $form['cid']['#value']);
+dpm(get_defined_vars());
+  $saved_values = iwi_get_saved_component_mapping($form['#node']->nid, $cid);
 
   // Set defaults from form state if present, from saved otherwise, and if neither, set as NULL.
   $mode_value = isset($form_state['values']['ingest']['mode']) ? $form_state['values']['ingest']['mode'] : (isset($saved_values['mode']) ? $saved_values['mode'] : NULL);
