@@ -63,143 +63,108 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
       'submission' => webform_submission_render($webform, $submission, NULL, NULL),
     ),
     '#object' => $object,
+    '#datastreams' => $datastreams,
+    '#submission' => $submission,
   );
 
 
   // Build array of ingest datastreams, each with its component mappings
   $ingest_datastreams = array();
+
+  // Loop through the component mappings, adding submitted values to appropriate datastream sub-forms
   foreach ($mappings as $mapping) {
-    // Check if we have submitted data for this component
+    // Check if we have submitted data for this component, if not, skip it entirely
     if (isset($submission->data[$mapping->cid][0])) {
       $submitted_value = $submission->data[$mapping->cid][0];
 
       $component_info = $webform->webform['components'][$mapping->cid];
+      $dsid = $mapping->data['datastream_id'];
+      $dsindex = $mapping->data['datastream'];
+      $association = $datastreams[$dsindex];
 
-      if (empty($ingest_datastreams[$mapping->data['datastream']])) {
-        $dsindex = $mapping->data['datastream'];
+      // If we haven't mapped anything on this datastream yet, we need to add the
+      // datastream sub-form as a fieldset to the aggregate form.
+      if (empty($aggregate_form[$dsid][$dsid])) {
 
-        if (!empty($datastreams[$dsindex])) {
+        $new_form = array(
+          '#title' => isset($association['form_name']) ? $association['form_name'] : $dsid,
+          '#type' => 'fieldset',
+          '#collapsible' => FALSE,
 
-          $association = $datastreams[$dsindex];
+        );
 
-          $new_form = array(
-            '#title' => isset($association['form_name']) ? $association['form_name'] : $association['dsid'],
-            '#type' => 'fieldset',
-            '#collapsible' => FALSE,
+        // If datastream has an edit form, add that to the aggregated form
+        if (isset($association['form_name'])) {
 
+          // Build the form array from schema...
+          $new_form_state = array();
+
+          $new_form_state['association'] = $association;
+          $new_form_name = $association['form_name'];
+          $xml = $object[$dsid]->content;
+
+          $new_form_tmp = array();
+          // This is where the magic happens and all xml_form components are initialized.
+          $new_form_tmp = xml_form_builder_get_form($new_form_tmp, $new_form_state, $new_form_name, $xml);
+
+
+          $new_form[$dsid] = $new_form_tmp;
+
+          $new_form[$dsid]['pre_form_state'] = array(
+            '#type' => 'value',
+            '#value' => $new_form_state
           );
-          
-          // If datastream has an edit form, add that to the aggregated form
-          if (isset($association['form_name'])) {
-			  $new_form_state=array();
-			 //Diego:We don't need a full form_state here, just the enough data so we get a form_state['storage'] back from xml_form_builder_get_form. Passing this to the next handler avoids recreating the XML form from scratch.
-          
-		    // Need to set these values in form_state for the xml_form_builder_get_form function
-           
-		    /*$new_form_state = array(
-              'build_info' => array(
-                'args' => array(
-                  0 => $object[$association['dsid']]
-                ),
-                'form_id' => isset($form_state['build_info']['form_id']) ? $form_state['build_info']['form_id'] : 'iwi_preview_ingest_submission_form',
-              ),
-              'rebuild' => isset($form_state['rebuild']) ? $form_state['rebuild'] : FALSE,
-              'rebuild_info' => array(),
-              'redirect' => NULL,
-              'temporary' => array(),
-              'submitted' => FALSE,
-              'executed' => FALSE,
-              'programmed' => FALSE,
-              'programmed_bypass_access_check' => TRUE,
-              'cache' => FALSE,
-              'method' => 'post',
-              'groups' => array(),
-              'buttons' => array(),
-              'input' => array(),
-              'datastream' => $object[$association['dsid']],
-              'association' => $association,
-            );*/
-			
-            //$xml = $new_form_state['datastream']->content;
-            //$form_name = $association['form_name'];
-           //unset($form_state['storage'][FormStorage::STORAGE_ROOT]);
-		 
-		 //Diego: No need for passing the datastream around.
-		 //Why? Tuque is tricky. If we assign a datastream to this form again, then Tuque want's to edit the datastream version! And we already have the object. So the target datastream can be derived from association.
-		
-             //$new_form_state['datastream']=$object[$association['dsid']];
-			 $new_form_state['association']=$association;
-			 $new_form_name=$association['form_name'];
-		     $xml =  $object[$association['dsid']]->content;
-			 
-			 $new_form_tmp=array();
-			 $new_form_tmp = xml_form_builder_get_form($new_form_tmp, $new_form_state, $new_form_name, $xml); //This is where the magic happens and all xml_form components are initialized,
-		    
-			 
-			 $new_form[$association['dsid']]=$new_form_tmp;
-			 
-			
-			 dpm($new_form_state);
-			 $new_form[$association['dsid']]['pre_form_state']= array(
-    			 '#type' => 'value',
-   			     '#value' => $new_form_state
-		  );
-			 
-		     //Diego:I think you already managed this, but just in case.
-  		     $title_field_parents = $association['title_field'];
-  		     $title_field_parents[] = '#required';
-  		     $title_field = drupal_array_set_nested_value($new_form[$association['dsid']], $title_field_parents, TRUE);
-			 
-		   
-		   
-		  
-		 
-		   
-		 
-			
-			$field_submitted_value = array(
-              '#default_value' => $submitted_value,
-              '#attributes' => array(
-                'class' => array(
-                  'submitted-value'
-                )
-              )
-            );
-            // Fill in the submitted value in the form
-            iwi_array_path_set_value($new_form[$association['dsid']], $mapping->data['field'], $field_submitted_value);
 
+          //Diego:I think you already managed this, but just in case.
+          $title_field_parents = $association['title_field'];
+          $title_field_parents[] = '#required';
+          // TODO: where is $title_field supposed to be used?
+          $title_field = drupal_array_set_nested_value($new_form[$dsid], $title_field_parents, TRUE);
 
-            $ingest_datastreams[$dsindex]['form'] = $form;
+          $ingest_datastreams[$dsindex]['form'] = $form;
 
-          }
-          else {
-            // Show a simple input element
-            $new_form[$association['dsid']] = array(
-              '#type' => $component_info['type'],
-              '#default_value' => $submission->data[$mapping->cid][0],
-              '#attributes' => array(
-                'class' => array(
-                  'submitted-value'
-                )
-              )
-            );
-          }
-
-
-          $ingest_datastreams[$dsindex]['datastream'] = $datastreams[$dsindex];
-
-          // Merge into aggregate
-          $aggregate_form[$association['dsid']] = $new_form;
-
-          // Keep a list of which datastreams we are ingesting
-          $aggregate_form['#datastreams'][$association['dsid']] = $association;
         }
+        else {
+          // Show a simple input element inside the sub-form
+          $new_form[$dsid] = array(
+            '#type' => $component_info['type'],
+            // Since this datastream form only has a single input element
+            // we can set the default value here when we create the form.
+            '#default_value' => $submission->data[$mapping->cid][0],
+            '#attributes' => array(
+              'class' => array(
+                'submitted-value'
+              )
+            )
+          );
+        }
+
+        // Merge the sub-form into aggregate
+        $aggregate_form[$dsid] = $new_form;
+      }
+      // Done building the form...
+
+
+      // If this is an xml form, insert the submitted value on
+      // the correct input element
+      if (!empty($aggregate_form[$dsid][$dsid]) && isset($association['form_name'])) {
+        $field_submitted_value = array(
+          '#default_value' => $submitted_value,
+          '#attributes' => array(
+            'class' => array(
+              'submitted-value'
+            )
+          )
+        );
+        // Insert the submitted value into the form
+        // TODO: Deal with mode (append, replace) and multi-value fields here?
+        iwi_array_path_set_value($aggregate_form[$dsid][$dsid], $mapping->data['field'], $field_submitted_value);
       }
 
       $ingest_datastreams[$mapping->data['datastream']]['mappings'][] = $mapping;
     }
   }
-   
+
   // Add submit handler
   $aggregate_form['submit'] = array(
     '#type' => 'submit',
@@ -220,38 +185,75 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
  */
 function iwi_ingest_page_form_submit($form, &$form_state) {
   if (!empty($form['#datastreams']) && !empty($form['#object'])) {
-    foreach ($form['#datastreams'] as $dsid => $association) {
+
+    $object = $form['#object'];
+
+    foreach ($form['#datastreams'] as $association) {
+      $dsid = $association['dsid'];
       if (isset($form_state['values'][$dsid]) && isset($form[$dsid][$dsid])) {
+
+        // Importing via xml form?
         if (isset($association['form_name'])) {
 
-          // Importing through xml form
+          // Pull out the sub form from the aggregate form
           $sub_form = $form[$dsid][$dsid];
-		  $new_form_state=$form_state['values'][$dsid]['pre_form_state']; //Diego: reloading the original sub_form $form_state;
-		  unset($form_state['values'][$dsid]['pre_form_state']); //Diego: unsetting now pre_form_state from the main $form_state values: That was just a temporary hack. We don't need nor wan't a form_state inside a form_state!
+
+          // Reload the original sub_form $form_state
+          $new_form_state = $form_state['values'][$dsid]['pre_form_state'];
+
+          // Unset pre_form_state from the main $form_state: We don't need
+          // nor want a form_state inside a form_state!
+          unset($form_state['values'][$dsid]['pre_form_state']);
+
+          // Load the input/values to our new form state
           $new_form_state['input'] = $form_state['input'][$dsid];
           $new_form_state['values'] = $form_state['values'][$dsid];
-          dpm($new_form_state);
-		  $xml_form = new XMLForm($new_form_state);
-		  
-		  
-          $document = $xml_form->submit($sub_form, $new_form_state);
-		  $title_field= drupal_array_get_nested_value($sub_form , $association['title_field']);
-  		  $label = $title_field['#value'];
-		   // Diego: enable if you preview the XML after the submission was done
-		   //dpm(dom_document_pretty_print($document->document));
-          xml_form_builder_update_object($form['#object'], $association, $document,$label);		
-        }
-        else {
-          // Not importing through xml form
-          // TODO
-         // dqdpm(get_defined_vars());
 
+          // Create XMLForm object from new form state
+          $xml_form = new XMLForm($new_form_state);
+
+          // Process the form
+          $document = $xml_form->submit($sub_form, $new_form_state);
+
+          $title_field = drupal_array_get_nested_value($sub_form, $association['title_field']);
+          $label = $title_field['#value'];
+
+          // Enable to preview the XML after the submission was done...
+          //dpm(dom_document_pretty_print($document->document));
+
+          // Update the islandora object with this datastream
+          xml_form_builder_update_object($form['#object'], $association, $document, $label);
+        }
+        // Done handling form-based datastream
+
+        // Handle other datastream mimetypes
+        else {
+          // TODO: Do we need to itemize each mime type?
+          // Get the datastream object that we'll be ingesting into
+          $datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
+          switch ($association['mime']) {
+            case 'text/plain':
+              $datastream->content = $form_state['values'][$dsid];
+              $object->ingestDatastream($datastream);
+              break;
+            case 'application/pdf':
+            case 'image/jpeg':
+              $file = file_load($form_state['values'][$dsid]);
+              $file_path = drupal_realpath($file->uri);
+              $datastream->setContentFromFile($file_path, FALSE);
+              $datastream->label = $file->filename;
+              $datastream->mimetype = $file->filemime;
+              $object->ingestDatastream($datastream);
+              break;
+            default:
+              drupal_set_message(t('%mime is not a supported mime type for ingest', array('%mime' => $association['mime']), 'error'));
+              break;
+          }
         }
       }
     }
     iwi_record_ingested($form['#submission'], $object);
   }
-  //dqdpm(get_defined_vars());
 }
 
 /**
