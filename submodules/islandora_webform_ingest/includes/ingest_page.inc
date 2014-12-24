@@ -249,6 +249,26 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
         }
       }
     }
+    iwi_record_ingested($form['#submission'], $object);
   }
   //dqdpm(get_defined_vars());
+}
+
+/**
+ * Save a record of an islandora webform ingestion
+ *
+ * @param $submission
+ * @param IslandoraFedoraObject $object
+ * @throws Exception
+ */
+function iwi_record_ingested($submission, IslandoraFedoraObject $object) {
+  $fields = array(
+    'nid' => $submission->nid,
+    'sid' => $submission->sid,
+    'pid' => $object->id,
+    'date' => REQUEST_TIME,
+    'data' => serialize($submission->data),
+  );
+
+  db_insert('islandora_webform_ingestions')->fields($fields);
 }
