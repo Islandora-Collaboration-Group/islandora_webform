@@ -282,25 +282,76 @@ function iwi_webform_content_model($webform_nid) {
  * @param string $delimiter
  * @param boolean $merge
  */
-function iwi_array_path_set_value(&$array_ptr, $path, $value, $delimiter = ':', $merge = TRUE) {
+function iwi_array_path_set_value(&$array_ptr, $path, $value, $mode = 'replace', $delimiter = ':', $merge = TRUE) {
 
   $keys = explode($delimiter, $path);
-  // extract the last key
+
+  // If there is a zero in the path, this is a multiple-value field.
+  $multi_index = array_search('0', $keys);
+
+  // figure out the last key
+  end($keys);
+
+  // The last key is a multi-value field if zero is the last key
+  $last_key_multi = $multi_index === key($keys);
+
+  // Pop off the last key; it gets handled differently at the end
   $last_key = array_pop($keys);
 
-  // walk/build the array to the specified key
-  foreach($keys as $arr_key) {
+  // walk/build the form array up to but not including the last key
+  foreach ($keys as $arr_index => $arr_key) {
     if (!array_key_exists($arr_key, $array_ptr)) {
       $array_ptr[$arr_key] = array();
     }
+
+    // Look to see if the section of the form we are on needs to be cloned
+    if ($arr_index === $multi_index && $mode == 'append') {
+      // Prepending a multi-value sub-form, clone the sub-form and add it to the end.
+      // We will push our values into the original.
+      array_push($array_ptr, arrayCopy($array_ptr[$arr_key]));
+    }
+    // Change array root and loop again
     $array_ptr = &$array_ptr[$arr_key];
   }
 
-  // set the final key
-  if($merge && isset($array_ptr[$last_key]) && is_array($array_ptr[$last_key])) {
-    $array_ptr[$last_key] = array_merge($array_ptr[$last_key], (array) $value);
+  // Deal with appending on the last key
+  if ($mode == 'append' && !empty($array_ptr[$last_key]['#default_value'])) {
+    // If last key is multiple, add a copy of the existing last key to the end.
+    // Because only the item at index zero is editable, we keep the original
+    // last key. In effect "prepending" instead of appending.
+    if ($last_key_multi) {
+      array_unshift($array_ptr, $array_ptr[$last_key]);
+    }
+    else {
+      // It's not a multi-value field. Deal with appending original value with
+      // submitted value in text field
+      if (!empty($array_ptr[$last_key]['#default_value']) && in_array(array('textarea', 'textfield'), $array_ptr[$last_key]['#type'])) {
+        $value['#default_value'] = $array_ptr[$last_key]['#default_value'] . "\n" . $value['#default_value'];
+      }
+    }
+  }
+
+  // Set the value at the last key
+  if ($merge && isset($array_ptr[$last_key]) && is_array($array_ptr[$last_key])) {
+    $array_ptr[$last_key] = drupal_array_merge_deep($array_ptr[$last_key], (array) $value);
   }
   else {
     $array_ptr[$last_key] = $value;
   }
+}
+
+function arrayCopy(array $array) {
+  $result = array();
+  foreach ($array as $key => $val) {
+    if (is_array($val)) {
+      $result[$key] = arrayCopy($val);
+    }
+    elseif (is_object($val)) {
+      $result[$key] = clone $val;
+    }
+    else {
+      $result[$key] = $val;
+    }
+  }
+  return $result;
 }

@@ -157,8 +157,7 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
           )
         );
         // Insert the submitted value into the form
-        // TODO: Deal with mode (append, replace) and multi-value fields here?
-        iwi_array_path_set_value($aggregate_form[$dsid][$dsid], $mapping->data['field'], $field_submitted_value);
+        iwi_array_path_set_value($aggregate_form[$dsid][$dsid], $mapping->data['field'], $field_submitted_value, $mapping->data['mode']);
       }
 
       $ingest_datastreams[$mapping->data['datastream']]['mappings'][] = $mapping;
