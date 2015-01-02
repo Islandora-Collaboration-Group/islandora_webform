@@ -3,8 +3,6 @@
 
 /**
  * Implements hook_schema().
- *
- * @return mixed
  */
 function islandora_webform_schema() {
 
@@ -44,7 +42,7 @@ function islandora_webform_schema() {
         'description' => 'Defines whether the link should appear on all objects matching the filters, or only on objects tagged for this webform. Options are "all" and "tagged"',
         'type' => 'varchar',
         'length' => 255,
-        'default' => 'tagged'
+        'default' => 'tagged',
       ),
       'link_text' => array(
         'description' => 'Sets the text for the link that appears on the object page',
@@ -62,7 +60,7 @@ function islandora_webform_schema() {
       'cmodel_filter' => array('cmodel_filter'),
       'pid_filter' => array('pid_filter'),
     ),
-    'primary key' => array( 'entity_id'),
+    'primary key' => array('entity_id'),
   );
 
   return $schema;
