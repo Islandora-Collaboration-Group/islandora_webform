@@ -35,7 +35,7 @@ function islandora_webform_admin(array $form, array &$form_state) {
         'islandora_webform_link_target_new_page' => array(
           '#type' => 'checkbox',
           '#title' => t('Open webforms in new window'),
-          '#default_value' => variable_get('islandora_webform_link_target_new_page', 0),
+          '#default_value' => variable_get('islandora_webform_link_target_new_page', 1),
           '#description' => t('Check if you want islandora webform links to open in a new page. This allows the user to have the object page and the webform page open at the same time.'),
           '#required' => FALSE,
         ),
