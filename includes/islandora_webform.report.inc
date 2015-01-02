@@ -14,8 +14,14 @@ module_load_include('inc', 'webform', 'includes/webform.submissions');
  * Retrieve table of webform submissions for a given object.
  *
  * @param AbstractObject $object
+ *   an islandora repository object
+ *
  * @param int $pager_count
+ *   the number of rows per page
+ *
  * @return string
+ *   themed table of submissions for this object
+ *
  * @throws Exception
  */
 function islandora_webform_results_object_submissions_page(AbstractObject $object, $pager_count = 10) {
@@ -40,13 +46,13 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
     $pager_count = $_GET['results'];
   }
 
-  $header =  array(
+  $header = array(
     array('data' => t('Webform'), 'field' => 'node_title'),
     array('data' => t('#'), 'field' => 'sid', 'sort' => 'desc'),
     array('data' => t('Submitted'), 'field' => 'submitted'),
     array('data' => t('User'), 'field' => 'name'),
     array('data' => t('IP Address'), 'field' => 'remote_addr'),
-    array('data' => t('Operations'), 'colspan' => module_exists('print') ? 5 : 3)
+    array('data' => t('Operations'), 'colspan' => module_exists('print') ? 5 : 3),
   );
 
   $operation_column = end($header);
@@ -84,7 +90,7 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
   }
 
   $element['#theme'] = 'webform_results_submissions';
-  // No harm in using whatever webform node came last as the $node here
+  // No harm in using whatever webform node came last as the $node here.
   $element['#node'] = $node;
   $element['#object'] = $object;
   $element['#submissions'] = $submissions;
@@ -97,7 +103,7 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
   $element['table']['#rows'] = $rows;
   $element['table']['#operation_total'] = $operation_total;
 
-  // Let other modules modify this page, e.g. for ingestion
+  // Let other modules modify this page, e.g. for ingestion.
   drupal_alter('iw_results_object_submissions_page_element', $element);
 
   return drupal_render($element);

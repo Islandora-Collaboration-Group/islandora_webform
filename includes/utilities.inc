@@ -7,13 +7,14 @@
 
 
 /**
- * Return a list those models that are content models
+ * Return a list those models that are content models.
  *
- * Expects a content models array produced by $object->models
- * (array values are the pids for those content models)
+ * @param array $models
+ *   Content models array produced by $object->models
+ *   (array values are the pids for those content models)
  *
- * @param $models
  * @return array
+ *   A list of content models
  */
 function _iw_content_models($models) {
   module_load_include('inc', 'islandora', 'includes/utilities');
@@ -27,14 +28,15 @@ function _iw_content_models($models) {
  * Filter by type: 'collections' or 'cmodels'
  *
  * @string $type
- *  'collections' or 'cmodels'
+ *   'collections' or 'cmodels'
+ *
  * @return array
- *  A list of object pids and their labels
+ *   A list of object pids and their labels
  */
 function iw_get_collections_or_content_models($type) {
   $types = array(
     'collections' => 'islandora:collectionCModel',
-    'cmodels' => 'fedora-system:ContentModel-3.0'
+    'cmodels' => 'fedora-system:ContentModel-3.0',
   );
   $type_for_query = '<info:fedora/' . $types[$type] . '>';
   // Query the rindex to get all collections.
@@ -58,9 +60,10 @@ function iw_get_collections_or_content_models($type) {
 
 
 /**
- * Get a list of enabled solution packs
+ * Get a list of enabled solution packs.
  *
  * @return array
+ *   a list of enabled solution packs
  */
 function _iw_get_solution_packs() {
   $solution_packs = &drupal_static(__FUNCTION__);
@@ -79,10 +82,13 @@ function _iw_get_solution_packs() {
 }
 
 /**
- * Get a list of all islandora_webforms applicable to a given IslandoraFedoraObject
+ * Get a list of all islandora_webforms applicable to a IslandoraFedoraObject.
  *
  * @param IslandoraFedoraObject $object
+ *   a repository object
+ *
  * @return mixed
+ *   array of islandora webform records or FALSE if none found
  */
 function islandora_webform_object_get_webforms(IslandoraFedoraObject $object) {
 
@@ -101,13 +107,13 @@ function islandora_webform_object_get_webforms(IslandoraFedoraObject $object) {
       ':cmodels' => $in_cmodels,
     );
 
-    // If the object is in a collection, then add the collections filter
+    // If the object is in a collection, then add the collections filter.
     if (!empty($in_collections)) {
       $sql .= "AND ( w.collection_filter = '' OR w.collection_filter IN (:collections) )";
       $query_args[':collections'] = $in_collections;
     }
     // If the object is not a member of a collection,
-    // then filter by collection_filter is "Any"
+    // then filter by collection_filter is "Any".
     else {
       $sql .= "AND ( w.collection_filter = '' )";
     }
@@ -120,10 +126,13 @@ function islandora_webform_object_get_webforms(IslandoraFedoraObject $object) {
 
 
 /**
- * Get a list of all islandora_webforms applicable to a given PID
+ * Get a list of all islandora_webforms applicable to a given PID.
  *
  * @param string $pid
+ *   Fedora object ID
+ *
  * @return mixed
+ *   array of islandora webform records or FALSE if none found
  */
 function islandora_webform_pid_get_webforms($pid) {
   $object = islandora_object_load($pid);
@@ -138,8 +147,11 @@ function islandora_webform_pid_get_webforms($pid) {
 /**
  * Get the islandora configuration for a given webform
  *
- * @param $node
+ * @param object $node
+ *   A webform node
+ *
  * @return mixed
+ *   A single islandora webform configuration record, or FALSE if none found.
  */
 function iw_node_islandora_webform($node) {
 
@@ -152,10 +164,13 @@ function iw_node_islandora_webform($node) {
 }
 
 /**
- * Given a submission id, get the fedora object pid that it relates to
+ * Given a submission id, get the fedora object pid that it relates to.
  *
- * @param $sid
+ * @param int $sid
+ *   A webform submission ID
+ *
  * @return mixed
+ *   The islandora object pid, or FALSE if not found
  */
 function iw_get_submission_pid($sid) {
   $query = db_select('webform_submitted_data', 'd')->fields('d', array('data'));
@@ -166,10 +181,12 @@ function iw_get_submission_pid($sid) {
 }
 
 /**
- * Given a submission id, get the fedora object that it relates to
+ * Given a submission id, get the fedora object that it relates to.
  *
- * @param $sid
- * @return mixed
+ * @param int $sid
+ *   A webform submission ID
+ *
+ * @return IslandoraFedoraObject or NULL
  */
 function iw_get_submission_object($sid) {
   $pid = iw_get_submission_pid($sid);

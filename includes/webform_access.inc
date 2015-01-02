@@ -1,13 +1,18 @@
 <?php
 
 /**
- * Utility function to determine if this user can access and submit this webform
+ * Utility function to determine if user can access and submit this webform.
  *
- * This code is mostly lifted from the webform module's webform_node_view function
+ * This code is mostly lifted from the webform module's webform_node_view
+ * function.
  *
- * @param $node
+ * @param object $node
+ *   The webform node object
  * @param null $user
+ *   A user object, or NULL
+ *
  * @return bool
+ *   If true, the user can submit; if false, the user cannot submit.
  *
  */
 function islandora_webform_user_can_submit_webform($node, $user = NULL) {

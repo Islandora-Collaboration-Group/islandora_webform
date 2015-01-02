@@ -6,12 +6,17 @@
  */
 
 /**
- * Create a islandora configuration page for webforms
+ * Create a islandora configuration page for webforms.
  *
- * @param $form
- * @param $form_state
- * @param $node
- * @return mixed
+ * @param array $form
+ *   A drupal form array
+ * @param array $form_state
+ *   A drupal form_state array
+ * @param object $node
+ *   The webform node object
+ *
+ * @return array
+ *   A drupal form render array
  */
 function islandora_webform_configure_form($form, &$form_state, $node) {
 
@@ -26,13 +31,13 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
   );
 
   $form_state['create_islandora_webform_data'] = FALSE;
-  if(!empty($node->nid)) {
-    $defaults = db_select('islandora_webform_webforms','w')
+  if (!empty($node->nid)) {
+    $defaults = db_select('islandora_webform_webforms', 'w')
       ->fields('w')
       ->condition('w.entity_id', $node->nid)
       ->execute()->fetchAssoc();
   }
-  if(empty($defaults)) {
+  if (empty($defaults)) {
     $form_state['create_islandora_webform_data'] = TRUE;
 
     $defaults = array(
@@ -74,14 +79,14 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
     'cmodel_filter' => array(
       '#type' => 'select',
       '#title' => t('Content model filter'),
-      '#description' => t(''),
+      '#description' => '',
       '#default_value' => $defaults['cmodel_filter'],
       '#options' => $cmodel_options,
     ),
     'collection_filter' => array(
       '#type' => 'select',
       '#title' => t('Collection filter'),
-      '#description' => t(''),
+      '#description' => '',
       '#default_value' => $defaults['collection_filter'],
       '#options' => $collection_options,
     ),
@@ -95,7 +100,7 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
     'scope' => array(
       '#type' => 'select',
       '#title' => t('Add a link to...'),
-      '#description' => t(''),
+      '#description' => '',
       '#default_value' => $defaults['scope'],
       '#options' => array(
         'all' => 'All matched objects',
@@ -126,10 +131,12 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
 }
 
 /**
- * Submit handler for islandora webform configuration page
+ * Submit handler for islandora webform configuration page.
  *
- * @param $node
- * @param $form_state
+ * @param object $node
+ *   The webform node
+ * @param array $form_state
+ *   The Drupal form_state array
  */
 function islandora_webform_configure_form_submit($node, $form_state) {
 
@@ -146,7 +153,8 @@ function islandora_webform_configure_form_submit($node, $form_state) {
       'link_text' => $form_state['values']['link_text'],
       'link_help' => $form_state['values']['link_help'],
     ))
-    ->execute()) {
+    ->execute()
+  ) {
     drupal_set_message(t('Islandora configuration saved.'));
   }
   else {
@@ -156,30 +164,33 @@ function islandora_webform_configure_form_submit($node, $form_state) {
 
 
 /**
- * Adds an islandora_object_pid textfield to a webform if one does not
- * already exist.
+ * Adds an islandora_object_pid textfield to a webform.
  *
- * @param $nid
+ * Only add if one does not already exist.
+ *
+ * @param int $nid
+ *   The node id for the webform
+ *
  * @throws Exception
  */
 function _islandora_webform_insert_pid_component($nid) {
 
   $webform = node_load($nid);
-  if($webform) {
+  if ($webform) {
     $component = FALSE;
 
-    // Look to see if the component already exists, if so, then do nothing
+    // Look to see if the component already exists, if so, then do nothing.
     if (!empty($webform->webform['components'])) {
-      foreach($webform->webform['components'] as $test_component) {
-        if($test_component['form_key'] == 'islandora_object_pid') {
+      foreach ($webform->webform['components'] as $test_component) {
+        if ($test_component['form_key'] == 'islandora_object_pid') {
           $component = $test_component;
           break;
         }
       }
     }
 
-    // If no component found, then add it and save
-    if(!$component) {
+    // If no component found, then add it and save.
+    if (!$component) {
       $component = array(
         'name' => 'Islandora object PID',
         'form_key' => 'islandora_object_pid',
@@ -189,13 +200,12 @@ function _islandora_webform_insert_pid_component($nid) {
         'extra' => array(
           'title_display' => 'inline',
           'private' => 0,
-        )
+        ),
       );
       webform_component_defaults($component);
 
       $webform->webform['components'][] = $component;
       node_save($webform);
-      dpm($webform);
     }
   }
 }
