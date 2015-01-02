@@ -23,14 +23,6 @@ function islandora_webform_menu() {
     'type'             => MENU_NORMAL_ITEM,
     'weight'           => -1,
   );
-  $items['admin/config/islandora_webform/test'] = array(
-    'title'            => 'Test Page',
-    'description'      => 'Utility page for testing development work',
-    'page callback'    => 'islandora_webform_test_page',
-    'access arguments' => array('cove admin'),
-    'file'             => 'test.inc',
-    'file path'        => drupal_get_path('module', 'islandora_webform') . '/includes',
-  );
   $items['node/%webform_menu/webform/islandora'] = array(
     'title'            => 'Islandora settings',
     'page callback'    => 'drupal_get_form',
