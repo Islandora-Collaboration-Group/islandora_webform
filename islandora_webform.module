@@ -11,61 +11,59 @@
 
 /**
  * Implements hook_menu().
- *
- * @return mixed
  */
 function islandora_webform_menu() {
   $items['admin/islandora/configure/iw'] = array(
-    'title' => 'Islandora Webform',
-    'description' => 'Configuration page for Islandora Webform module',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('islandora_webform_admin'),
-    'file' => 'includes/admin.form.inc',
+    'title'            => 'Islandora Webform',
+    'description'      => 'Configuration page for Islandora Webform module',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('islandora_webform_admin'),
+    'file'             => 'includes/admin.form.inc',
     'access arguments' => array('administer site configuration'),
-    'type' => MENU_NORMAL_ITEM,
-    'weight' => -1,
+    'type'             => MENU_NORMAL_ITEM,
+    'weight'           => -1,
   );
   $items['admin/config/islandora_webform/test'] = array(
-    'title' => 'Test Page',
-    'description' => 'Utility page for testing development work',
-    'page callback' => 'islandora_webform_test_page',
+    'title'            => 'Test Page',
+    'description'      => 'Utility page for testing development work',
+    'page callback'    => 'islandora_webform_test_page',
     'access arguments' => array('cove admin'),
-    'file' => 'test.inc',
-    'file path' => drupal_get_path('module', 'islandora_webform') . '/includes',
+    'file'             => 'test.inc',
+    'file path'        => drupal_get_path('module', 'islandora_webform') . '/includes',
   );
   $items['node/%webform_menu/webform/islandora'] = array(
-    'title' => 'Islandora settings',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('islandora_webform_configure_form', 1),
-    'access callback' => 'node_access',
+    'title'            => 'Islandora settings',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('islandora_webform_configure_form', 1),
+    'access callback'  => 'node_access',
     'access arguments' => array('update', 1),
-    'file' => 'includes/webform.configure.inc',
-    'weight' => 5,
-    'type' => MENU_LOCAL_TASK,
+    'file'             => 'includes/webform.configure.inc',
+    'weight'           => 5,
+    'type'             => MENU_LOCAL_TASK,
   );
 
   $items['islandora/object/%islandora_object/submissions'] = array(
-    'title' => 'Submissions',
-    'page callback' => 'islandora_webform_results_object_submissions_page',
-    'page arguments' => array(2),
-    'access callback' => 'islandora_webform_object_results_access',
+    'title'            => 'Submissions',
+    'page callback'    => 'islandora_webform_results_object_submissions_page',
+    'page arguments'   => array(2),
+    'access callback'  => 'islandora_webform_object_results_access',
     'access arguments' => array(2),
-    'file' => 'includes/islandora_webform.report.inc',
-    'weight' => 4,
-    'type' => MENU_LOCAL_TASK,
+    'file'             => 'includes/islandora_webform.report.inc',
+    'weight'           => 4,
+    'type'             => MENU_LOCAL_TASK,
   );
 
   $items['islandora_webform/%/tag_object/%/nojs'] = array(
-    'page callback' => 'islandora_webform_action_tag_object',
-    'page arguments' => array(1, 3,4),
-    'access callback' => '_islandora_webform_user_access_or',
+    'page callback'    => 'islandora_webform_action_tag_object',
+    'page arguments'   => array(1, 3, 4),
+    'access callback'  => '_islandora_webform_user_access_or',
     'access arguments' => array(
       'manage islandora webform',
-      'islandora webform link objects'
+      'islandora webform link objects',
     ),
-    'type' => MENU_CALLBACK,
-    'file' => 'tag_object.inc',
-    'file path' => drupal_get_path('module', 'islandora_webform') . '/includes',
+    'type'             => MENU_CALLBACK,
+    'file'             => 'tag_object.inc',
+    'file path'        => drupal_get_path('module', 'islandora_webform') . '/includes',
   );
   $items['islandora_webform/%/tag_object/%/ajax'] = array(
       'delivery callback' => 'ajax_deliver',
@@ -73,54 +71,51 @@ function islandora_webform_menu() {
     + $items['islandora_webform/%/tag_object/%/nojs'];
 
   $items['islandora_webform/%/untag_object/%/nojs'] = array(
-    'page callback' => 'islandora_webform_action_untag_object',
-    'page arguments' => array(1, 3,4),
-    'access callback' => '_islandora_webform_user_access_or',
+    'page callback'    => 'islandora_webform_action_untag_object',
+    'page arguments'   => array(1, 3, 4),
+    'access callback'  => '_islandora_webform_user_access_or',
     'access arguments' => array(
       'manage islandora webform',
       'islandora webform link objects'
     ),
-    'type' => MENU_CALLBACK,
-    'file' => 'tag_object.inc',
-    'file path' => drupal_get_path('module', 'islandora_webform') . '/includes',
+    'type'             => MENU_CALLBACK,
+    'file'             => 'tag_object.inc',
+    'file path'        => drupal_get_path('module', 'islandora_webform') . '/includes',
   );
 
   $items['islandora_webform/%/untag_object/%/ajax'] = array(
-      'delivery callback' => 'ajax_deliver',
-    )
-    + $items['islandora_webform/%/untag_object/%/nojs'];
+    'delivery callback' => 'ajax_deliver',
+  ) + $items['islandora_webform/%/untag_object/%/nojs'];
 
   return $items;
 }
 
 /**
- *  Implements hook_permission().
+ * Implements hook_permission().
  */
 function islandora_webform_permission() {
   return array(
-    'manage islandora webform' => array(
-      'title' => t('Manage Islandora Webforms'),
+    'manage islandora webform'       => array(
+      'title'       => t('Manage Islandora Webforms'),
       'description' => t('Manage islandora settings on webforms.'),
     ),
     'islandora webform link objects' => array(
-      'title' => t('Link islandora objects to webforms'),
+      'title'       => t('Link islandora objects to webforms'),
       'description' => t('Permission to link individual islandora objects to webforms'),
     ),
   );
 }
 
 /**
- * Implements hook_theme
- *
- * @return array
+ * Implements hook_theme().
  */
 function islandora_webform_theme() {
   return array(
     'islandora_webform_links' => array(
-      'file' => 'theme.inc',
-      'path' => drupal_get_path('module', 'islandora_webform') . '/theme',
+      'file'      => 'theme.inc',
+      'path'      => drupal_get_path('module', 'islandora_webform') . '/theme',
       'variables' => array(
-        'webform_data' => NULL,
+        'webform_data'     => NULL,
         'islandora_object' => NULL,
       ),
     ),
@@ -129,10 +124,6 @@ function islandora_webform_theme() {
 
 /**
  * Implements hook_form_alter().
- *
- * @param $form
- * @param $form_state
- * @param $form_id
  */
 function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['#node']->type) && $form['#node']->type == 'webform' && !empty($form['submitted']['islandora_object_pid'])) {
@@ -141,7 +132,7 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
       $object = islandora_object_load($args['pid']);
       $form['submitted']['#prefix'] = '<h2 class="object-label">In regards to: <em>' . $object->label . '</em></h2>';
       $form['submitted']['islandora_object_pid']['#default_value'] = $args['pid'];
-      if(!user_access('manage islandora webform')) {
+      if (!user_access('manage islandora webform')) {
         $form['submitted']['islandora_object_pid']['#type'] = 'hidden';
         $form['submitted']['islandora_object_pid']['#title_display'] = 'invisible';
       }
@@ -152,14 +143,9 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
 /**
  * Implements hook_node_access().
  *
- * Do not allow users to view an islandora webform without the object's PID being
- * predefined.
+ * Do not allow users to view an islandora webform without the object's PID
+ * being predefined.
  * Exception if user has 'manage islandora webform' permissions.
- *
- * @param $node
- * @param $op
- * @param $account
- * @return null|string
  */
 function islandora_webform_node_access($node, $op, $account) {
   if ($op == 'view' && isset($node->type) && $node->type == 'webform' && isset($node->webform['components']) && !user_access('manage islandora webform', $account)) {
@@ -170,7 +156,7 @@ function islandora_webform_node_access($node, $op, $account) {
         break;
       }
     }
-    if ($is_islandora_webform ) {
+    if ($is_islandora_webform) {
       $args = drupal_get_query_parameters();
       if (!isset($args['pid'])) {
         drupal_set_message(t('No fedora object PID was defined'), 'error');
@@ -192,17 +178,12 @@ function islandora_webform_node_access($node, $op, $account) {
  * Look to see if the preprocess hook is the name of an islandora solution pack
  * and if so, run it through our own preprocess function which adds the webform
  * links.
- *
- * @param $variables
- *  Standard preprocess variable passed by reference and modified by this function
- * @param $hook
- *  The name of the implementing module
  */
 function islandora_webform_preprocess(&$variables, $hook) {
   module_load_include('inc', 'islandora_webform', 'includes/utilities');
   $enabled_hooks = _iw_get_solution_packs();
   if (in_array($hook, $enabled_hooks)) {
-   module_load_include('inc', 'islandora_webform', 'theme/theme');
+    module_load_include('inc', 'islandora_webform', 'theme/theme');
 
     islandora_webform_preprocess_solution_pack_module($variables);
   }
@@ -247,7 +228,7 @@ function _islandora_webform_user_access_or($permissions) {
  */
 function islandora_webform_object_results_access(AbstractObject $object) {
 
-  // Check if user has permissions
+  // Check if user has permissions.
   if (user_access('access all webform results')) {
 
     // If so, then if the count of webform submissions associated with this object
