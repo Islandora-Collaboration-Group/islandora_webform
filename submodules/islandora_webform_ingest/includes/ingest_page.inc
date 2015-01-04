@@ -12,168 +12,147 @@
  * @return array
  * @throws Exception
  */
-function iwi_ingest_page_form($form, &$form_state, $sid) {
-
+function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   module_load_include('inc', 'webform', 'includes/webform.submissions');
   module_load_include('inc', 'islandora_webform', 'includes/utilities');
   module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
   drupal_add_css(drupal_get_path('module', 'islandora_webform_ingest') . '/css/islandora_webform_ingest.css');
   form_load_include($form_state, 'inc', 'islandora_webform_ingest', '/includes/ingest_page');
   form_load_include($form_state, 'inc', 'islandora', '/includes/ingest.form');
-
-  // Get the submission data
   $submission = array_shift(webform_get_submissions(array('sid' => $sid)));
-  $webform = node_load($submission->nid);
+  //$webform = node_load($submission->nid);
   $object = $submission->islandora_object;
-
+  $webform = node_load($submission->nid);
   // Get the submission component mappings
   $mappings = iwi_get_saved_component_mappings($submission->nid);
 
   // Get the content model datastreams
   $datastreams = iwi_ingestable_datastreams(islandora_object_load(iwi_webform_content_model($submission->nid)));
-
-  // Create submission information collapsed fieldset and put at top of form
   $submission_info = array(
-    l($object->label, 'islandora/object/' . $object->id),
-    l($webform->title, 'node/' . $webform->nid),
-    l($submission->is_draft ? t('@sid (draft)', array('@sid' => $sid)) : $sid, "node/$webform->nid/submission/$sid"),
-    format_date($submission->submitted, 'short'),
-    theme('username', array('account' => $submission)),
-  );
-  $submission_header = array(
-    t('Object'),
-    t('Webform'),
-    t('Submission'),
-    t('Submitted on'),
-    t('Submitted by'),
-  );
-  $aggregate_form = array(
-    'submission_info' => array(
-      '#type' => 'fieldset',
-      '#title' => t('Submission info'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#weight' => -1,
-      'description' => array(
-        '#markup' => theme('table', array(
-          'rows' => array($submission_info),
-          'header' => $submission_header
-        )),
-      ),
-      'submission' => webform_submission_render($webform, $submission, NULL, NULL),
-    ),
-    '#object' => $object,
-    '#datastreams' => $datastreams,
-    '#submission' => $submission,
-  );
-
-
-  // Build array of ingest datastreams, each with its component mappings
+      l($object->label, 'islandora/object/' . $object->id),
+      l($webform->title, 'node/' . $webform->nid),
+      l($submission->is_draft ? t('@sid (draft)', array('@sid' => $sid)) : $sid, "node/$webform->nid/submission/$sid"),
+      format_date($submission->submitted, 'short'),
+      theme('username', array('account' => $submission)),
+    );
+    $submission_header = array(
+      t('Object'),
+      t('Webform'),
+      t('Submission'),
+      t('Submitted on'),
+      t('Submitted by'),
+    );
+    $form['submission_info'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Submission info'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#weight' => -1,
+        'description' => array(
+          '#markup' => theme('table', array(
+            'rows' => array($submission_info),
+            'header' => $submission_header
+          )),
+        ),
+        'submission' => webform_submission_render($webform, $submission, NULL, NULL),
+      );
+  $form_state['object'] = $object;
+  $form_state['datastreams']=$datastreams;
   $ingest_datastreams = array();
-
-  // Loop through the component mappings, adding submitted values to appropriate datastream sub-forms
+  $islandora_webform_formstate_values = array();
+  $cloned_elements = array(); //We are going to store the already cloned elements to avoid multiple new form elements with partial equal paths to generate multiple childs. (like a tabpanel)
+  //e.g if we have n"ame:0:namePart" and "name:0:role"...this could give to additional tab panels being added, even when both belong to only one. Used in iwi_set_form_element_byhash, utilities.inc
+ // Loop through the component mappings, adding submitted values to appropriate datastream sub-forms
   foreach ($mappings as $mapping) {
     // Check if we have submitted data for this component, if not, skip it entirely
     if (isset($submission->data[$mapping->cid][0])) {
       $submitted_value = $submission->data[$mapping->cid][0];
-
       $component_info = $webform->webform['components'][$mapping->cid];
       $dsid = $mapping->data['datastream_id'];
       $dsindex = $mapping->data['datastream'];
       $association = $datastreams[$dsindex];
-
-      // If we haven't mapped anything on this datastream yet, we need to add the
-      // datastream sub-form as a fieldset to the aggregate form.
-      if (empty($aggregate_form[$dsid][$dsid])) {
-
-        $new_form = array(
-          '#title' => isset($association['form_name']) ? $association['form_name'] : $dsid,
-          '#type' => 'fieldset',
-          '#collapsible' => FALSE,
-
-        );
-
-        // If datastream has an edit form, add that to the aggregated form
-        if (isset($association['form_name'])) {
-
-          // Build the form array from schema...
-          $new_form_state = array();
-
-          $new_form_state['association'] = $association;
-          $new_form_name = $association['form_name'];
-          $xml = $object[$dsid]->content;
-
-          $new_form_tmp = array();
-          // This is where the magic happens and all xml_form components are initialized.
-          $new_form_tmp = xml_form_builder_get_form($new_form_tmp, $new_form_state, $new_form_name, $xml);
-
-
-          $new_form[$dsid] = $new_form_tmp;
-
-          $new_form[$dsid]['pre_form_state'] = array(
-            '#type' => 'value',
-            '#value' => $new_form_state
-          );
-
-          //Diego:I think you already managed this, but just in case.
-          $title_field_parents = $association['title_field'];
-          $title_field_parents[] = '#required';
-          // TODO: where is $title_field supposed to be used?
-          $title_field = drupal_array_set_nested_value($new_form[$dsid], $title_field_parents, TRUE);
-
-          $ingest_datastreams[$dsindex]['form'] = $form;
-
-        }
-        else {
-          // Show a simple input element inside the sub-form
-          $new_form[$dsid] = array(
-            '#type' => $component_info['type'],
-            // Since this datastream form only has a single input element
-            // we can set the default value here when we create the form.
-            '#default_value' => $submission->data[$mapping->cid][0],
+      //We are making this a bit different. First we store all our submited values.
+      
+      $islandora_webform_values[$dsid]['association']=$association; //This is somehow strange done. There should always be only one association for an DSID, @TODO fix this.
+      $islandora_webform_values[$dsid]['data_values'][]=array(
+        'path' => $mapping->data['field'],
+        'input_value' => array( 
+            '#default_value' => $submitted_value,
             '#attributes' => array(
-              'class' => array(
-                'submitted-value'
-              )
-            )
-          );
-        }
-
-        // Merge the sub-form into aggregate
-        $aggregate_form[$dsid] = $new_form;
-      }
-      // Done building the form...
-
-
-      // If this is an xml form, insert the submitted value on
-      // the correct input element
-      if (!empty($aggregate_form[$dsid][$dsid]) && isset($association['form_name'])) {
-        $field_submitted_value = array(
-          '#default_value' => $submitted_value,
-          '#attributes' => array(
             'class' => array(
               'submitted-value'
+              )
             )
-          )
-        );
-        // Insert the submitted value into the form
-        iwi_array_path_set_value($aggregate_form[$dsid][$dsid], $mapping->data['field'], $field_submitted_value, $mapping->data['mode']);
-      }
+          ),
+         'mode' => $mapping->data['mode'],
+         ); 
+       }
+     }
+     $moveElement = function($element,&$newParent)
+       {
+           $newParent->adopt($element);
 
-      $ingest_datastreams[$mapping->data['datastream']]['mappings'][] = $mapping;
-    }
-  }
+       };
+     
+     foreach ($islandora_webform_values as $dsid => $dsid_values)
+       {
+         // If datastream has an edit form, add that to the aggregated form(Now called just $form)
+         if (isset($dsid_values['association']['form_name'])) {
+           $new_form_name = $dsid_values['association']['form_name'];
+           $xml = $object[$dsid]->content;
+           $form_state_new = $form_state; //tricky, but it works, we need to trick xml_form generator and make it think it's new form is the only one!
+           $form2 = xml_form_builder_get_form($form, $form_state_new, $new_form_name, $xml);
+           
+           if (!isset($form_state['storage']['objective_form_storage']))
+               {
+               $form_state['storage'] = $form_state_new['storage'];
+               }
+           else 
+              {
+              //Oh my, so hacky. We are adopting a bunch of new elements! 
+              //@TODO talk to patrick and have his opinion on this. [root] is an object, but i don't know if i copy around, i keep the original instance(and links) or makes copies. 
+              $newParent=&$form_state['storage']['objective_form_storage']['root'];
+              $temproot=$form_state_new['storage']['objective_form_storage']['root'];
+              $temproot->eachChild($setElementProps,$newParent);
+              //@TODO make some tests with real multi Metadata DSID objects and XML forms.
+              //Still have to test this. there are so many possible "go wrong situations, like duplicate Form element indexes, etc.";
+              
+              }
+         
+         
+         }
+         
+         //Only do this once. If ajax is called, then the form is rebuild and we end re-adding new elements. So check if form was rebuild. If yes, don't do anything.
+         if ((!isset($form_state['rebuild']) || $form_state['rebuild']) == FALSE)
+           {
+           foreach($dsid_values['data_values'] as $input) {
+             //Patrick: give this function a look, there are some questions for you. It works, but i still need to test this in detail making a very complex webform. Help in debugging is needed=)
+             iwi_set_form_element_byhash($form2, $form_state_new, $cloned_elements, $input['path'], $input['input_value'], $input['mode']);
+             }
+           }
+           $form2['pre_form_state'] = array(
+                       '#type' => 'value',
+                       '#value' => $form_state_new,
+                     );
+           $new_form = array(
+             '#title' => isset($dsid_values['association']['form_name']) ? $dsid_values['association']['form_name'] : $dsid,
+             '#type' => 'fieldset',
+             '#collapsible' => FALSE,
+             $dsid => $form2,
+           );
+         $form[$dsid]=$new_form;
+       }
+       $form['submit'] = array(
+         '#type' => 'submit',
+         '#value' => t('Ingest this Submission'),
+         '#name' => 'submit',
+         '#submit' => array('iwi_ingest_page_form_submit'),
+         '#weight' => 100,
+       );
+       dpm($form);
+       dpm($form_state);
+      return  $form;
 
-  // Add submit handler
-  $aggregate_form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Ingest this Submission'),
-    '#name' => 'submit',
-    '#submit' => array('iwi_ingest_page_form_submit'),
-    '#weight' => 100,
-  );
-
-  return $aggregate_form;
 }
 
 /**
@@ -183,11 +162,11 @@ function iwi_ingest_page_form($form, &$form_state, $sid) {
  * @param $form_state
  */
 function iwi_ingest_page_form_submit($form, &$form_state) {
-  if (!empty($form['#datastreams']) && !empty($form['#object'])) {
+  if (!empty($form_state['datastreams']) && !empty($form_state['object'])) {
 
-    $object = $form['#object'];
+    $object = $form_state['object'];
 
-    foreach ($form['#datastreams'] as $association) {
+    foreach ($form_state['datastreams'] as $association) {
       $dsid = $association['dsid'];
       if (isset($form_state['values'][$dsid]) && isset($form[$dsid][$dsid])) {
 
@@ -197,7 +176,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
           // Pull out the sub form from the aggregate form
           $sub_form = $form[$dsid][$dsid];
 
-          // Reload the original sub_form $form_state
+        // Reload the original sub_form $form_state
           $new_form_state = $form_state['values'][$dsid]['pre_form_state'];
 
           // Unset pre_form_state from the main $form_state: We don't need
@@ -207,7 +186,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
           // Load the input/values to our new form state
           $new_form_state['input'] = $form_state['input'][$dsid];
           $new_form_state['values'] = $form_state['values'][$dsid];
-
+          dpm($new_form_state);
           // Create XMLForm object from new form state
           $xml_form = new XMLForm($new_form_state);
 
@@ -221,7 +200,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
           //dpm(dom_document_pretty_print($document->document));
 
           // Update the islandora object with this datastream
-          xml_form_builder_update_object($form['#object'], $association, $document, $label);
+          xml_form_builder_update_object($object, $association, $document, $label);
         }
         // Done handling form-based datastream
 
