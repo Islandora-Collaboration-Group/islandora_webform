@@ -415,13 +415,19 @@ function iwi_preview_ingest_submission_form_callback($js, $sid) {
     exit;
   }
   else {
+    module_load_include('inc', 'islandora_webform_ingest', 'includes/ingest_page');
+    //@TODO, ask Patrick if i did well. I found too much nested form creation functions a bit complicated. So i just called here the form creating function directly. If wrong, we just roll back, but i was having a hardtime keeping the formstate.
     return drupal_get_form('iwi_preview_ingest_submission_form', $sid);
+	 
   }
 
 
 }
 
-function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
-  module_load_include('inc', 'islandora_webform_ingest', 'includes/ingest_page');
-  return iwi_ingest_page_form($form, $form_state, $sid);
+function islandora_webform_ingest_xml_form_builder_get_form_modify_definition_alter(&$form,&$form_state) {
+  module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+  //Of no use right now. We don't have the #hash still. How much time and code lost. This hook is only of use if you wan't to modify a unfilled form, like adding/moding styles and behaviors. If you add elements here(stupid of me), you end with many, many duplicates at the end. I left his hook here if this is required in the future.
 }
+
+
+
