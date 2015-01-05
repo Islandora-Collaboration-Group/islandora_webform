@@ -2,8 +2,6 @@
 
 /**
  * Implements hook_schema().
- *
- * @return mixed
  */
 function islandora_webform_ingest_schema() {
 
@@ -53,7 +51,7 @@ function islandora_webform_ingest_schema() {
       'cid' => array('cid'),
       'pid' => array('pid'),
     ),
-    'primary key' => array( 'id'),
+    'primary key' => array('id'),
   );
 
   $schema['islandora_webform_ingest_map'] = array(
@@ -88,7 +86,7 @@ function islandora_webform_ingest_schema() {
       'nid' => array('nid'),
       'cid' => array('cid'),
     ),
-    'primary key' => array( 'id'),
+    'primary key' => array('id'),
   );
 
   return $schema;
@@ -96,7 +94,7 @@ function islandora_webform_ingest_schema() {
 }
 
 /**
- * Add islandora_webform_ingest_map database table
+ * Add islandora_webform_ingest_map database table.
  */
 function islandora_webform_ingest_update_7001() {
   cache_clear_all();
@@ -105,7 +103,7 @@ function islandora_webform_ingest_update_7001() {
 }
 
 /**
- * No need for cid in recorded islandora webform ingestions
+ * No need for cid in recorded islandora webform ingestions.
  */
 function islandora_webform_ingest_update_7002() {
   db_drop_field('islandora_webform_ingestions', 'cid');

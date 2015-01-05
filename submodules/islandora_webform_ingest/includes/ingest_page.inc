@@ -2,14 +2,18 @@
 
 
 /**
- * Callback to build islandora webform ingest submission page
+ * Callback to build islandora webform ingest submission page.
  *
- * @param $form
- * @param $form_state
- * @param $sid
- *  the submission ID
+ * @param array $form
+ *   form
+ * @param array $form_state
+ *   form_state
+ * @param int $sid
+ *   the submission ID
  *
  * @return array
+ *   A renderable Drupal form array
+ *
  * @throws Exception
  */
 function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
@@ -19,14 +23,16 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   drupal_add_css(drupal_get_path('module', 'islandora_webform_ingest') . '/css/islandora_webform_ingest.css');
   form_load_include($form_state, 'inc', 'islandora_webform_ingest', '/includes/ingest_page');
   form_load_include($form_state, 'inc', 'islandora', '/includes/ingest.form');
+  // Get the submission data.
   $submission = array_shift(webform_get_submissions(array('sid' => $sid)));
   //$webform = node_load($submission->nid);
   $object = $submission->islandora_object;
   $webform = node_load($submission->nid);
   // Get the submission component mappings
+  // Get the submission component mappings.
   $mappings = iwi_get_saved_component_mappings($submission->nid);
 
-  // Get the content model datastreams
+  // Get the content model datastreams.
   $datastreams = iwi_ingestable_datastreams(islandora_object_load(iwi_webform_content_model($submission->nid)));
   $submission_info = array(
       l($object->label, 'islandora/object/' . $object->id),
@@ -64,7 +70,8 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   //e.g if we have n"ame:0:namePart" and "name:0:role"...this could give to additional tab panels being added, even when both belong to only one. Used in iwi_set_form_element_byhash, utilities.inc
  // Loop through the component mappings, adding submitted values to appropriate datastream sub-forms
   foreach ($mappings as $mapping) {
-    // Check if we have submitted data for this component, if not, skip it entirely
+    // Check if we have submitted data for this component, if not, skip it
+    // entirely.
     if (isset($submission->data[$mapping->cid][0])) {
       $submitted_value = $submission->data[$mapping->cid][0];
       $component_info = $webform->webform['components'][$mapping->cid];
@@ -156,10 +163,12 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
 }
 
 /**
- * Form-submit callback for islandora webform ingest submission page
+ * Form-submit callback for islandora webform ingest submission page.
  *
- * @param $form
- * @param $form_state
+ * @param array $form
+ *   the form
+ * @param array $form_state
+ *   the form_state
  */
 function iwi_ingest_page_form_submit($form, &$form_state) {
   if (!empty($form_state['datastreams']) && !empty($form_state['object'])) {
@@ -173,7 +182,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
         // Importing via xml form?
         if (isset($association['form_name'])) {
 
-          // Pull out the sub form from the aggregate form
+          // Pull out the sub form from the aggregate form.
           $sub_form = $form[$dsid][$dsid];
 
         // Reload the original sub_form $form_state
@@ -183,37 +192,38 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
           // nor want a form_state inside a form_state!
           unset($form_state['values'][$dsid]['pre_form_state']);
 
-          // Load the input/values to our new form state
+          // Load the input/values to our new form state.
           $new_form_state['input'] = $form_state['input'][$dsid];
           $new_form_state['values'] = $form_state['values'][$dsid];
           dpm($new_form_state);
           // Create XMLForm object from new form state
           $xml_form = new XMLForm($new_form_state);
 
-          // Process the form
+          // Process the form.
           $document = $xml_form->submit($sub_form, $new_form_state);
 
           $title_field = drupal_array_get_nested_value($sub_form, $association['title_field']);
           $label = $title_field['#value'];
 
           // Enable to preview the XML after the submission was done...
-          //dpm(dom_document_pretty_print($document->document));
+          // dpm(dom_document_pretty_print($document->document));
 
           // Update the islandora object with this datastream
           xml_form_builder_update_object($object, $association, $document, $label);
         }
-        // Done handling form-based datastream
+        // Done handling form-based datastream.
 
-        // Handle other datastream mimetypes
+        // Handle other datastream mimetypes.
         else {
           // TODO: Do we need to itemize each mime type?
-          // Get the datastream object that we'll be ingesting into
+          // Get the datastream object that we'll be ingesting into.
           $datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
           switch ($association['mime']) {
             case 'text/plain':
               $datastream->content = $form_state['values'][$dsid];
               $object->ingestDatastream($datastream);
               break;
+
             case 'application/pdf':
             case 'image/jpeg':
               $file = file_load($form_state['values'][$dsid]);
@@ -223,6 +233,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
               $datastream->mimetype = $file->filemime;
               $object->ingestDatastream($datastream);
               break;
+
             default:
               drupal_set_message(t('%mime is not a supported mime type for ingest', array('%mime' => $association['mime']), 'error'));
               break;
@@ -235,10 +246,13 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 }
 
 /**
- * Save a record of an islandora webform ingestion
+ * Save a record of an islandora webform ingestion.
  *
- * @param $submission
+ * @param object $submission
+ *   A webform submission object
  * @param IslandoraFedoraObject $object
+ *   The repository object
+ *
  * @throws Exception
  */
 function iwi_record_ingested($submission, IslandoraFedoraObject $object) {

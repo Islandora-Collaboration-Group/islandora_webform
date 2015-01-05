@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Get a list of datastream identifiers that can be ingested for this object
+ * Get a list of datastream identifiers that can be ingested for this object.
  *
  * @param IslandoraFedoraObject $object
  * @param MIXED $mimetype
