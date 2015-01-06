@@ -253,8 +253,8 @@ function islandora_webform_ingest_get_component_types() {
   $eligible_component_types = array(
     'date',
     'email',
-// TODO FUTURE: Work on file ingest
-//    'file',
+    // TODO FUTURE: Work on file ingest.
+    // 'file',
     'hidden',
     'number',
     'select',
@@ -339,6 +339,8 @@ function iwi_ds_field_options($association, $mimefilter = array()) {
 function islandora_webform_ingest_iw_results_object_submissions_page_element_alter(&$element) {
   if (user_access('ingest islandora webform submissions')) {
 
+    // Failed to get ctools modal popup form to work.
+    // TODO: Set $model to TRUE if we want to try again.
     $modal = FALSE;
 
     drupal_add_css(drupal_get_path('module', 'islandora_webform_ingest') . '/css/islandora_webform_ingest.css');
@@ -353,7 +355,7 @@ function islandora_webform_ingest_iw_results_object_submissions_page_element_alt
 
 
     $bulk = user_access('bulk ingest islandora webform submissions');
-    // TODO FUTURE: Remove the next line to enable bulk ingestion
+    // TODO FUTURE: Remove the next line to enable bulk ingestion.
     $bulk = FALSE;
 
     module_load_include('inc', 'islandora_webform', 'includes/utilities');
@@ -414,7 +416,9 @@ function islandora_webform_ingest_iw_results_object_submissions_page_element_alt
 }
 
 /**
- * @param boolean $js
+ * Ajax callback to render the ingest form.
+ *
+ * @param bool $js
  *   True if ajax enabled
  * @param int $sid
  *   The webform submission id
@@ -447,17 +451,28 @@ function iwi_preview_ingest_submission_form_callback($js, $sid) {
   }
   else {
     module_load_include('inc', 'islandora_webform_ingest', 'includes/ingest_page');
-    //@TODO, ask Patrick if i did well. I found too much nested form creation functions a bit complicated. So i just called here the form creating function directly. If wrong, we just roll back, but i was having a hardtime keeping the formstate.
     return drupal_get_form('iwi_preview_ingest_submission_form', $sid);
-	 
   }
-
-
 }
 
+
+/**
+ * Implements hook_xml_form_builder_get_form_modify_definition_alter().
+ *
+ * @param array $form
+ *   A form array
+ * @param array $form_state
+ *   A form_state array
+ *
+ * TODO Probably remove this function
+ */
 function islandora_webform_ingest_xml_form_builder_get_form_modify_definition_alter(&$form,&$form_state) {
   module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
-  //Of no use right now. We don't have the #hash still. How much time and code lost. This hook is only of use if you wan't to modify a unfilled form, like adding/moding styles and behaviors. If you add elements here(stupid of me), you end with many, many duplicates at the end. I left his hook here if this is required in the future.
+  // Of no use right now. We don't have the #hash still. How much time and
+  // code lost. This hook is only of use if you wan't to modify a unfilled
+  // form, like adding/moding styles and behaviors. If you add elements
+  // here (stupid of me), you end with many, many duplicates at the end.
+  // I left his hook here if this is required in the future.
 }
 
 
