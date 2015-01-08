@@ -111,7 +111,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       $new_form_name = $dsid_values['association']['form_name'];
       $xml = NULL;
       if (isset($object[$dsid])) {
-      $xml = $object[$dsid]->content;
+        $xml = $object[$dsid]->content;
       }
       $form2 = NULL;
       ///Deal with ajax. We are going to simulate a multistep form using only one dsid at a time. Dirty!
