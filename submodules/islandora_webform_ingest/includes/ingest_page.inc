@@ -67,7 +67,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
 
   // We are going to store the already cloned elements to avoid multiple
   // new form elements with partial equal paths to generate multiple childs.
-  // (like a tabpanel) e.g if we have n"ame:0:namePart" and "name:0:role"
+  // (like a tabpanel) e.g if we have "name:0:namePart" and "name:0:role"
   // ...this could give to additional tab panels being added, even when both
   // belong to only one. Used in iwi_set_form_element_byhash, utilities.inc
   $cloned_elements = array();
@@ -101,70 +101,58 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       );
     }
   }
-  // @codingStandardsIgnoreStart
-  // TODO Is CamelCase necessary here?
-  $moveElement = function ($element, &$newParent) {
-    $newParent->adopt($element);
-  };
-  // @codingStandardsIgnoreEnd
-
+  // We need to preserve the original $form_state to pass it to xml_form_builder_get_form 
+  // On the first build pass.
+  $form_state_original = $form_state;
 
   foreach ($islandora_webform_values as $dsid => $dsid_values) {
     // If datastream has an edit form, add that to the form.
     if (isset($dsid_values['association']['form_name'])) {
       $new_form_name = $dsid_values['association']['form_name'];
+      $xml = NULL;
+      if (isset($object[$dsid])) {
       $xml = $object[$dsid]->content;
-
-      // Tricky, but this works: we need to trick xml_form generator and make
-      // it think it's new form is the only one!
-      $form_state_new = $form_state;
-      $form2 = xml_form_builder_get_form($form, $form_state_new, $new_form_name, $xml);
-
-      if (!isset($form_state['storage']['objective_form_storage'])) {
-        $form_state['storage'] = $form_state_new['storage'];
       }
+      $form2 = NULL;
+      ///Deal with ajax. We are going to simulate a multistep form using only one dsid at a time. Dirty!
+      if (isset($form_state['rebuild']) && $form_state['rebuild'] == TRUE) {
+        $form_state_new['values'] = $form_state['values'][$dsid];
+        $form_state_new['storage']['objective_form_storage'] = $form_state['storage']['islandora_webform'][$dsid];
+        $form_state_new['triggering_element'] = $form_state['triggering_element'];
+        $form2 = xml_form_builder_get_form(array(), $form_state_new, $new_form_name, $xml);
+      }// End deal with ajax
       else {
-        // Oh my, so hacky. We are adopting a bunch of new elements!
-
-        // @TODO talk to patrick and have his opinion on this. [root] is an object, but i don't know if i copy around, i keep the original instance(and links) or makes copies.
-        // @codingStandardsIgnoreStart
-        $newParent =& $form_state['storage']['objective_form_storage']['root'];
-        // @codingStandardsIgnoreEnd
-        $temproot = $form_state_new['storage']['objective_form_storage']['root'];
-
-        // TODO: 'eachChild' is not a method in the 'Form' class; check with Diego
-        $temproot->eachChild($moveElement, $newParent);
-
-        // @TODO make some tests with real multi Metadata DSID objects and XML forms.
-        // Still have to test this. there are so many possible "go wrong
-        // situations, like duplicate Form element indexes, etc.";
-
+        $form_state_new = $form_state_original;
+        $form2 = xml_form_builder_get_form($form, $form_state_new, $new_form_name, $xml);
       }
-
-
-    }
 
     // Only do this once. If ajax is called, then the form is rebuilt and
     // we end re-adding new elements. So check if form was rebuild. If yes,
     // don't do anything.
-    if ((!isset($form_state['rebuild']) || $form_state['rebuild']) == FALSE) {
-
-      // Loop through the submitted values, setting them into the form.
+    if (!isset($form_state['rebuild']) || $form_state['rebuild'] == FALSE) {
+      // Loop through the submitted values, setting them into $form2.
       foreach ($dsid_values['data_values'] as $input) {
         iwi_set_form_element_byhash($form2, $form_state_new, $cloned_elements, $input['path'], $input['input_value'], $input['mode']);
       }
     }
-    $form2['pre_form_state'] = array(
-      '#type' => 'value',
-      '#value' => $form_state_new,
-    );
+    //Build our own local and multiple objective_form_storage for every dsid
+    $form_state['storage']['islandora_webform'][$dsid]=$form_state_new['storage']['objective_form_storage'];
+
     $new_form = array(
       '#title' => isset($dsid_values['association']['form_name']) ? $dsid_values['association']['form_name'] : $dsid,
       '#type' => 'fieldset',
+      '#tree' => TRUE,
       '#collapsible' => FALSE,
-      $dsid => $form2,
     );
+    foreach (element_children($form2) as $childkey) {
+      $new_form[$childkey]=$form2[$childkey];
+    }
+    //Recover the #hash
+    $new_form['#hash']=$form2['#hash'];
+    
+    
     $form[$dsid] = $new_form;
+    }
   }
   $form['submit'] = array(
     '#type' => 'submit',
@@ -195,39 +183,36 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
     foreach ($form_state['datastreams'] as $association) {
       $dsid = $association['dsid'];
-      if (isset($form_state['values'][$dsid]) && isset($form[$dsid][$dsid])) {
+      if (isset($form_state['values'][$dsid]) && isset($form[$dsid])) {
 
         // Importing via xml form?
         if (isset($association['form_name'])) {
 
           // Pull out the sub form from the aggregate form.
-          $sub_form = $form[$dsid][$dsid];
+          $sub_form = $form[$dsid];
 
           // Reload the original sub_form $form_state
-          $new_form_state = $form_state['values'][$dsid]['pre_form_state'];
+          $new_form_state['storage']['objective_form_storage'] = $form_state['storage']['islandora_webform'][$dsid];
 
-          // Unset pre_form_state from the main $form_state: We don't need
-          // nor want a form_state inside a form_state!
-          unset($form_state['values'][$dsid]['pre_form_state']);
 
           // Load the input/values to our new form state.
           $new_form_state['input'] = $form_state['input'][$dsid];
           $new_form_state['values'] = $form_state['values'][$dsid];
-
           // Create XMLForm object from new form state.
           $xml_form = new XMLForm($new_form_state);
 
           // Process the form.
           $document = $xml_form->submit($sub_form, $new_form_state);
-
-          $title_field = drupal_array_get_nested_value($sub_form, $association['title_field']);
-          $label = $title_field['#value'];
-
+          if (isset($association['title_field'])) {
+            $title_field = drupal_array_get_nested_value($sub_form, $association['title_field']);
+            $label = $title_field['#value'];
+          }
+          
           // Enable to preview the XML after the submission was done...
           // dpm(dom_document_pretty_print($document->document));
-
           // Update the islandora object with this datastream.
           xml_form_builder_update_object($object, $association, $document, $label);
+          
         }
         // Done handling form-based datastream.
 

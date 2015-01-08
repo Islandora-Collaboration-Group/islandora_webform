@@ -375,15 +375,13 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
                 if (!array_key_exists($child_element_hash, $cloned_elements)) {
                   // If not already cloned clone it.
                   $new_tab = clone $tab;
-                  // @codingStandardsIgnoreStart
-                  $setElementProps = function ($element) {
+
+                  $set_element_properties = function ($element) {
                     $element->default_value = NULL;
                   };
-                  // @codingStandardsIgnoreEnd
-
                   // Set element properties on the descendants.
                   // TODO: 'eachDecendant' is not a method in the 'Form' class; check with Diego
-                  $new_tab->eachDecendant($setElementProps);
+                  $new_tab->eachDecendant($set_element_properties);
 
                   $element->adopt($new_tab);
                   $new_tab_drupal = $new_tab->toArray();
@@ -419,8 +417,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
               // "themed" like a tag. Should, in case of having no previous
               // value, just add the value to the existing input ?([0])
               // ..it's like replacing...
-              // TODO: Still missing a bit. If i add a new value, all new values are
-              // the last appended one when using ajax later? Fixit tomorrow.
               $form_children = element_children($special_element_ref);
               $input_field = &$special_element_ref[array_shift($form_children)];
               // Get Input Value as its not stored in the object form.
@@ -447,10 +443,10 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
       //@TODO ask Patrick. In case of multivalues fields. Replace means wiping out every child element of tabs or tags? The thing about replacing in multivalued fields is that we don't know which one to replace. [0]...[n]?
       //If we got only one, it's easy(two lines?), just put our values there.
       $key_exists = NULL;
-      $target_element_hash = drupal_array_set_nested_value($new_tab_drupal, array_merge($parents, array('#hash')), $key_exists);
+      $target_element_hash=drupal_array_get_nested_value($form, array_merge($parents,array('#hash')),$key_exists);
       if ($key_exists) {
-        drupal_array_set_nested_value($new_tab_drupal, array_merge($parents, array('#attributes')), $input_value['#attributes']);
-        drupal_array_set_nested_value($new_tab_drupal, array_merge($parents, array('#default_value')), $input_value['#default_value']);
+        drupal_array_set_nested_value($form, array_merge($parents, array('#attributes')), $input_value['#attributes']);
+        drupal_array_set_nested_value($form, array_merge($parents, array('#default_value')), $input_value['#default_value']);
         $element = $form_state['storage']['objective_form_storage']['root']->findElement($target_element_hash);
         $element->default_value = $input_value['#default_value'];
         // Done.
