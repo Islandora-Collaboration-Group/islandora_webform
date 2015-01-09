@@ -213,6 +213,16 @@ function iwi_get_ingestion_info($sid) {
     ->fetchAll();
 }
 
+/**
+ * A webform component is being saved, save its islandora ingest mapping.
+ *
+ * @param array $form
+ *   the component edit form
+ * @param array $form_state
+ *   the form_state
+ *
+ * @throws \Exception
+ */
 function iwi_save_component_mapping($form, $form_state) {
 
   $nid = $form['nid']['#value'];
@@ -251,6 +261,17 @@ function iwi_save_component_mapping($form, $form_state) {
 
 }
 
+/**
+ * Retrieve islandora ingest mapping for a given webform component
+ *
+ * @param int $webform_nid
+ *   The node id of the webform
+ * @param int $cid
+ *   The component id
+ *
+ * @return mixed
+ *   the component mapping data as an array
+ */
 function iwi_get_saved_component_mapping($webform_nid, $cid) {
   $data = db_select('islandora_webform_ingest_map', 'm')
     ->fields('m', array('data'))
@@ -260,6 +281,16 @@ function iwi_get_saved_component_mapping($webform_nid, $cid) {
   return @unserialize($data);
 }
 
+/**
+ * Retrieve all islandora ingest mappings for a given webform
+ *
+ * @param int $webform_nid
+ *   the node id of the webform
+ *
+ * @return mixed
+ *   an array with one row per component,
+ *   each row as an array of component mapping data
+ */
 function iwi_get_saved_component_mappings($webform_nid) {
   $results = db_select('islandora_webform_ingest_map', 'm')
     ->fields('m', array('cid', 'data'))
@@ -271,6 +302,15 @@ function iwi_get_saved_component_mappings($webform_nid) {
   return $results;
 }
 
+/**
+ * Retrieve the content_model filter for a webform.
+ *
+ * @param int $webform_nid
+ *   the node id of the webform
+ *
+ * @return string
+ *   the cmodel filter value, or NULL
+ */
 function iwi_webform_content_model($webform_nid) {
   return db_select('islandora_webform_webforms', 'iw')
     ->fields('iw', array('cmodel_filter'))
@@ -305,7 +345,8 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
   $parents = explode($delimiter, $elementspath);
   // XML forms have two special form elements, whose children need to be cloned:
   // if #type in (tags,tabs) and $mode=='append'
-  // So we are going to check for those types before deciding how to handle appends.
+  // So we are going to check for those types before deciding how
+  // to handle appends.
 
   $special_xmlform_elements = array('tags' => 'tag', 'tabs' => 'tabpanel');
 
@@ -325,6 +366,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
       $level = 0;
       $special_element_ref = array();
       $previous_partial_path = array();
+      $key_exists = NULL;
       foreach ($parents as $parent) {
         if (is_array($ref) && array_key_exists($parent, $ref)) {
           $key_exists = TRUE;
@@ -417,8 +459,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
               // ..it's like replacing...
               $form_children = element_children($special_element_ref);
               $input_field = &$special_element_ref[array_shift($form_children)];
-              // Get Input Value as its not stored in the object form.
-              $default_value = $input_field['#default_value'];
               $input_field['#value'] = '';
               $element_children = array_values($element->children);
               $input = array_shift($element_children);
