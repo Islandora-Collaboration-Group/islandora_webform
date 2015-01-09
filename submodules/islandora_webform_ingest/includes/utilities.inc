@@ -365,7 +365,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
       if (($key_exists && !empty($target_element_hash)) && (!empty($child_element_hash))) {
         // OK, we got something to clone, let's do it using the objective_
         // form_api:
-        //@TODO ask Patrick: if we got no previous values at all for this perticular element, appending means 'replace'?
         $element = $form_state['storage']['objective_form_storage']['root']->findElement($target_element_hash);
         if ($element) {
           switch ($special_element_child_type) {
@@ -380,7 +379,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
                     $element->default_value = NULL;
                   };
                   // Set element properties on the descendants.
-                  // TODO: 'eachDecendant' is not a method in the 'Form' class; check with Diego
                   $new_tab->eachDecendant($set_element_properties);
 
                   $element->adopt($new_tab);
@@ -411,8 +409,8 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
                 }
               }
               break;
-            case "tag" :
-              //@TODO ask Patrick: if we got no previous values at all for this perticular element, appending means 'replace'?
+
+            case "tag":
               // Now appending at the end. This means the new value is
               // "themed" like a tag. Should, in case of having no previous
               // value, just add the value to the existing input ?([0])
@@ -440,34 +438,14 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
 
     default:
       // We are going to replace existing value.
-      //@TODO ask Patrick. In case of multivalues fields. Replace means wiping out every child element of tabs or tags? The thing about replacing in multivalued fields is that we don't know which one to replace. [0]...[n]?
-      //If we got only one, it's easy(two lines?), just put our values there.
+      // If we got only one, just put our values there.
       $key_exists = NULL;
-      $target_element_hash=drupal_array_get_nested_value($form, array_merge($parents,array('#hash')),$key_exists);
+      $target_element_hash = drupal_array_get_nested_value($form, array_merge($parents, array('#hash')), $key_exists);
       if ($key_exists) {
         drupal_array_set_nested_value($form, array_merge($parents, array('#attributes')), $input_value['#attributes']);
         drupal_array_set_nested_value($form, array_merge($parents, array('#default_value')), $input_value['#default_value']);
         $element = $form_state['storage']['objective_form_storage']['root']->findElement($target_element_hash);
         $element->default_value = $input_value['#default_value'];
-        // Done.
       }
   }
-
-
-}
-
-function arrayCopy(array $array) {
-  $result = array();
-  foreach ($array as $key => $val) {
-    if (is_array($val)) {
-      $result[$key] = arrayCopy($val);
-    }
-    elseif (is_object($val)) {
-      $result[$key] = clone $val;
-    }
-    else {
-      $result[$key] = $val;
-    }
-  }
-  return $result;
 }
