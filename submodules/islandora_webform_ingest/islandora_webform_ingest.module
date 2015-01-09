@@ -27,7 +27,7 @@ function islandora_webform_ingest_menu() {
 }
 
 /**
- *  Implements hook_permission().
+ * Implements hook_permission().
  */
 function islandora_webform_ingest_permission() {
   return array(
@@ -454,26 +454,3 @@ function iwi_preview_ingest_submission_form_callback($js, $sid) {
     return drupal_get_form('iwi_preview_ingest_submission_form', $sid);
   }
 }
-
-
-/**
- * Implements hook_xml_form_builder_get_form_modify_definition_alter().
- *
- * @param array $form
- *   A form array
- * @param array $form_state
- *   A form_state array
- *
- * TODO Probably remove this function
- */
-function islandora_webform_ingest_xml_form_builder_get_form_modify_definition_alter(&$form,&$form_state) {
-  module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
-  // Of no use right now. We don't have the #hash still. How much time and
-  // code lost. This hook is only of use if you wan't to modify a unfilled
-  // form, like adding/moding styles and behaviors. If you add elements
-  // here (stupid of me), you end with many, many duplicates at the end.
-  // I left his hook here if this is required in the future.
-}
-
-
-
