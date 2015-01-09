@@ -161,24 +161,24 @@ function islandora_webform_node_access($node, $op, $account) {
 
 
 /**
- * Preprocess functions...
- */
-
-/**
- *  Implements hook_preprocess().
+ * Implements hook_islandora_view_object_alter().
  *
- * Look to see if the preprocess hook is the name of an islandora solution pack
- * and if so, run it through our own preprocess function which adds the webform
- * links.
+ * Adds webform links to islandora object pages
  */
-function islandora_webform_preprocess(&$variables, $hook) {
-  module_load_include('inc', 'islandora_webform', 'includes/utilities');
-  $enabled_hooks = _iw_get_solution_packs();
-  if (in_array($hook, $enabled_hooks)) {
-    module_load_include('inc', 'islandora_webform', 'theme/theme');
+function islandora_webform_islandora_view_object_alter(&$object, &$rendered) {
 
-    islandora_webform_preprocess_solution_pack_module($variables);
+  module_load_include('inc', 'islandora_webform', 'includes/utilities');
+  $webforms = islandora_webform_object_get_webforms($object);
+
+  if (!empty($webforms)) {
+    $rendered += array(
+      'webform_links' => theme('islandora_webform_links', array(
+        'webform_data' => $webforms,
+        'islandora_object' => $object,
+      ))
+    );
   }
+
 }
 
 /**

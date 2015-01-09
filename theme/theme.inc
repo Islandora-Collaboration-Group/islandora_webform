@@ -112,6 +112,8 @@ function theme_islandora_webform_links(array $vars) {
     $output .= '</div>';
   }
 
+  $output .= '</div>';
+
   return $output;
 }
 
@@ -138,37 +140,4 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
     $webform_link = l($islandora_webform_record->link_text, drupal_get_path_alias('node/' . $islandora_webform_record->entity_id), $webform_link_options);
   }
   return $webform_link;
-}
-
-
-/**
- * Implementation of preprocess hook for all solution pack object pages
- *
- * @param $variables
- */
-function islandora_webform_preprocess_solution_pack_module(&$variables) {
-
-  if (!empty($variables['islandora_object'])) {
-    module_load_include('inc', 'islandora_webform', 'includes/utilities');
-    $variables['webforms'] = islandora_webform_object_get_webforms($variables['islandora_object']);
-
-    if (!empty($variables['webforms'])) {
-
-      $output = theme('islandora_webform_links', array(
-        'webform_data'     => $variables['webforms'],
-        'islandora_object' => $variables['islandora_object'],
-      ));
-
-      // Add to the template variables.
-      $variables['webform_links'] = $output;
-
-      // If webform link injection is not disabled, append to the
-      // metadata table if present.
-      if (variable_get('islandora_webform_inject_link', 1)) {
-        if (!empty($variables['metadata'])) {
-          $variables['metadata'] .= $output;
-        }
-      }
-    }
-  }
 }

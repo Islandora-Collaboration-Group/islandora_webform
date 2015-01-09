@@ -22,16 +22,7 @@ function islandora_webform_admin(array $form, array &$form_state) {
       '#type' => 'fieldset',
       '#title' => t('Islandora Webform Configuration'),
       'wrapper' => array(
-        '#prefix' => '<div id="islandora-webform-link-inject">',
-        '#suffix' => '</div>',
         '#type' => 'markup',
-        'islandora_webform_inject_link' => array(
-          '#type' => 'checkbox',
-          '#title' => t('Inject webform link'),
-          '#default_value' => variable_get('islandora_webform_inject_link', 1),
-          '#description' => t('Uncheck to use your own template files to add the webform link on islandora solution pack object display pages. Check this box to insert the links immediately after the table of metadata.'),
-          '#required' => FALSE,
-        ),
         'islandora_webform_link_target_new_page' => array(
           '#type' => 'checkbox',
           '#title' => t('Open webforms in new window'),
