@@ -204,16 +204,19 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
           // Process the form.
           $document = $xml_form->submit($sub_form, $new_form_state);
-          if (isset($association['title_field'])) {
+
+          // Enable to preview the XML after the submission was done...
+          // dpm(dom_document_pretty_print($document->document));
+
+          // Get updated object label.
+          $label = NULL;
+          if (is_array($association['title_field'])) {
             $title_field = drupal_array_get_nested_value($sub_form, $association['title_field']);
             $label = $title_field['#value'];
           }
 
-          // Enable to preview the XML after the submission was done...
-          // dpm(dom_document_pretty_print($document->document));
           // Update the islandora object with this datastream.
           xml_form_builder_update_object($object, $association, $document, $label);
-
         }
         // Done handling form-based datastream.
 
