@@ -72,6 +72,7 @@ function iwi_ingestable_datastreams(IslandoraFedoraObject $object, $mimetypes = 
  */
 function iwi_datastream_mime_from_component_type($component_type) {
   $map = array(
+    'datepicker' => array('text/plain'),
     'date' => array('text/plain'),
     'email' => array('text/plain'),
     'file' => array('image/jpeg', 'application/pdf'),
