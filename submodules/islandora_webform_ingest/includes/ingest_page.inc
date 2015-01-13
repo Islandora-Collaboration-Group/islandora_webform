@@ -271,5 +271,5 @@ function iwi_record_ingested($submission, IslandoraFedoraObject $object) {
     'data' => serialize($submission->data),
   );
 
-  db_insert('islandora_webform_ingestions')->fields($fields);
+  db_insert('islandora_webform_ingestions')->fields($fields)->execute();
 }
