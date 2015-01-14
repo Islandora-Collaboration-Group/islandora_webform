@@ -3,3 +3,13 @@
   color:#808080;
   font-style: italic;
 }
+
+#islandora_webform_object_tag_links .webform-links-wrapper {
+  padding:0px 0px 0px 10px;
+}
+
+#islandora_webform_object_tag_links .webform-links-wrapper.opened {
+  padding:10px 10px 10px 10px;
+  margin:10px 0px;
+  border:1px solid darkgray;
+}

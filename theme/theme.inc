@@ -34,8 +34,33 @@ function theme_islandora_webform_links(array $vars) {
     ),
   );
 
-  if (variable_get('islandora_webform_link_target_new_page', 0)) {
-    $webform_link_options['attributes']['target'] = '_islandora_webform_page';
+  $webform_link_options = array(
+    'attributes' => array(
+      'class' => array(
+        'webform-link',
+      ),
+    ),
+    'html'       => TRUE,
+    'query'      => array(
+      'pid'         => $pid,
+      $destination,
+
+    ),
+  );
+
+  switch ($link_mode = variable_get('islandora_webform_link_target', 'inline')) {
+    case "new":
+      $webform_link_options['attributes']['target'] = '_islandora_webform_page';
+      break;
+
+    case "same":
+      break;
+
+    default:
+      // Inline ajax is default.
+      $webform_link_options['attributes']['class'][] = 'use-ajax';
+      unset($webform_link_options['query']['destination']);
+      break;
   }
 
   $tag_link_options = array(
@@ -66,7 +91,8 @@ function theme_islandora_webform_links(array $vars) {
 
 
   foreach ($webforms as $webform) {
-    $output .= '<div class="webform-links">';
+    $jqid = 'iw_iwebform_links_' . $webform->entity_id;
+    $output .= '<div id="' . $jqid . '" class="webform-links-wrapper"><div class="webform-links">';
 
     if ($webform->scope != 'tagged') {
       $output .= islandora_webform_theme_webform_link($webform, $webform_link_options);
@@ -79,7 +105,7 @@ function theme_islandora_webform_links(array $vars) {
       // If so, add the webform link and the remove-tag link for content
       // managers.
       if ($tagged) {
-        $output .= islandora_webform_theme_webform_link($webform, $webform_link_options);
+        $output .= islandora_webform_theme_webform_link($webform, $webform_link_options, $link_mode);
 
         $path = 'islandora_webform/' . $webform->entity_id . '/untag_object/' . $pid . '/nojs';
 
@@ -109,7 +135,7 @@ function theme_islandora_webform_links(array $vars) {
         }
       }
     }
-    $output .= '</div>';
+    $output .= '</div></div>';
   }
 
   $output .= '</div>';
@@ -131,13 +157,14 @@ function theme_islandora_webform_links(array $vars) {
  * @return string
  *   the themed link, or empty if no access
  */
-function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array()) {
+function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $link_mode = 'inline') {
   $webform_link = '';
   $node = node_load($islandora_webform_record->entity_id);
   module_load_include('inc', 'islandora_webform', 'includes/webform_access');
   if (islandora_webform_user_can_submit_webform($node)) {
+    $link_path = $link_mode == 'inline' ? 'islandora_webform/retrieve_form/' . $islandora_webform_record->entity_id . '/ajax' : drupal_get_path_alias('node/' . $islandora_webform_record->entity_id);
     $webform_link_options['attributes']['title'] = $islandora_webform_record->link_help;
-    $webform_link = l($islandora_webform_record->link_text, drupal_get_path_alias('node/' . $islandora_webform_record->entity_id), $webform_link_options);
+    $webform_link = l($islandora_webform_record->link_text, $link_path, $webform_link_options);
   }
   return $webform_link;
 }

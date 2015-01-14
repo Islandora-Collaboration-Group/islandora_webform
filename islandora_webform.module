@@ -79,6 +79,20 @@ function islandora_webform_menu() {
     'delivery callback' => 'ajax_deliver',
   ) + $items['islandora_webform/%/untag_object/%/nojs'];
 
+
+  $items['islandora_webform/retrieve_form/%node/nojs'] = array(
+    'page callback' => '_iw_inline_webform',
+    'page arguments'   => array(2,3),
+    'access callback' => TRUE,
+    'file'             => 'inline_webform.inc',
+    'file path'        => drupal_get_path('module', 'islandora_webform') . '/includes',
+  );
+
+  $items['islandora_webform/retrieve_form/%node/ajax'] = array(
+      'delivery callback' => 'ajax_deliver',
+    )
+    + $items['islandora_webform/retrieve_form/%node/nojs'];
+
   return $items;
 }
 
