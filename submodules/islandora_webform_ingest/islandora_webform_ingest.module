@@ -454,3 +454,14 @@ function iwi_preview_ingest_submission_form_callback($js, $sid) {
     return drupal_get_form('iwi_preview_ingest_submission_form', $sid);
   }
 }
+
+/**
+ * Implements hook_init().
+ */
+function islandora_webform_init() {
+  // This solves an ajax error when trying to select datastream when
+  // webform component is a select list.
+  // TODO see if this is a webform bug and remove from here if possible.
+
+  module_load_include('inc', 'webform', 'components/select');
+}
