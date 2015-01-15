@@ -14,7 +14,7 @@
  * @return array
  *   An array of the ingestable datastream objects
  */
-function iwi_ingestable_datastreams(IslandoraFedoraObject $object, $mimetypes = array('text/plain')) {
+function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('text/plain')) {
 
   if (!empty($object['DS-COMPOSITE-MODEL'])) {
 
@@ -75,7 +75,7 @@ function iwi_datastream_mime_from_component_type($component_type) {
     'datepicker' => array('text/plain'),
     'date' => array('text/plain'),
     'email' => array('text/plain'),
-    'file' => array('image/jpeg', 'application/pdf'),
+    'file' => array('image/jpg', 'application/pdf'),
     'hidden' => array('text/plain'),
     'number' => array('text/plain'),
     'select' => array('text/plain'),
@@ -87,6 +87,22 @@ function iwi_datastream_mime_from_component_type($component_type) {
   return isset($map[$component_type]) ? $map[$component_type] : array();
 }
 
+/**
+ * Get a list of mimetypes for datastreams that we can target for ingestion.
+ *
+ * @param array $filter
+ *   a list of mimetypes that we want to exclude, defaults to none
+ * @return array
+ *   a list of ingestable mimetypes
+ */
+function iwi_ingestable_mimetypes($filter = array()) {
+  $mimetypes = array(
+    'text/plain',
+    'image/jpg',
+    'application/pdf',
+  );
+  return array_diff($mimetypes, $filter);
+}
 
 /**
  * Utility function takes a form array and returns a list of fields and field
@@ -468,8 +484,25 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
               $special_element_ref[] = $new_tag_drupal;
               break;
 
+            default:
+              break;
           }
         }
+      }
+      else {
+        // We are going to text-append existing value.
+        $key_exists = NULL;
+        $target_element_hash = drupal_array_get_nested_value($form, array_merge($parents, array('#hash')), $key_exists);
+        if ($key_exists) {
+          drupal_array_set_nested_value($form, array_merge($parents, array('#attributes')), $input_value['#attributes']);
+          drupal_array_set_nested_value($form, array_merge($parents, array('#default_value')), $input_value['#default_value']);
+          $element = $form_state['storage']['objective_form_storage']['root']->findElement($target_element_hash);
+          if (!empty($element->default_value)) {
+            $input_value['#default_value'] = "; " . $input_value['#default_value'];
+          }
+          $element->default_value = $input_value['#default_value'];
+        }
+
       }
       break;
 

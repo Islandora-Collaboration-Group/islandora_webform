@@ -31,7 +31,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   $mappings = iwi_get_saved_component_mappings($submission->nid);
 
   // Get the content model datastreams.
-  $datastreams = iwi_ingestable_datastreams(islandora_object_load(iwi_webform_content_model($submission->nid)));
+  $datastreams = iwi_ingestable_datastreams(islandora_object_load(iwi_webform_content_model($submission->nid)), iwi_ingestable_mimetypes());
 
   $submission_info = array(
     l($object->label, 'islandora/object/' . $object->id),
@@ -97,6 +97,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         ),
         'mode' => $mapping->data['mode'],
       );
+      $islandora_webform_values[$dsid]['component'] = $webform->webform['components'][$mapping->cid];
     }
   }
   // We need to preserve the original $form_state to pass it to
@@ -154,7 +155,30 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
 
       $form[$dsid] = $new_form;
     }
+    else {
+      // There is no edit form, display using webform component theming.
+      $new_form = array(
+        '#title' => $dsid,
+        '#type' => 'fieldset',
+        '#tree' => TRUE,
+        '#collapsible' => FALSE,
+      );
+
+      // Display the component using webform defaults.
+      $data = $submission->data[$dsid_values['component']['cid']];
+      $new_form['component'] = webform_component_invoke($dsid_values['component']['type'], 'display', $dsid_values['component'], $data);
+
+      // Include the file id in a hidden field.
+      $new_form['fid'] = array(
+        '#type' => 'hidden',
+        '#value' => $new_form['component']['#value']->fid,
+      );
+
+      $form[$dsid] = $new_form;
+    }
   }
+
+  // Add the submit button.
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Ingest this Submission'),
@@ -222,28 +246,46 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
         // Handle other datastream mimetypes.
         else {
-          // TODO: Do we need to itemize each mime type?
           // Get the datastream object that we'll be ingesting into.
-          $datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
-          switch ($association['mime']) {
-            case 'text/plain':
-              $datastream->content = $form_state['values'][$dsid];
-              $object->ingestDatastream($datastream);
-              break;
+          // Create it if not preexisting.
+          $new_datastream = isset($object[$dsid]) ? FALSE : TRUE;
+          $datastream = $new_datastream ? $object[$dsid] : $object->constructDatastream($dsid);
+          $value_type = gettype($form_state['values'][$dsid]);
 
-            case 'application/pdf':
-            case 'image/jpeg':
-              $file = file_load($form_state['values'][$dsid]);
-              $file_path = drupal_realpath($file->uri);
-              $datastream->setContentFromFile($file_path, FALSE);
-              $datastream->label = $file->filename;
-              $datastream->mimetype = $file->filemime;
-              $object->ingestDatastream($datastream);
-              break;
+          // Handle text datastreams.
+          $text_value_types = array('integer', 'double', 'double');
+          if ($association['mime'] == 'text/plain' && in_array($value_type, $text_value_types)) {
+            $datastream->content = $form_state['values'][$dsid];
+            $object->ingestDatastream($datastream);
+          }
 
-            default:
-              drupal_set_message(t('%mime is not a supported mime type for ingest', array('%mime' => $association['mime']), 'error'));
-              break;
+          // Handle file ingestion.
+          elseif (!empty($form_state['values'][$dsid]['fid'])) {
+            // Handle file.
+            if ($file = file_load($form_state['values'][$dsid]['fid'])) {
+              // Get permissible extensions for this datastream.
+              module_load_include('inc', 'islandora', 'includes/mimetype.utils');
+              $extensions = islandora_get_extensions_for_datastream($object, $dsid);
+              $ext = pathinfo($file->filename, PATHINFO_EXTENSION);
+              // If extension is valid for this datastream, go ahead and ingest.
+              if (in_array($ext, $extensions)) {
+                $datastream->label = $file->filename;
+                $file_path = drupal_realpath($file->uri);
+                $datastream->setContentFromFile($file_path, FALSE);
+                $object->ingestDatastream($datastream);
+              }
+            }
+            else {
+              drupal_set_message(t('%type is not a supported file type for ingest to %dsid', array(
+                '%type' => $ext,
+                '%dsid' => $dsid
+              ), 'error'));
+            }
+          }
+
+          // Respond to invalid types.
+          else {
+            drupal_set_message(t('%mime is not a supported mime type for ingest', array('%mime' => $association['mime']), 'error'));
           }
         }
       }
