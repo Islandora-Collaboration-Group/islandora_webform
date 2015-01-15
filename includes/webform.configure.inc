@@ -52,7 +52,7 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
   }
 
   $cmodel_options = array('' => '- Any -');
-  module_load_include('inc', 'islandora', 'includes/utilities');
+  form_load_include($form_state, 'inc', 'islandora', 'includes/utilities');
   $cmodels = islandora_get_content_models();
   asort($cmodels);
   foreach ($cmodels as $cmodel) {
@@ -60,7 +60,7 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
   }
 
   $collection_options = array('' => '- Any -');
-  module_load_include('inc', 'islandora_webform', 'includes/utilities');
+  form_load_include($form_state, 'inc', 'islandora_webform', 'includes/utilities');
   $collections = iw_get_collections_or_content_models('collections');
   asort($collections);
   $collection_options = array_merge($collection_options, $collections);

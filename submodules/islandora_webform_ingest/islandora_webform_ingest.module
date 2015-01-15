@@ -74,7 +74,9 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'webform_component_edit_form' && !empty($form['cid']['#value'])) {
 
 
-    module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+    form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
+    form_load_include($form_state, 'inc', 'webform', 'components/select');
+    form_load_include($form_state, 'inc', 'webform', 'components/file');
 
     if (!empty($form['type']['#value']) && in_array($form['type']['#value'], islandora_webform_ingest_get_component_types())) {
 
@@ -129,7 +131,7 @@ function islandora_webform_ingest_webform_component_delete($component) {
  *   The webform_component_edit_form form_state array
  */
 function iwi_webform_component_edit_form_submit($form, &$form_state) {
-  module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+  form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
   iwi_save_component_mapping($form, $form_state);
 }
 
@@ -168,7 +170,7 @@ function iwi_webform_component_edit_form_validate($form, &$form_state) {
  */
 function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, IslandoraFedoraObject $cmodel, $mimetypes = array()) {
 
-  module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
+  form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
 
   // Get a list of the theoretically eligible destination datastreams.
   $datastreams = iwi_ingestable_datastreams($cmodel, $mimetypes);
@@ -452,16 +454,4 @@ function iwi_preview_ingest_submission_form_callback($js, $sid) {
     module_load_include('inc', 'islandora_webform_ingest', 'includes/ingest_page');
     return drupal_get_form('iwi_preview_ingest_submission_form', $sid);
   }
-}
-
-/**
- * Implements hook_init().
- */
-function islandora_webform_init() {
-  // This solves an ajax error when trying to select datastream when
-  // webform component is a select list.
-  // TODO see if this is a webform bug and remove from here if possible.
-
-  module_load_include('inc', 'webform', 'components/select');
-  module_load_include('inc', 'webform', 'components/file');
 }
