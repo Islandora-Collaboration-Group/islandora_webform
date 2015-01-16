@@ -69,6 +69,7 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
     '#type' => 'fieldset',
     '#title' => 'Islandora Options',
     '#collapsible' => FALSE,
+    '#tree' => TRUE,
     '#group' => 'additional_settings',
     'enabled' => array(
       '#type' => 'checkbox',
@@ -126,7 +127,6 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
     '#type' => 'submit',
     '#value' => t('Save configuration'),
   );
-
   return $form;
 }
 
@@ -145,13 +145,13 @@ function islandora_webform_configure_form_submit($node, $form_state) {
   if (db_merge('islandora_webform_webforms')
     ->key(array('entity_id' => $nid))
     ->fields(array(
-      'enabled' => $form_state['values']['enabled'],
-      'cmodel_filter' => $form_state['values']['cmodel_filter'],
-      'collection_filter' => $form_state['values']['collection_filter'],
-      'pid_filter' => $form_state['values']['pid_filter'],
-      'scope' => $form_state['values']['scope'],
-      'link_text' => $form_state['values']['link_text'],
-      'link_help' => $form_state['values']['link_help'],
+      'enabled' => $form_state['values']['islandora']['enabled'],
+      'cmodel_filter' => $form_state['values']['islandora']['cmodel_filter'],
+      'collection_filter' => $form_state['values']['islandora']['collection_filter'],
+      'pid_filter' => $form_state['values']['islandora']['pid_filter'],
+      'scope' => $form_state['values']['islandora']['scope'],
+      'link_text' => $form_state['values']['islandora']['link_text'],
+      'link_help' => $form_state['values']['islandora']['link_help'],
     ))
     ->execute()
   ) {
