@@ -107,6 +107,72 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
       }
     }
   }
+  else {
+    if ($form_id == 'islandora_webform_configure_form') {
+
+      $default_values = db_select('islandora_webform_ingest_webforms', 'm')
+        ->fields('m')
+        ->condition('m.nid', $form['nid']['#value'])
+        ->execute()->fetchAssoc();
+
+      $cmodel_options = array('' => 'Ingest to current object');
+      form_load_include($form_state, 'inc', 'islandora', 'includes/utilities');
+      $cmodels = islandora_get_content_models();
+      asort($cmodels);
+      foreach ($cmodels as $cmodel) {
+        $cmodel_options[$cmodel['pid']] = t('Create new @cmodel', array('@cmodel' => $cmodel['label']));
+      }
+
+      $relation_options = array(
+        'child' => t('Child of current object'),
+        'sibling' => t('Sibling of current object'),
+      );
+
+      $form['islandora_ingest'] = array(
+        '#type' => 'fieldset',
+        '#title' => 'Islandora Ingest',
+        '#description' => t('Configure ingest settings for this webform.'),
+        '#collapsible' => FALSE,
+        '#tree' => TRUE,
+        'ingest_enabled' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Enable'),
+          '#description' => t('Enable ingest for this webform'),
+          '#default_value' => $default_values['ingest_enabled'] ? $default_values['ingest_enabled'] : 0,
+        ),
+        'cmodel' => array(
+          '#type' => 'select',
+          '#title' => 'Ingest destination',
+          '#description' => t('Select whether to ingest to the current object, or to a new object/content-model. <br />
+          IMPORTANT: If you select to ingest to the current object, then a content model filter must be selected above.
+          This is needed in order to be able to map submitted data to datastreams in your content model.'),
+          '#default_value' => $default_values['cmodel'] ? $default_values['cmodel'] : '',
+          '#options' => $cmodel_options,
+        ),
+        'relation' => array(
+          '#type' => 'select',
+          '#title' => 'Relationship to current object',
+          '#description' => t('Select whether the newly created object should be a child of this object, or a member of this object\'s parent collection (i.e. sibling).'),
+          '#default_value' => $default_values['relation'] ? $default_values['relation'] : 'child',
+          '#options' => $relation_options,
+          '#states' => array(
+            // Hide if cmodel is not chosen.
+            'invisible' => array(
+              ':input[name="islandora_ingest[cmodel]"]' => array('value' => ''),
+            ),
+          ),
+        ),
+      );
+      $form['#submit'][] = 'iwi_islandora_webform_configure_form_submit';
+      $form['#validate'][] = 'iwi_islandora_webform_configure_form_validate';
+
+      // Adjust weights.
+      $form['islandora']['#weight'] = 0;
+      $form['islandora_ingest']['#weight'] = 1;
+      $form['actions']['#weight'] = 2;
+
+    }
+  }
 }
 
 /**
@@ -152,6 +218,37 @@ function iwi_webform_component_edit_form_validate($form, &$form_state) {
   }
 
 }
+
+/**
+ * Submit handler for webform ingest configuration sub-form.
+ *
+ * @param array $form
+ *   the form
+ * @param array $form_state
+ *   the form state, passed by reference
+ */
+function iwi_islandora_webform_configure_form_submit($form, &$form_state) {
+  form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
+  iwi_save_webform_configuration($form, $form_state);
+}
+
+/**
+ * Form validate hook for  webform ingest configuration sub-form.
+ *
+ * @param array $form
+ *   The form
+ * @param array $form_state
+ *   The form_state array
+ */
+function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
+
+  if ($form_state['values']['islandora_ingest']['ingest_enabled'] && empty($form_state['values']['islandora_ingest']['cmodel_filter']) && empty($form_state['values']['islandora_ingest']['cmodel'])) {
+
+    form_set_error('islandora][cmodel_filter', t('If ingesting to current object, a content model filter must be chosen.'));
+
+  }
+}
+
 
 /**
  * Build the component mapping destination options.

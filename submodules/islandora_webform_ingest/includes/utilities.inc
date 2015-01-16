@@ -519,3 +519,35 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
       }
   }
 }
+
+function iwi_save_webform_configuration($form, &$form_state) {
+
+  $nid = $form['nid']['#value'];
+  $enabled = !empty($form_state['values']['islandora_ingest']['ingest_enabled']) ? $form_state['values']['islandora_ingest']['ingest_enabled'] : 0;
+  $cmodel = !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['cmodel'] : '';
+  $relation = !empty($form_state['values']['islandora_ingest']['relation']) ? $form_state['values']['islandora_ingest']['relation'] : 'child';
+  if ($id = db_select('islandora_webform_ingest_webforms', 'm')
+    ->fields('m', array('id'))
+    ->condition('m.nid', $nid)
+    ->execute()->fetchField()
+  ) {
+    db_update('islandora_webform_ingest_webforms')
+      ->fields(array(
+        'ingest_enabled' => $enabled,
+        'cmodel' => $cmodel,
+        'relation' => $relation,
+      ))
+      ->condition('id', $id)
+      ->execute();
+  }
+  else {
+    db_insert('islandora_webform_ingest_webforms')
+      ->fields(array(
+        'nid' => $nid,
+        'ingest_enabled' => $enabled,
+        'cmodel' => $cmodel,
+        'relation' => $relation,
+      ))
+      ->execute();
+  }
+}

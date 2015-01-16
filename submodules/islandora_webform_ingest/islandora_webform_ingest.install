@@ -89,6 +89,47 @@ function islandora_webform_ingest_schema() {
     'primary key' => array('id'),
   );
 
+  $schema['islandora_webform_ingest_webforms'] = array(
+    'description' => 'Holds webform configuration for use with islandora_webform_ingest functionality',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Unique row ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'description' => 'Webform node id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'ingest_enabled' => array(
+        'description' => 'Ingestion enabled',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'cmodel' => array(
+        'description' => 'If empty, ingestion is to current object; if defined, ingestion is to new object of this cmodel',
+        'type' => 'varchar',
+        'length' => 500,
+      ),
+      'relation' => array(
+        'description' => 'If cmodel is defined, this defines the relation of the new object relative to the original object (child or sibling)',
+        'type' => 'varchar',
+        'length' => 500,
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'ingest_enabled' => array('ingest_enabled'),
+    ),
+    'primary key' => array('id'),
+  );
+
   return $schema;
 
 }
@@ -97,8 +138,7 @@ function islandora_webform_ingest_schema() {
  * Add islandora_webform_ingest_map database table.
  */
 function islandora_webform_ingest_update_7001() {
-  cache_clear_all();
-  $schema = drupal_get_schema('islandora_webform_ingest_map');
+  $schema = drupal_get_schema('islandora_webform_ingest_map', TRUE);
   db_create_table('islandora_webform_ingest_map', $schema);
 }
 
@@ -107,4 +147,12 @@ function islandora_webform_ingest_update_7001() {
  */
 function islandora_webform_ingest_update_7002() {
   db_drop_field('islandora_webform_ingestions', 'cid');
+}
+
+/**
+ * Add islandora_webform_ingest_webforms database table.
+ */
+function islandora_webform_ingest_update_7003() {
+  $schema = drupal_get_schema('islandora_webform_ingest_webforms', TRUE);
+  db_create_table('islandora_webform_ingest_webforms', $schema);
 }
