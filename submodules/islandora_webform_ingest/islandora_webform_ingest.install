@@ -94,6 +94,21 @@ function islandora_webform_ingest_schema() {
 }
 
 /**
+ * Implements hook_install().
+ */
+function islandora_webform_ingest_install() {
+  drupal_install_schema('islandora_webform_ingest');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function islandora_webform_ingest_uninstall() {
+  drupal_uninstall_schema('islandora_webform_ingest');
+}
+
+
+/**
  * Add islandora_webform_ingest_map database table.
  */
 function islandora_webform_ingest_update_7001() {
