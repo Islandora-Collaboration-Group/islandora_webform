@@ -78,32 +78,54 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
     form_load_include($form_state, 'inc', 'webform', 'components/select');
     form_load_include($form_state, 'inc', 'webform', 'components/file');
 
-    if (!empty($form['type']['#value']) && in_array($form['type']['#value'], islandora_webform_ingest_get_component_types())) {
+    $webform_ingest_config = db_select('islandora_webform_ingest_webforms', 'c')
+      ->fields('c')
+      ->condition('c.nid', $form['#node']->nid)
+      ->execute()
+      ->fetch();
 
-      $cmodel = iwi_webform_content_model($form['#node']->nid);
+    if ($webform_ingest_config && $webform_ingest_config->ingest_enabled) {
+      if (!empty($form['type']['#value']) && in_array($form['type']['#value'], islandora_webform_ingest_get_component_types())) {
 
-      if ($cmodel) {
+        // If a content model is defined in the ingest configuration, use that.
+        // Otherwise, use the content model defined in the webform.
+        $cmodel = $webform_ingest_config->cmodel ? $webform_ingest_config->cmodel : iwi_webform_content_model($form['#node']->nid);
 
-        $cmodel = islandora_object_load($cmodel);
+        if ($cmodel) {
 
-        // Get datastream mimetypes.
-        $dsmimetypes = iwi_datastream_mime_from_component_type($form['type']['#value']);
+          $cmodel = islandora_object_load($cmodel);
 
-        // Start building the form.
-        $form['ingest'] = array(
-          '#type' => 'fieldset',
-          '#title' => 'Islandora Ingest Defaults',
-          '#description' => t('Choose the datastream and field that this component should be ingested to. Note that this only sets the default, and can be overridden during the actual ingestion of a submission.'),
-          '#collapsible' => TRUE,
-          '#collapsed' => TRUE,
-          '#weight' => 5,
-        );
+          // Get datastream mimetypes.
+          $dsmimetypes = iwi_datastream_mime_from_component_type($form['type']['#value']);
 
-        // Load most the form elements.
-        $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, $cmodel, $dsmimetypes));
+          $description = array();
+          if (!$webform_ingest_config->cmodel) {
+            $description[] = t('You are ingesting to datastreams on the existing object');
+          }
+          else {
+            $description[] = t('You are ingesting to a new object using the @cmodel content model', array('@cmodel' => $webform_ingest_config->cmodel));
+            $description[] = t('The new object will be a @relation of the existing object', array('@relation' => $webform_ingest_config->relation));
+          }
 
-        $form['#submit'][] = 'iwi_webform_component_edit_form_submit';
-        $form['#validate'][] = 'iwi_webform_component_edit_form_validate';
+          $description[] = t('Choose the datastream and field that this component should be ingested to. Note that this only sets the default, and can be overridden during the actual ingestion of a submission.');
+
+
+          // Start building the form.
+          $form['ingest'] = array(
+            '#type' => 'fieldset',
+            '#title' => 'Islandora Ingest Mapping',
+            '#description' => implode('<br />', $description),
+            '#collapsible' => TRUE,
+            '#collapsed' => TRUE,
+            '#weight' => 5,
+          );
+
+          // Load most the form elements.
+          $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, $cmodel, $dsmimetypes));
+
+          $form['#submit'][] = 'iwi_webform_component_edit_form_submit';
+          $form['#validate'][] = 'iwi_webform_component_edit_form_validate';
+        }
       }
     }
   }
