@@ -169,11 +169,6 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
         $cmodel_options[$cmodel['pid']] = t('Create new @cmodel', array('@cmodel' => $cmodel['label']));
       }
 
-      $relation_options = array(
-        'child' => t('Child of current object'),
-        'sibling' => t('Sibling of current object'),
-      );
-
       $form['islandora_ingest'] = array(
         '#type' => 'fieldset',
         '#title' => 'Islandora Ingest',
@@ -196,11 +191,22 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
           '#options' => $cmodel_options,
         ),
         'relation' => array(
-          '#type' => 'select',
+          '#type' => 'textfield',
           '#title' => 'Relationship to current object',
-          '#description' => t('Select whether the newly created object should be a child of this object, or a member of this object\'s parent collection (i.e. sibling).'),
-          '#default_value' => $default_values['relation'] ? $default_values['relation'] : 'child',
-          '#options' => $relation_options,
+          '#description' => t('Provide a name for the relationship of the new object to the original object, e.g. "isTranscriptionOf". This must be a string with only upper and lower case letters and no spaces.'),
+          '#default_value' => $default_values['relation'] ? $default_values['relation'] : 'isChildOf',
+          '#states' => array(
+            // Hide if cmodel is not chosen.
+            'invisible' => array(
+              ':input[name="islandora_ingest[cmodel]"]' => array('value' => ''),
+            ),
+          ),
+        ),
+        'namespace' => array(
+          '#type' => 'textfield',
+          '#title' => 'Namespace of new object',
+          '#description' => t('Provide a namespace for the newly created object.'),
+          '#default_value' => $default_values['namespace'] ? $default_values['namespace'] : 'islandora',
           '#states' => array(
             // Hide if cmodel is not chosen.
             'invisible' => array(
@@ -291,6 +297,26 @@ function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
   if ($form_state['values']['islandora_ingest']['ingest_enabled'] && empty($form_state['values']['islandora']['cmodel_filter']) && empty($form_state['values']['islandora_ingest']['cmodel'])) {
 
     form_set_error('islandora][cmodel_filter', t('If ingesting to current object, a content model filter must be chosen.'));
+
+  }
+
+  if ($form_state['values']['islandora_ingest']['ingest_enabled']
+    && $form_state['values']['islandora_ingest']['cmodel']
+    && !empty($form_state['values']['islandora_ingest']['relation'])
+    && preg_match("/[^a-zA-Z]/", $form_state['values']['islandora_ingest']['relation'])
+  ) {
+
+    form_set_error('islandora_ingest][relation', t('Invalid string for relation. Relation must consist of upper and lower case letters without any spaces.'));
+
+  }
+
+  if ($form_state['values']['islandora_ingest']['ingest_enabled']
+    && $form_state['values']['islandora_ingest']['cmodel']
+    && !empty($form_state['values']['islandora_ingest']['namespace'])
+    && preg_match("/[^a-z]/", $form_state['values']['islandora_ingest']['namespace'])
+  ) {
+
+    form_set_error('islandora_ingest][namespace', t('Invalid string for namespace. Namespace must consist of lower case letters only.'));
 
   }
 }

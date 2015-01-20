@@ -331,6 +331,22 @@ function iwi_webform_content_model($webform_nid) {
     ->execute()->fetchField();
 }
 
+/**
+ * Retrieve the ingest settings for a webform.
+ *
+ * @param int $webform_nid
+ *   the node id of the webform
+ *
+ * @return string
+ *   the cmodel filter value, or NULL
+ */
+function iwi_webform_ingest_settings($webform_nid) {
+  return db_select('islandora_webform_ingest_webforms', 'iw')
+    ->fields('iw', array('ingest_enabled', 'cmodel', 'relation'))
+    ->condition('iw.nid', $webform_nid)
+    ->execute()->fetch();
+}
+
 
 /**
  * This function is the clone & replace workhorse.
@@ -526,6 +542,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
   $enabled = !empty($form_state['values']['islandora_ingest']['ingest_enabled']) ? $form_state['values']['islandora_ingest']['ingest_enabled'] : 0;
   $cmodel = !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['cmodel'] : '';
   $relation = !empty($form_state['values']['islandora_ingest']['relation']) ? $form_state['values']['islandora_ingest']['relation'] : 'child';
+  $namespace = !empty($form_state['values']['islandora_ingest']['namespace']) ? $form_state['values']['islandora_ingest']['namespace'] : 'islandora';
   if ($id = db_select('islandora_webform_ingest_webforms', 'm')
     ->fields('m', array('id'))
     ->condition('m.nid', $nid)
@@ -536,6 +553,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
         'ingest_enabled' => $enabled,
         'cmodel' => $cmodel,
         'relation' => $relation,
+        'namespace' => $namespace,
       ))
       ->condition('id', $id)
       ->execute();
@@ -547,6 +565,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
         'ingest_enabled' => $enabled,
         'cmodel' => $cmodel,
         'relation' => $relation,
+        'namespace' => $namespace,
       ))
       ->execute();
   }
