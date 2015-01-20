@@ -342,7 +342,7 @@ function iwi_webform_content_model($webform_nid) {
  */
 function iwi_webform_ingest_settings($webform_nid) {
   return db_select('islandora_webform_ingest_webforms', 'iw')
-    ->fields('iw', array('ingest_enabled', 'cmodel', 'relation'))
+    ->fields('iw', array('ingest_enabled', 'cmodel', 'relation', 'namespace'))
     ->condition('iw.nid', $webform_nid)
     ->execute()->fetch();
 }

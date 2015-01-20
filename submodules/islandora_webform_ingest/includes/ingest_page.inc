@@ -25,13 +25,44 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   form_load_include($form_state, 'inc', 'islandora', '/includes/ingest.form');
   // Get the submission data.
   $submission = array_shift(webform_get_submissions(array('sid' => $sid)));
-  $object = $submission->islandora_object;
+  // Get the webform ingest configuration.
+  $iwi_settings = iwi_webform_ingest_settings($submission->nid);
+
+
+  // If cmodel is defined in the webform ingest settings, we want to create
+  // a new object related to the original object.
+  if ($iwi_settings->cmodel) {
+    if ($iwi_settings->namespace && $iwi_settings->relation) {
+      // Create a new object of this cmodel from scratch.
+      $object = $submission->islandora_object->repository->constructObject($iwi_settings->namespace);
+      $object->owner = 'fedoraAdmin';
+      $object->models = $iwi_settings->cmodel;
+      // Add the relationship back to the original object.
+      $object->relationships->add(FEDORA_RELS_EXT_URI, $iwi_settings->relation, $submission->islandora_object->id);
+      $object->repository->ingestObject($object);
+      $ingest_content_model = islandora_object_load($iwi_settings->cmodel);
+    }
+    else {
+      // We shouldn't ever see this condition, but just in case...
+      $url = 'node/' . $submission->nid . '/webform/islandora';
+      drupal_set_message(t('Invalid webform ingestion settings for creating a new object. Please check your settings at !link', array('!link' => l($url, $url))), 'error');
+      return $form;
+    }
+  }
+  // If cmodel is not defined in the webform ingest settings, we are modifying
+  // the original object.
+  else {
+    $object = $submission->islandora_object;
+    $ingest_content_model = islandora_object_load(iwi_webform_content_model($submission->nid));
+  }
+
+
   $webform = node_load($submission->nid);
   // Get the submission component mappings.
   $mappings = iwi_get_saved_component_mappings($submission->nid);
 
   // Get the content model datastreams.
-  $datastreams = iwi_ingestable_datastreams(islandora_object_load(iwi_webform_content_model($submission->nid)), iwi_ingestable_mimetypes());
+  $datastreams = iwi_ingestable_datastreams($ingest_content_model, iwi_ingestable_mimetypes());
 
   $submission_info = array(
     l($object->label, 'islandora/object/' . $object->id),
@@ -187,7 +218,10 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
     '#weight' => 100,
   );
 
+  // Store some stuff for submit callback.
   $form['#submission'] = $submission;
+  $form['#iwi_settings'] = $iwi_settings;
+  $form['#ingest_cmodel'] = $ingest_content_model;
 
   return $form;
 
@@ -290,6 +324,22 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
         }
       }
     }
+    $url = 'islandora/object/' . $object->id;
+    $link = l($url, $url);
+    if ($form['#iwi_settings']->cmodel) {
+      // Report new object created.
+      drupal_set_message(t('New @cmodel was ingested: !link', array(
+        '@cmodel' => $form['#ingest_cmodel']->label,
+        '!link' => $link,
+      )));
+    }
+    else {
+      // Report original object modified.
+      drupal_set_message(t('@cmodel was updated: !link', array(
+        '@cmodel' => $form['#ingest_cmodel']->label,
+        '!link' => $link,
+      )));
+    }
     iwi_record_ingested($form['#submission'], $object);
   }
 }
@@ -299,19 +349,25 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
  *
  * @param object $submission
  *   A webform submission object
- * @param IslandoraFedoraObject $object
+ * @param mixed $object
  *   The repository object
  *
  * @throws Exception
  */
-function iwi_record_ingested($submission, IslandoraFedoraObject $object) {
-  $fields = array(
-    'nid' => $submission->nid,
-    'sid' => $submission->sid,
-    'pid' => $object->id,
-    'date' => REQUEST_TIME,
-    'data' => serialize($submission->data),
-  );
+function iwi_record_ingested($submission, $object) {
+  if (in_array(get_class($object), array('IslandoraNewFedoraObject', 'IslandoraFedoraObject'))) {
+    $fields = array(
+      'nid' => $submission->nid,
+      'sid' => $submission->sid,
+      'pid' => $object->id,
+      'date' => REQUEST_TIME,
+      'data' => serialize($submission->data),
+    );
 
-  db_insert('islandora_webform_ingestions')->fields($fields)->execute();
+    db_insert('islandora_webform_ingestions')->fields($fields)->execute();
+
+  }
+  else {
+    watchdog('islandora_webform_ingest', 'Could not record object ingestion because second argument was not correct class', array(), WATCHDOG_ERROR);
+  }
 }

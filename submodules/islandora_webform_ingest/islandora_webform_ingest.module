@@ -507,7 +507,7 @@ function iwi_ds_field_options($association, $mimefilter = array()) {
  * TODO If bulk ingest is implemented, we would add that here as well
  */
 function islandora_webform_ingest_iw_results_object_submissions_page_element_alter(&$element) {
-  dpm($element);
+
   if (user_access('ingest islandora webform submissions')) {
 
     // Failed to get ctools modal popup form to work.
