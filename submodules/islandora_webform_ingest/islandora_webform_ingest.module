@@ -21,7 +21,8 @@ function islandora_webform_ingest_menu() {
       'title' => 'Ingest Webform Submission',
       'page callback' => 'iwi_preview_ingest_submission_form_callback',
       'page arguments' => array(FALSE, 2),
-      'access arguments' => array('ingest islandora webform submissions'),
+      'access arguments' => array(2),
+      'access callback' => 'iwi_ingest_access',
     ),
   );
 }
@@ -43,6 +44,29 @@ function islandora_webform_ingest_permission() {
   );
 }
 
+/**
+ * Access callback for islandora webform ingest.
+ *
+ * @param mixed $sid
+ *   Submission id - if provided, checks to see if ingestion is enabled for
+ *   that submission
+ *
+ * @return bool
+ *   TRUE = access permitted; FALSE = access denied
+ */
+function iwi_ingest_access($sid = FALSE) {
+  if ($sid) {
+    $query = db_select('webform_submissions', 's');
+    $query->join('islandora_webform_ingest_webforms', 'w', "w.nid = s.nid");
+    $query->fields('w', array('ingest_enabled'));
+    $query->condition('s.sid', $sid);
+    $enabled = $query->execute()->fetchField();
+  }
+  else {
+    $enabled = TRUE;
+  }
+  return $enabled && user_access('ingest islandora webform submissions');
+}
 
 /**
  * Implements hook_webform_submission_load().
@@ -264,7 +288,7 @@ function iwi_islandora_webform_configure_form_submit($form, &$form_state) {
  */
 function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
 
-  if ($form_state['values']['islandora_ingest']['ingest_enabled'] && empty($form_state['values']['islandora_ingest']['cmodel_filter']) && empty($form_state['values']['islandora_ingest']['cmodel'])) {
+  if ($form_state['values']['islandora_ingest']['ingest_enabled'] && empty($form_state['values']['islandora']['cmodel_filter']) && empty($form_state['values']['islandora_ingest']['cmodel'])) {
 
     form_set_error('islandora][cmodel_filter', t('If ingesting to current object, a content model filter must be chosen.'));
 
@@ -457,6 +481,7 @@ function iwi_ds_field_options($association, $mimefilter = array()) {
  * TODO If bulk ingest is implemented, we would add that here as well
  */
 function islandora_webform_ingest_iw_results_object_submissions_page_element_alter(&$element) {
+  dpm($element);
   if (user_access('ingest islandora webform submissions')) {
 
     // Failed to get ctools modal popup form to work.
@@ -485,35 +510,40 @@ function islandora_webform_ingest_iw_results_object_submissions_page_element_alt
     $pid = $element['#object']->id;
 
     foreach ($element['table']['#rows'] as $rownum => &$row) {
-      // Check to see if this has previously been ingested, if so,
-      // change link text.
-      $ingested = iwi_get_ingestion_info($submission_ids[$rownum]);
-      $link_text = t('Ingest');
-      $link_options = array(
-        'attributes' => array(
-          'title' => t('Review and ingest this submission'),
-          'class' => array(
-            'islandora_webform_ingest',
-          ),
-        ),
-      );
-      if ($modal) {
-        $link_options['attributes']['class'][] = 'ctools-use-modal';
-        $link_url = 'islandora_webform_submission/nojs/ingest/' . $submission_ids[$rownum];
-      }
-      else {
-        $link_options['query'] = $destination;
-        $link_url = 'islandora_webform_submission/ingest/' . $submission_ids[$rownum];
-      }
-      if ($ingested) {
-        $link_text = t('Re-Ingest');
-        $link_options['attributes']['class'][] = 'ingested';
-        $link_options['attributes']['title'] = t('This submission has previously been ingested. Click to review and re-ingest this submission');
-      }
+      $sid = $submission_ids[$rownum];
+      $link = '';
+      if (iwi_ingest_access($sid)) {
 
-      // TODO: Set up a model ingestion preview/confirm popup
-      // and configure this link to fire it.
-      $link = l($link_text, $link_url, $link_options);
+        // Check to see if this has previously been ingested, if so,
+        // change link text.
+        $ingested = iwi_get_ingestion_info($sid);
+        $link_text = t('Ingest');
+        $link_options = array(
+          'attributes' => array(
+            'title' => t('Review and ingest this submission'),
+            'class' => array(
+              'islandora_webform_ingest',
+            ),
+          ),
+        );
+        if ($modal) {
+          $link_options['attributes']['class'][] = 'ctools-use-modal';
+          $link_url = 'islandora_webform_submission/nojs/ingest/' . $sid;
+        }
+        else {
+          $link_options['query'] = $destination;
+          $link_url = 'islandora_webform_submission/ingest/' . $sid;
+        }
+        if ($ingested) {
+          $link_text = t('Re-Ingest');
+          $link_options['attributes']['class'][] = 'ingested';
+          $link_options['attributes']['title'] = t('This submission has previously been ingested. Click to review and re-ingest this submission');
+        }
+
+        // TODO: Set up a model ingestion preview/confirm popup
+        // and configure this link to fire it.
+        $link = l($link_text, $link_url, $link_options);
+      }
       $row[] = $link;
       if ($bulk) {
         // TODO FUTURE: Implement bulk ingestion - this is just for UI demo.
