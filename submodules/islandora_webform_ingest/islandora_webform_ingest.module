@@ -122,33 +122,37 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
           // Get datastream mimetypes.
           $dsmimetypes = iwi_datastream_mime_from_component_type($form['type']['#value']);
 
-          $description = array();
-          if (!$webform_ingest_config->cmodel) {
-            $description[] = t('You are ingesting to datastreams on the existing object');
-          }
-          else {
-            $description[] = t('You are ingesting to a new object using the @cmodel content model', array('@cmodel' => $webform_ingest_config->cmodel));
-            $description[] = t('The new object will be a @relation of the existing object', array('@relation' => $webform_ingest_config->relation));
-          }
-
-          $description[] = t('Choose the datastream and field that this component should be ingested to. Note that this only sets the default, and can be overridden during the actual ingestion of a submission.');
-
-
           // Start building the form.
           $form['ingest'] = array(
             '#type' => 'fieldset',
             '#title' => 'Islandora Ingest Mapping',
-            '#description' => implode('<br />', $description),
             '#collapsible' => TRUE,
             '#collapsed' => TRUE,
             '#weight' => 5,
           );
 
           // Load most the form elements.
-          $form['ingest'] = array_merge($form['ingest'], islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, $cmodel, $dsmimetypes));
+          $mapping_fields = islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state, $cmodel, $dsmimetypes);
+          if (!empty($mapping_fields)) {
+            $form['ingest'] = array_merge($form['ingest'], $mapping_fields);
 
-          $form['#submit'][] = 'iwi_webform_component_edit_form_submit';
-          $form['#validate'][] = 'iwi_webform_component_edit_form_validate';
+            $description = array();
+            $description[] = t('Choose the datastream and field that this component should be ingested to. Note that this only sets the default values, and can be overridden at the time a submission is ingested.');
+            if (!$webform_ingest_config->cmodel) {
+              $description[] = t('You are ingesting to datastreams on the existing object. <strong>Be very careful - this can permanently overwrite existing data!</strong>');
+            }
+            else {
+              $description[] = t('You are ingesting to a new %cmodel object', array('%cmodel' => $cmodel->label));
+              $description[] = t('It will be related by %relation to the existing object', array('%relation' => $webform_ingest_config->relation));
+            }
+            $form['ingest']['#description'] = implode('<br />', $description);
+
+            $form['#submit'][] = 'iwi_webform_component_edit_form_submit';
+            $form['#validate'][] = 'iwi_webform_component_edit_form_validate';
+          }
+          else {
+            $form['ingest']['#description'] = t('@cmodel provides no datastreams that can be populated from this webform field type.', array('@cmodel' => $cmodel->label));
+          }
         }
       }
     }
@@ -185,7 +189,9 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
           '#type' => 'select',
           '#title' => 'Ingest destination',
           '#description' => t('Select whether to ingest to the current object, or to a new object/content-model. <br />
-          IMPORTANT: If you select to ingest to the current object, then a content model filter must be selected above.
+          <strong>If you change a previously saved ingestion destination, all component ingestion mappings that you had previously defined for this webform will be deleted and will need to be recreated.</strong>
+           <br />
+          If you select to ingest to the current object, then a content model filter must be selected above.
           This is needed in order to be able to map submitted data to datastreams in your content model.'),
           '#default_value' => $default_values['cmodel'] ? $default_values['cmodel'] : '',
           '#options' => $cmodel_options,
@@ -344,6 +350,9 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
   // Get a list of the theoretically eligible destination datastreams.
   $datastreams = iwi_ingestable_datastreams($cmodel, $mimetypes);
 
+  if (empty($datastreams)) {
+    return FALSE;
+  }
   // The datastreams options list that we are building.
   $dsoptions = array();
 
@@ -381,6 +390,12 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
         'event' => 'change',
         'callback' => 'iwi_ds_field_options_ajax',
         'wrapper' => 'ds_field_options',
+      ),
+      '#states' => array(
+        // Hide if mode is not selected.
+        'invisible' => array(
+          ':input[name="ingest[mode]"]' => array('value' => ''),
+        ),
       ),
     ),
     'fields_wrapper' => array(

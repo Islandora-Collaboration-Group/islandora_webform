@@ -543,11 +543,16 @@ function iwi_save_webform_configuration($form, &$form_state) {
   $cmodel = !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['cmodel'] : '';
   $relation = !empty($form_state['values']['islandora_ingest']['relation']) ? $form_state['values']['islandora_ingest']['relation'] : 'child';
   $namespace = !empty($form_state['values']['islandora_ingest']['namespace']) ? $form_state['values']['islandora_ingest']['namespace'] : 'islandora';
-  if ($id = db_select('islandora_webform_ingest_webforms', 'm')
-    ->fields('m', array('id'))
+  if ($old_settings = db_select('islandora_webform_ingest_webforms', 'm')
+    ->fields('m')
     ->condition('m.nid', $nid)
-    ->execute()->fetchField()
+    ->execute()->fetch()
   ) {
+    if ($old_settings->cmodel != $cmodel) {
+      // Content model is changing, wipe out ingest mappings.
+      db_delete('islandora_webform_ingest_map')->condition('nid', $nid);
+      drupal_set_message(t('The destination content model was changed and therefore all existing component ingest mappings for this webform were deleted. You will have to edit each webform component that you wish to ingest.'), 'warning');
+    }
     db_update('islandora_webform_ingest_webforms')
       ->fields(array(
         'ingest_enabled' => $enabled,
@@ -555,7 +560,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
         'relation' => $relation,
         'namespace' => $namespace,
       ))
-      ->condition('id', $id)
+      ->condition('id', $old_settings->id)
       ->execute();
   }
   else {
