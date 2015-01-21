@@ -145,8 +145,19 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
               $description[] = t('You are ingesting to a new %cmodel object', array('%cmodel' => $cmodel->label));
               $description[] = t('It will be related by %relation to the existing object', array('%relation' => $webform_ingest_config->relation));
             }
-            $form['ingest']['#description'] = implode('<br />', $description);
-
+            $form['ingest']['long_description'] = array(
+              '#weight' => 2,
+              '#type' => 'container',
+              'content' => array(
+                '#markup' => implode('<br />', $description)
+              ),
+              '#states' => array(
+                // Hide if mode is not selected.
+                'invisible' => array(
+                  ':input[name="ingest[mode]"]' => array('value' => ''),
+                ),
+              ),
+            );
             $form['#submit'][] = 'iwi_webform_component_edit_form_submit';
             $form['#validate'][] = 'iwi_webform_component_edit_form_validate';
           }
@@ -269,7 +280,7 @@ function iwi_webform_component_edit_form_submit($form, &$form_state) {
  */
 function iwi_webform_component_edit_form_validate($form, &$form_state) {
 
-  if (isset($form['ingest']['fields_wrapper']['fields']['#required']) && $form['ingest']['fields_wrapper']['fields']['#required'] && empty($form_state['values']['ingest']['fields_wrapper']['fields'])) {
+  if (!empty($form_state['values']['ingest']['mode']) && isset($form['ingest']['fields_wrapper']['fields']['#required']) && $form['ingest']['fields_wrapper']['fields']['#required'] && empty($form_state['values']['ingest']['fields_wrapper']['fields'])) {
 
     form_set_error('ingest][fields_wrapper][fields', t('A field name is required.'));
 
@@ -372,8 +383,9 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
   $elements = array(
     'mode' => array(
       '#title' => 'Ingest?',
-      '#description' => t('Do you want to ingest this component? If so, do you want to replace existing content in this field, or append to it if possible?'),
+      '#description' => t('Do you want to ingest this component? If so, do you want to replace existing content, or append to it if possible?'),
       '#type' => 'select',
+      '#weight' => 1,
       '#options' => array(
         '' => 'Do not ingest',
         'replace' => 'Replace',
@@ -386,6 +398,7 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
       '#type' => 'select',
       '#options' => array_merge(array('' => '- Select datastream -'), $dsoptions),
       '#default_value' => $datastream_value,
+      '#weight' => 3,
       '#ajax' => array(
         'event' => 'change',
         'callback' => 'iwi_ds_field_options_ajax',
@@ -401,6 +414,7 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
     'fields_wrapper' => array(
       '#prefix' => '<div id="ds_field_options">',
       '#suffix' => '</div>',
+      '#weight' => 4,
     ),
   );
 
@@ -414,13 +428,21 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
     $elements['fields_wrapper'] = array(
       '#prefix' => '<div id="ds_field_options">',
       '#suffix' => '</div>',
+      '#weight' => 4,
       'fields' => array(
         '#title' => 'Field',
         '#type' => 'select',
         '#options' => $ds_field_options,
         '#default_value' => $ds_field_default,
         '#required' => TRUE,
+        '#states' => array(
+          // Hide if mode is not selected.
+          'invisible' => array(
+            ':input[name="ingest[mode]"]' => array('value' => ''),
+          ),
+        ),
       ),
+
     );
 
   }
