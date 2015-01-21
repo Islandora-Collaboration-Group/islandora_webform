@@ -667,3 +667,78 @@ function iwi_preview_ingest_submission_form_callback($js, $sid) {
     return drupal_get_form('iwi_preview_ingest_submission_form', $sid);
   }
 }
+
+/**
+ * Implements hook_block_info().
+ *
+ * Define a block for each distinct relation term defined in webform
+ * ingest configurations.
+ */
+function islandora_webform_ingest_block_info() {
+  $webforms = db_select('islandora_webform_ingest_webforms', 'iw')
+    ->distinct()
+    ->fields('iw', array('relation'))
+    ->execute()->fetchAll();
+  $items = array();
+
+  foreach ($webforms as $webform) {
+    $items[$webform->relation] = array(
+      'info' => 'Objects with ' . $webform->relation . ' relation',
+      'cache' => DRUPAL_NO_CACHE,
+      'visibility' => BLOCK_VISIBILITY_LISTED,
+      'pages' => 'islandora/object/*',
+    );
+  }
+
+  return $items;
+}
+
+/**
+ * Implements hook_block_configure().
+ */
+function islandora_webform_ingest_block_configure($delta = '') {
+  $form = array();
+  $form['view_mode'] = array(
+    '#type' => 'select',
+    '#title' => t('View mode'),
+    '#default_value' => variable_get('islandora_webform_ingest_block_view_mode_' . $delta, 'grid'),
+    '#description' => t('Select the way objects should appear in this block.'),
+    '#options' => array(
+      'grid' => 'Grid',
+      'list' => 'List',
+      'table' => 'Table',
+    ),
+  );
+  return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
+  if (isset($edit['view_mode'])) {
+    variable_set('islandora_webform_ingest_block_view_mode_' . $delta, $edit['view_mode']);
+  }
+}
+
+
+/**
+ * Implements hook_block_view().
+ *
+ * Displays objects related by the rels-ext $relation to the currently
+ * displayed object, using view mode configured in the block settings.
+ */
+function islandora_webform_ingest_block_view($relation = '') {
+  $object = islandora_object_load(arg(2));
+  $block = array();
+  if ($object) {
+    $view_mode = variable_get('islandora_webform_ingest_block_view_mode_' . $relation, 'grid');
+    // TODO: figure out SPARQL query and view mode theming.
+
+    // SPARQL query gets objects.
+
+    // Theme the objects using the selected view mode.
+  }
+
+  return $block;
+}
