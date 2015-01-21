@@ -33,13 +33,9 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   // a new object related to the original object.
   if ($iwi_settings->cmodel) {
     if ($iwi_settings->namespace && $iwi_settings->relation) {
-      // Create a new object of this cmodel from scratch.
-      $object = $submission->islandora_object->repository->constructObject($iwi_settings->namespace);
-      $object->owner = 'fedoraAdmin';
-      $object->models = $iwi_settings->cmodel;
-      // Add the relationship back to the original object.
-      $object->relationships->add(FEDORA_RELS_EXT_URI, $iwi_settings->relation, $submission->islandora_object->id);
-      $object->repository->ingestObject($object);
+      // Setting $object to NULL causes a new object of this cmodel
+      // to be created from scratch.
+      $object = NULL;
       $ingest_content_model = islandora_object_load($iwi_settings->cmodel);
     }
     else {
@@ -64,8 +60,21 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   // Get the content model datastreams.
   $datastreams = iwi_ingestable_datastreams($ingest_content_model, iwi_ingestable_mimetypes());
 
+  // Get row label for submission summary.
+  if ($object) {
+    $submission_object_text = l($object->label, 'islandora/object/' . $object->id);
+  }
+  else {
+    $submission_object_text = t('New @cmodel related by @relation to "@object"',
+      array(
+        '@cmodel' => $ingest_content_model->label,
+        '@relation' => $iwi_settings->relation,
+        '@object' => $submission->islandora_object->label,
+      ));
+  }
+
   $submission_info = array(
-    l($object->label, 'islandora/object/' . $object->id),
+    $submission_object_text,
     l($webform->title, 'node/' . $webform->nid),
     l($submission->is_draft ? t('@sid (draft)', array('@sid' => $sid)) : $sid, "node/$webform->nid/submission/$sid"),
     format_date($submission->submitted, 'short'),
@@ -236,9 +245,20 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
  *   the form_state
  */
 function iwi_ingest_page_form_submit($form, &$form_state) {
-  if (!empty($form_state['datastreams']) && !empty($form_state['object'])) {
+  if (!empty($form_state['datastreams']) && (!empty($form_state['object']) || !empty($form['#submission']->islandora_object))) {
 
     $object = $form_state['object'];
+
+    // If $object is NULL, that means we're creating a new object related to
+    // the original object. Do that now. We'll add the datastreams next.
+    if (empty($object)) {
+      $object = $form['#submission']->islandora_object->repository->constructObject($form['#iwi_settings']->namespace);
+      $object->owner = 'fedoraAdmin';
+      $object->models = $form['#iwi_settings']->cmodel;
+      // Add the relationship back to the original object.
+      $object->relationships->add(FEDORA_RELS_EXT_URI, $form['#iwi_settings']->relation, $form['#submission']->islandora_object->id);
+      $object->repository->ingestObject($object);
+    }
 
     foreach ($form_state['datastreams'] as $association) {
       $dsid = $association['dsid'];
@@ -312,7 +332,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
             else {
               drupal_set_message(t('%type is not a supported file type for ingest to %dsid', array(
                 '%type' => $ext,
-                '%dsid' => $dsid
+                '%dsid' => $dsid,
               ), 'error'));
             }
           }
