@@ -796,20 +796,28 @@ function islandora_webform_ingest_block_view($relation = '') {
 /**
  * Implements hook_islandora_basic_collection_query_param_alter().
  *
- * If the object at the pid is not a collection
+ * Substitute relation predicate for the collection predicates.
  */
 function islandora_webform_ingest_islandora_basic_collection_query_param_alter(&$query_filters, &$query_statements, &$params, &$query_optionals) {
   if (!empty($params['relation'])) {
     foreach ($query_filters as &$query_filter) {
       if (strpos($query_filter, 'sameTerm(?collection_predicate') !== FALSE && strpos($query_filter, "<fedora-rels-ext:" . $params['relation'] . ">)") === FALSE) {
-        $query_filter .= " || sameTerm(?collection_predicate, <fedora-rels-ext:" . $params['relation'] . ">)";
+        $query_filter = "sameTerm(?collection_predicate, <fedora-rels-ext:" . $params['relation'] . ">)";
       }
+      break;
     }
+
   }
 }
 
 /**
  * Get objects associated with this object.
+ *
+ * This is copied from islandora_basic_collection_get_member_objects(). We make
+ * one small change - we add a $relation parameter to the $parameters array
+ * prior to calling islandora_basic_collection_get_query_info(). This signals
+ * to our hook_islandora_basic_collection_query_param_alter() to remove the
+ * collection member filters and replace them with our relation filter.
  *
  * @param AbstractObject $object
  *   The object whose related objects will be fetched.
