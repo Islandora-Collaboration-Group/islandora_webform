@@ -715,6 +715,17 @@ function islandora_webform_ingest_block_configure($delta = '') {
     '#default_value' => variable_get('islandora_webform_ingest_block_page_count_' . $delta, '10'),
     '#description' => t('How many objects may appear in the related objects block at one time? A pager will be added if the count exceeds this number.'),
   );
+  $form['sort_by'] = array(
+    '#type' => 'select',
+    '#title' => t('Sort by'),
+    '#default_value' => variable_get('islandora_webform_ingest_block_sort_by_' . $delta, '?date_modified'),
+    '#description' => t('How should the objects be sorted?'),
+    '#options' => array(
+      '?date_modified' => 'Most recent',
+      '?title' => 'Title',
+      '?object' => 'Object PID',
+    ),
+  );
   return $form;
 }
 
@@ -728,6 +739,9 @@ function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
   if (isset($edit['page_count'])) {
     variable_set('islandora_webform_ingest_block_page_count_' . $delta, $edit['page_count']);
   }
+  if (isset($edit['sort_by'])) {
+    variable_set('islandora_webform_ingest_block_sort_by_' . $delta, $edit['sort_by']);
+  }
 }
 
 
@@ -736,6 +750,8 @@ function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
  *
  * Displays objects related by the rels-ext $relation to the currently
  * displayed object, using view mode configured in the block settings.
+ *
+ * We are calling $delta "$relation" - they are the same thing in this case.
  */
 function islandora_webform_ingest_block_view($relation = '') {
   $object = islandora_object_load(arg(2));
@@ -807,6 +823,32 @@ function islandora_webform_ingest_islandora_basic_collection_query_param_alter(&
       break;
     }
 
+  }
+}
+
+
+/**
+ * Implements hook_islandora_basic_collection_query_alter().
+ *
+ * We need to be able to change order-by to descending if ordering by date.
+ * islandora_basic_collection_get_query_info() sorts ascending and this can't
+ * be modified by hook_islandora_basic_collection_query_param_alter, so we
+ * need to override that after the query is built.
+ */
+function islandora_webform_ingest_islandora_basic_collection_query_alter(&$query_array) {
+
+  if (!empty($query_array['relation'])) {
+
+    $order_by = variable_get('islandora_webform_ingest_block_sort_by_' . $query_array['relation'], '?date_modified');
+    $query_array['order_by'] = $order_by;
+    if ($order_by == '?date_modified') {
+      $order_by_expression = 'ORDER BY DESC(' . $order_by . ')';
+    }
+    else {
+      $order_by_expression = 'ORDER BY ' . $order_by;
+    }
+    $order_by_pattern = '/ORDER BY \?\S*/';
+    $query_array['query'] = preg_replace($order_by_pattern, $order_by_expression, $query_array['query']);
   }
 }
 
