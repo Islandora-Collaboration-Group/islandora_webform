@@ -706,8 +706,14 @@ function islandora_webform_ingest_block_configure($delta = '') {
     '#options' => array(
       'grid' => 'Grid',
       'list' => 'List',
-      'table' => 'Table',
+      'links' => 'Links',
     ),
+  );
+  $form['page_count'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Page count'),
+    '#default_value' => variable_get('islandora_webform_ingest_block_page_count_' . $delta, '10'),
+    '#description' => t('How many objects may appear in the related objects block at one time? A pager will be added if the count exceeds this number.'),
   );
   return $form;
 }
@@ -718,6 +724,9 @@ function islandora_webform_ingest_block_configure($delta = '') {
 function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
   if (isset($edit['view_mode'])) {
     variable_set('islandora_webform_ingest_block_view_mode_' . $delta, $edit['view_mode']);
+  }
+  if (isset($edit['page_count'])) {
+    variable_set('islandora_webform_ingest_block_page_count_' . $delta, $edit['page_count']);
   }
 }
 
@@ -730,15 +739,153 @@ function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
  */
 function islandora_webform_ingest_block_view($relation = '') {
   $object = islandora_object_load(arg(2));
-  $block = array();
+  $block = array(
+    'subject' => $relation,
+  );
   if ($object) {
     $view_mode = variable_get('islandora_webform_ingest_block_view_mode_' . $relation, 'grid');
-    // TODO: figure out SPARQL query and view mode theming.
+    $page_number = (empty($_GET['page'])) ? 0 : $_GET['page'];
+    $page_size = (empty($_GET['pagesize'])) ? variable_get('islandora_webform_ingest_block_page_count_' . $relation, '10') : $_GET['pagesize'];
 
-    // SPARQL query gets objects.
+    // Get objects.
+    list($results_count, $results) = islandora_webform_ingest_get_related_objects($object, $relation, $page_number, $page_size, $type = 'view');
 
     // Theme the objects using the selected view mode.
+    if ($results_count) {
+
+      // Initialize pager.
+      pager_default_initialize($results_count, $page_size);
+      $collection_pager = theme('pager', array('quantity' => 10));
+
+      switch ($view_mode) {
+        case 'grid':
+          $collection_content = theme('islandora_basic_collection_grid', array(
+              'islandora_object' => $object,
+              'collection_results' => $results,
+            )
+          );
+          break;
+
+        case 'list':
+          $collection_content = theme('islandora_basic_collection', array(
+              'islandora_object' => $object,
+              'collection_results' => $results,
+            )
+          );
+          break;
+
+        default:
+          // Default is to show a list of links.
+          $links = array();
+          foreach ($results as $result) {
+            if (!empty($result['title']['value']) && !empty($result['object']['value'])) {
+              $links[] = l($result['title']['value'], 'islandora/object/' . $result['object']['value']);
+            }
+          }
+          $collection_content = theme('item_list', array('items' => $links));
+          break;
+      }
+
+      $block['content'] = $collection_content . $collection_pager;
+    }
   }
 
   return $block;
+}
+
+/**
+ * Implements hook_islandora_basic_collection_query_param_alter().
+ *
+ * If the object at the pid is not a collection
+ */
+function islandora_webform_ingest_islandora_basic_collection_query_param_alter(&$query_filters, &$query_statements, &$params, &$query_optionals) {
+  if (!empty($params['relation'])) {
+    foreach ($query_filters as &$query_filter) {
+      if (strpos($query_filter, 'sameTerm(?collection_predicate') !== FALSE && strpos($query_filter, "<fedora-rels-ext:" . $params['relation'] . ">)") === FALSE) {
+        $query_filter .= " || sameTerm(?collection_predicate, <fedora-rels-ext:" . $params['relation'] . ">)";
+      }
+    }
+  }
+}
+
+/**
+ * Get objects associated with this object.
+ *
+ * @param AbstractObject $object
+ *   The object whose related objects will be fetched.
+ * @param string $relation
+ *   The rels-ext relation string
+ * @param int $page_number
+ *   The page number in the query for related objects.
+ * @param int $page_size
+ *   The number of results per page page from the query for related objects.
+ * @param string $type
+ *   Either 'view' or 'manage', its meant to represent how the objects will be
+ *   used.
+ * @param string $cmodel
+ *   The content model in which to explicitly select.
+ *
+ * @return array|bool
+ *   An array containing two values:
+ *   - An integer representing the total number of tuples which can be
+ *     selected with the given parameters.
+ *   - The tuples in the slice according to $page_number and $page_size.
+ *   or boolean FALSE if the query fails.
+ */
+function islandora_webform_ingest_get_related_objects(AbstractObject $object, $relation, $page_number = 0, $page_size = 20, $type = 'view', $cmodel = NULL) {
+  $params = array(
+    'object' => $object,
+    'page_number' => $page_number,
+    'page_size' => $page_size,
+    'relation' => $relation,
+  );
+
+  if (isset($cmodel)) {
+    $params['model'] = "<info:fedora/$cmodel>";
+  }
+  // Utilize the basic collection query function, then modify it for our
+  // purpose.
+  $query_array = islandora_basic_collection_get_query_info($params, $type);
+  try {
+    $count = variable_get('islandora_basic_collection_disable_count_object', FALSE) ? 0 : $object->repository->ri->countQuery($query_array['query'], $query_array['type']);
+    $is_itql = strcasecmp('itql', $query_array['type']) === 0;
+
+    if ($is_itql && ($page_number > 0 || $page_size >= 0)) {
+      // Strip the final semi-colon(s) of any itql query, where they exist.
+      $query = trim($query_array['query']);
+      while (strpos($query, -1) == ';') {
+        $query = substr($query, 0, -1);
+      }
+      $query_array['query'] = $query;
+    }
+
+    if ($page_number > 0 && $page_size > 0) {
+      // Add in the offset somehow.
+      $offset = $page_number * $page_size;
+      $query_array['query'] .= " offset $offset";
+    }
+    if ($page_size >= 0) {
+      // Add in the limit somehow.
+      $query_array['query'] .= " limit $page_size";
+    }
+
+    if ($is_itql) {
+      // Add in the final semi-colon.
+      $query_array['query'] .= ';';
+    }
+
+    $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
+  }
+  catch (Exception $e) {
+    $variables = array(
+      '@message' => $e->getMessage(),
+      '@stack' => $e->getTraceAsString(),
+    );
+    watchdog('islandora_webform_ingest',
+      'Islandora webform ingest related objects failed to retrieve associated objects.<br/>Error:<br/>@message<br/>Stack: <br/>@stack',
+      $variables,
+      WATCHDOG_ERROR);
+    return FALSE;
+  }
+  return array($count, $results);
 }
