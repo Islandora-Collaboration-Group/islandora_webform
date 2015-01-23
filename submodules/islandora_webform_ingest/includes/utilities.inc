@@ -550,7 +550,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
   ) {
     if ($old_settings->cmodel != $cmodel) {
       // Content model is changing, wipe out ingest mappings.
-      db_delete('islandora_webform_ingest_map')->condition('nid', $nid);
+      db_delete('islandora_webform_ingest_map')->condition('nid', $nid)->execute();
       drupal_set_message(t('The destination content model was changed and therefore all existing component ingest mappings for this webform were deleted. You will have to edit each webform component that you wish to ingest.'), 'warning');
     }
     db_update('islandora_webform_ingest_webforms')

@@ -58,6 +58,7 @@ function iwi_ingest_access($sid = FALSE) {
   if ($sid) {
     $query = db_select('webform_submissions', 's');
     $query->join('islandora_webform_ingest_webforms', 'w', "w.nid = s.nid");
+    $query->join('islandora_webform_ingest_map', 'm', "m.nid = w.nid");
     $query->fields('w', array('ingest_enabled'));
     $query->condition('s.sid', $sid);
     $enabled = $query->execute()->fetchField();
