@@ -321,7 +321,6 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
                else {
                  $datastream = $object[$dsid];
                }
-            $object->ingestDatastream($datastream);
             $datastream->content = $form_state['values'][$dsid];
             $datastream_count++;
           }
