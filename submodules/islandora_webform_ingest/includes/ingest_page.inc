@@ -342,7 +342,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
           // Respond to invalid types.
           else {
-            drupal_set_message(t('%mime is not a supported mime type for ingest', array('%mime' => $association['mime']), 'error'));
+            drupal_set_message(t('%mime is not a supported mime type for ingest', array('%mime' => $association['mime'])), 'error');
           }
         }
       }
