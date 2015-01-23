@@ -27,6 +27,11 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   $submission = array_shift(webform_get_submissions(array('sid' => $sid)));
   // Get the webform ingest configuration.
   $iwi_settings = iwi_webform_ingest_settings($submission->nid);
+  // Get the submission component mappings.
+  $mappings = iwi_get_saved_component_mappings($submission->nid);
+  if (!count($mappings)) {
+    return $form;
+  }
 
 
   // If cmodel is defined in the webform ingest settings, we want to create
@@ -54,8 +59,6 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
 
 
   $webform = node_load($submission->nid);
-  // Get the submission component mappings.
-  $mappings = iwi_get_saved_component_mappings($submission->nid);
 
   // Get the content model datastreams.
   $datastreams = iwi_ingestable_datastreams($ingest_content_model, iwi_ingestable_mimetypes());
