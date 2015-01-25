@@ -64,7 +64,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   // Get the content model datastreams.
   // It's ok to use NULL mimetype filter because our mappings below
   // control which datastreams we will actually show.
-  $datastreams = iwi_ingestable_datastreams($ingest_content_model, NULL);
+  $datastreams = iwi_ingestible_datastreams($ingest_content_model, NULL);
 
   // Get row label for submission summary.
   if ($object) {

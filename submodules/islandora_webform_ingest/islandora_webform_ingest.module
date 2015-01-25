@@ -381,7 +381,7 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
   form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
 
   // Get a list of the theoretically eligible destination datastreams.
-  $datastreams = iwi_ingestable_datastreams($cmodel, $mimetypes);
+  $datastreams = iwi_ingestible_datastreams($cmodel, $mimetypes);
 
   if (empty($datastreams)) {
     return FALSE;
@@ -514,7 +514,7 @@ function iwi_ds_field_options_ajax($form, &$form_state) {
 
 
 /**
- * Get a list of ingestable fields from a given datastream edit form.
+ * Get a list of ingestible fields from a given datastream edit form.
  *
  * @param array $association
  *   An xml form associated with the datastream

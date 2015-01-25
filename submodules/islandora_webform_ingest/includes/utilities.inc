@@ -17,9 +17,9 @@
  *   If array, filter mimetype by strings in the array
  *
  * @return array
- *   An array of the ingestable datastream objects
+ *   An array of the ingestible datastream objects
  */
-function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('text/plain')) {
+function iwi_ingestible_datastreams(FedoraObject $object, $mimetypes = array('text/plain')) {
 
   if (!empty($object['DS-COMPOSITE-MODEL'])) {
 
@@ -31,7 +31,7 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
     $results = array();
 
     // Array for keeping track of which DSIDs we have already.
-    $ingestable_dsids = array();
+    $ingestible_dsids = array();
 
     // First, get available xml forms.
     // Xml forms can only accept text content.
@@ -44,7 +44,7 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
           $association['mime'] = 'text/xml';
           // Uniquely identify by dsid and form name.
           $results[$association['dsid'] . ' (' . $association['form_name'] . ')'] = $association;
-          $ingestable_dsids[$association['dsid']] = $association['dsid'];
+          $ingestible_dsids[$association['dsid']] = $association['dsid'];
         }
       }
     }
@@ -59,8 +59,8 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
     $datastreams = (array) json_decode(islandora_webform_run_xsl_transform($info));
 
     foreach ($datastreams as $ds => $dsmime) {
-      if (empty($ingestable_dsids[$ds])) {
-        // Add ingestable datastreams from other mimetypes (e.g. text/plain)
+      if (empty($ingestible_dsids[$ds])) {
+        // Add ingestible datastreams from other mimetypes (e.g. text/plain)
         // If filtering by mimetype, only add datastreams that match a filter.
         if ($mimetypes) {
           foreach ($mimetypes as $type) {
@@ -69,7 +69,7 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
                 'dsid' => $ds,
                 'mime' => $dsmime,
               );
-              $ingestable_dsids[$ds] = $ds;
+              $ingestible_dsids[$ds] = $ds;
             }
             // Only map the datastream once!
             break;
@@ -81,7 +81,7 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
             'dsid' => $ds,
             'mime' => $dsmime,
           );
-          $ingestable_dsids[$ds] = $ds;
+          $ingestible_dsids[$ds] = $ds;
         }
       }
     }
@@ -145,7 +145,7 @@ function iwi_file_extensions_from_component($component) {
 }
 
 /**
- * Convert form array and into a list of ingestable fields and field types.
+ * Convert form array and into a list of ingestible fields and field types.
  *
  * Fieldsets are returned as arrays of fields recursively.
  *
@@ -153,7 +153,7 @@ function iwi_file_extensions_from_component($component) {
  *   a drupal form
  *
  * @return array|bool
- *   List of ingestable fields. Fieldsets are returned as arrays of
+ *   List of ingestible fields. Fieldsets are returned as arrays of
  *   fields recursively
  */
 function iwi_recursive_form_parsing(array $input_form) {
