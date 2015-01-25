@@ -177,7 +177,7 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
         ->condition('m.nid', $form['nid']['#value'])
         ->execute()->fetchAssoc();
 
-      $cmodel_options = array('' => 'Ingest to current object');
+      $cmodel_options = array('' => 'Update datastreams on current object');
       form_load_include($form_state, 'inc', 'islandora', 'includes/utilities');
       $cmodels = islandora_get_content_models();
       asort($cmodels);
