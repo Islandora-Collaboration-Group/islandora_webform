@@ -233,7 +233,6 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   // Store some stuff for submit callback.
   $form['#submission'] = $submission;
   $form['#iwi_settings'] = $iwi_settings;
-  //Do we really need this? 
   $form['#ingest_cmodel'] = $ingest_content_model;
   return $form;
 
@@ -249,20 +248,23 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
  */
 function iwi_ingest_page_form_submit($form, &$form_state) {
   if (!empty($form_state['datastreams']) && !empty($form['#submission']->islandora_object)) {
-    $new_object = ($form['#iwi_settings']->cmodel) ? TRUE : FALSE; 
-    //Created/modified datastream count. We keep track of this to avoid ingesting an empty object to the repo.
-    $datastream_count=0;
+    $new_object = ($form['#iwi_settings']->cmodel) ? TRUE : FALSE;
+    // Keep track of datastream count to avoid ingesting an empty object
+    // to the repo.
+    $datastream_count = 0;
     if ($new_object) {
       $new_pid = $form['#submission']->islandora_object->repository->getNextIdentifier($form['#iwi_settings']->namespace, variable_get('islandora_basic_collection_generate_uuid', FALSE));
       $relationships = array('relationship' => $form['#iwi_settings']->relation, 'pid' => $form['#submission']->islandora_object->id);
       $label = "New Object";
-      $object = islandora_prepare_new_object($new_pid , $label, array(), array($form['#iwi_settings']->cmodel), array($relationships));
-      //Don't add the Object to the REPO yet, let's do this at the end, if $datastream_count > 0
+      $object = islandora_prepare_new_object($new_pid, $label, array(), array($form['#iwi_settings']->cmodel), array($relationships));
+      // Don't add the Object to the REPO yet, let's do this at the end, if
+      // $datastream_count > 0
     }
     else {
-      $object  = islandora_object_load($form['#submission']->islandora_object->id); //Why? Oh my. If you got MD5 checksum activated things get messy. Sorry, only way!
+      // Reload object to avoid MD5 checksum problems.
+      $object = islandora_object_load($form['#submission']->islandora_object->id);
     }
-  
+
     foreach ($form_state['datastreams'] as $association) {
       $dsid = $association['dsid'];
       if (isset($form_state['values'][$dsid]) && isset($form[$dsid])) {
@@ -294,7 +296,8 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
           }
 
           // Update the islandora object with this datastream.
-          // xml_form_builder_update_object returns (array($association['dsid'] => $created, 'DC' => $created_dc);)
+          // xml_form_builder_update_object returns
+          // (array($association['dsid'] => $created, 'DC' => $created_dc);)
           $created = xml_form_builder_update_object($object, $association, $document, $label);
           if ($created[$dsid]) {
             $datastream_count++;
@@ -306,21 +309,20 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
         // Done handling form-based datastream.
 
         // Handle other datastream mimetypes.
-        else {      
+        else {
           $value_type = gettype($form_state['values'][$dsid]);
           // Handle text datastreams.
           $text_value_types = array('integer', 'double', 'string');
           if ($association['mime'] == 'text/plain' && in_array($value_type, $text_value_types)) {
             // Get the datastream object that we'll be ingesting into.
             // Create it if not preexisting.
-             //Carefull with Miss. magic properties. isset is not the way)
             if (empty($object[$dsid])) {
-                 $datastream = $object->constructDatastream($dsid, 'M');
-                 $object->ingestDatastream($datastream);
-               }
-               else {
-                 $datastream = $object[$dsid];
-               }
+              $datastream = $object->constructDatastream($dsid, 'M');
+              $object->ingestDatastream($datastream);
+            }
+            else {
+              $datastream = $object[$dsid];
+            }
             $datastream->content = $form_state['values'][$dsid];
             $datastream_count++;
           }
@@ -334,8 +336,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
               $ext = pathinfo($file->filename, PATHINFO_EXTENSION);
               // If extension is valid for this datastream, go ahead and ingest.
               if (in_array($ext, $extensions)) {
-               //Carefull with Miss magic properties. isset is not the way!)
-              if (empty($object[$dsid])) {
+                if (empty($object[$dsid])) {
                   $datastream = $object->constructDatastream($dsid, 'M');
                   $object->ingestDatastream($datastream);
                 }
@@ -346,7 +347,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
                 $datastream->mimetype = $file->filemime;
                 $file_path = drupal_realpath($file->uri);
                 $datastream->setContentFromFile($file_path);
-                //assuming for now everything wen't fine
+                // Assuming for now everything wen't fine.
                 $datastream_count++;
               }
             }
@@ -364,15 +365,15 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
         }
       }
     }
-    
+
     $url = 'islandora/object/' . $object->id;
     $link = l($url, $url);
     if (($new_object) && ($datastream_count > 0)) {
-      //Now add the Object to the repo
+      // Finally, add the Object to the repo.
       islandora_add_object($object);
+
       // Report new object created.
       drupal_set_message(t('New @cmodel object with PID @pid was ingested: !link', array(
-        //Could we avoid passing the whole cmodel object here and print the CMODEL PID instead of the label?
         '@cmodel' => $form['#ingest_cmodel']->label,
         '@pid' => $object->id,
         '!link' => $link,
@@ -386,6 +387,8 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
         '!link' => $link,
       )));
     }
+
+    // Save a record of this ingestion.
     iwi_record_ingested($form['#submission'], $object);
   }
 }

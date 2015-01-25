@@ -121,7 +121,7 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
           $cmodel = islandora_object_load($cmodel);
 
           // Get datastream mimetypes.
-          $dsmimetypes = iwi_datastream_mime_from_component_type($form['type']['#value']);
+          $dsmimetypes = iwi_datastream_mime_from_component($form['#node']->webform['components'][$form['cid']['#value']]);
 
           // Start building the form.
           $form['ingest'] = array(
@@ -280,6 +280,27 @@ function iwi_webform_component_edit_form_submit($form, &$form_state) {
  *   The webform_component_edit_form form_state array
  */
 function iwi_webform_component_edit_form_validate($form, &$form_state) {
+
+  if ($form['type']['#value'] == 'file' && !empty($form_state['values']['ingest']['datastream'])) {
+    if (preg_match('/\((.*)\)/U', $form_state['values']['ingest']['datastream'], $matches)) {
+      $ds_mime = $matches[1];
+      $types = $form_state['values']['extra']['filtering']['types'];
+      if (count($types) == 0) {
+        form_set_error('validation', t('You must specify one allowed file extension in the validation section when mapping a file component to a binary datastream.'));
+      }
+      if (count($types) > 1) {
+        form_set_error('validation', t('You must specify only one allowed file extension in the validation section when mapping a file component to a binary datastream; @count were selected.', array('@count' => count($types))));
+      }
+      elseif (count($types) == 1) {
+        form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
+        $filter_extension = reset($types);
+        $filter_mime = iwi_get_mimetypes_from_extensions($filter_extension);
+        if ($ds_mime != $filter_mime) {
+          form_set_error('validation', t('The allowed file extension does not match the mimetype of the destination datastream.'));
+        }
+      }
+    }
+  }
 
   if (!empty($form_state['values']['ingest']['mode']) && isset($form['ingest']['fields_wrapper']['fields']['#required']) && $form['ingest']['fields_wrapper']['fields']['#required'] && empty($form_state['values']['ingest']['fields_wrapper']['fields'])) {
 
@@ -476,11 +497,12 @@ function islandora_webform_ingest_get_component_types() {
 }
 
 /**
- * Function for handling ajax request
+ * Function for handling ajax request.
  *
  * @param array $form
  *   The whole drupal form
  * @param array $form_state
+ *   the form_state
  *
  * @return array
  *   The portion of the form being reloaded via ajax
