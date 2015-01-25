@@ -3,6 +3,11 @@
 /**
  * Get a list of datastream identifiers that can be ingested for this object.
  *
+ * This function gets used in two contexts:
+ * 1 - On the component mapping configuration form, where mimetype filtering is
+ *     needed.
+ * 2 - On the ingest submission page, where mimetype filtering is unnecessary.
+ *
  * @param FedoraObject $object
  *   the object
  * @param array $mimetypes
@@ -56,6 +61,7 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
     foreach ($datastreams as $ds => $dsmime) {
       if (empty($ingestable_dsids[$ds])) {
         // Add ingestable datastreams from other mimetypes (e.g. text/plain)
+        // If filtering by mimetype, only add datastreams that match a filter.
         if ($mimetypes) {
           foreach ($mimetypes as $type) {
             if (strpos($dsmime, $type) !== FALSE) {
@@ -65,8 +71,11 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
               );
               $ingestable_dsids[$ds] = $ds;
             }
+            // Only map the datastream once!
+            break;
           }
         }
+        // We aren't filtering mimetype, just add the datastream to the results.
         else {
           $results[$ds . ' (' . $dsmime . ')'] = array(
             'dsid' => $ds,
