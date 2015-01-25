@@ -22,7 +22,7 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
     module_load_include('inc', 'islandora_webform_ingest', '/includes/xml');
 
 
-    $mimetypes = (array) $mimetypes;
+    $mimetypes = $mimetypes ? (array) $mimetypes : $mimetypes;
     $results = array();
 
     // Array for keeping track of which DSIDs we have already.
@@ -31,7 +31,7 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
     // First, get available xml forms.
     // Xml forms can only accept text content.
     // If $mimetypes includes "text/plain", we can use xml forms.
-    if (in_array('text/plain', $mimetypes)) {
+    if (!$mimetypes || in_array('text/plain', $mimetypes)) {
       // Get the xml form associations and put them into the select list.
       $associations = xml_form_builder_get_associations(array(), array($object->id));
       if (count($associations) > 0) {
@@ -56,14 +56,23 @@ function iwi_ingestable_datastreams(FedoraObject $object, $mimetypes = array('te
     foreach ($datastreams as $ds => $dsmime) {
       if (empty($ingestable_dsids[$ds])) {
         // Add ingestable datastreams from other mimetypes (e.g. text/plain)
-        foreach ($mimetypes as $type) {
-          if (strpos($dsmime, $type) !== FALSE) {
-            $results[$ds . ' (' . $dsmime . ')'] = array(
-              'dsid' => $ds,
-              'mime' => $dsmime,
-            );
-            $ingestable_dsids[$ds] = $ds;
+        if ($mimetypes) {
+          foreach ($mimetypes as $type) {
+            if (strpos($dsmime, $type) !== FALSE) {
+              $results[$ds . ' (' . $dsmime . ')'] = array(
+                'dsid' => $ds,
+                'mime' => $dsmime,
+              );
+              $ingestable_dsids[$ds] = $ds;
+            }
           }
+        }
+        else {
+          $results[$ds . ' (' . $dsmime . ')'] = array(
+            'dsid' => $ds,
+            'mime' => $dsmime,
+          );
+          $ingestable_dsids[$ds] = $ds;
         }
       }
     }
@@ -124,37 +133,6 @@ function iwi_file_extensions_from_component($component) {
   }
 
   return $types;
-}
-
-/**
- * Get a list of mimetypes for datastreams that we can target for ingestion.
- *
- * @param array $filter
- *   a list of mimetypes that we want to exclude, defaults to none
- *
- * @return array
- *   a list of ingestable mimetypes
- */
-function iwi_ingestable_mimetypes($filter = array()) {
-  $mimetypes = array(
-    'text/xml',
-    'text/plain',
-    'image/jpg',
-    'application/pdf',
-    'image/tiff',
-    'image/jpeg',
-    'video/ogg',
-    'video/mp4',
-    'application/warc',
-    'image/png',
-    'audio/mpeg',
-    'image/jp2',
-    'video/x-matroska',
-    'text/enriched',
-    'application/msword',
-    'application/vnd.oasis.opendocument.text',
-  );
-  return array_diff($mimetypes, $filter);
 }
 
 /**
