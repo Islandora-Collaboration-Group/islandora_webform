@@ -13,16 +13,7 @@
  * Implements hook_menu().
  */
 function islandora_webform_menu() {
-  $items['admin/islandora/configure/iw'] = array(
-    'title'            => 'Islandora Webform',
-    'description'      => 'Configuration page for Islandora Webform module',
-    'page callback'    => 'drupal_get_form',
-    'page arguments'   => array('islandora_webform_admin'),
-    'file'             => 'includes/admin.form.inc',
-    'access arguments' => array('administer site configuration'),
-    'type'             => MENU_NORMAL_ITEM,
-    'weight'           => -1,
-  );
+
   $items['node/%webform_menu/webform/islandora'] = array(
     'title'            => 'Islandora settings',
     'page callback'    => 'drupal_get_form',
@@ -83,16 +74,16 @@ function islandora_webform_menu() {
   $items['islandora_webform/retrieve_form/%node/nojs'] = array(
     'page callback' => '_iw_inline_webform',
     'page arguments'   => array(2,3),
-    'access callback' => TRUE,
+    'access callback' => 'node_access',
+    'access arguments' => array('view', 2),
     'file'             => 'inline_webform.inc',
     'file path'        => drupal_get_path('module', 'islandora_webform') . '/includes',
   );
 
   $items['islandora_webform/retrieve_form/%node/ajax'] = array(
-      'delivery callback' => 'ajax_deliver',
-    )
-    + $items['islandora_webform/retrieve_form/%node/nojs'];
-
+     'delivery callback' => 'ajax_deliver',  
+  )+ $items['islandora_webform/retrieve_form/%node/nojs'];
+    
   return $items;
 }
 
@@ -145,6 +136,55 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
     }
   }
 }
+/**
+ * Implements hook_module_implements_alter().
+ * Let's make sure our form alters are called at the end of all.
+ * So we can be sure webform_ajax already has done it's own alters.
+ */
+
+function islandora_webform_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'form_alter') {
+    $group = $implementations['islandora_webform'];
+    unset($implementations['islandora_webform']);
+    $implementations['islandora_webform'] = $group;
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * FORM_ID = webform_configure_form.
+ * Adds a custom message if the form is configured to be "islandora"
+ */
+function islandora_webform_form_webform_configure_form_alter(&$form, &$form_state) {
+  module_load_include('inc', 'islandora_webform', 'includes/utilities');
+  $node = $form_state['build_info']['args'][0];
+  if ((isset($form['webform_ajax_fieldset'])) && count(iw_node_islandora_webform($node))>0) {
+    $form['webform_ajax_fieldset']['#title']= t('Inline Islandora Webform');
+    $form['webform_ajax_fieldset']['webform_ajax']['#title'] =  t('Inline AJAX mode');
+    $form['webform_ajax_fieldset']['webform_ajax']['#description'] = t('When set, all page changes (from pagebreak component), and Islandora webform submissions will be achieved inline using AJAX.');
+  }
+}
+
+
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * FORM_ID = webform_client_form.
+ * Removes pre_render functionality added by webform. Sorry, we need the element id for ajax
+ */
+function islandora_webform_form_webform_client_form_alter(&$form, &$form_state, $form_id) {
+  $webform = $form['#node']->webform;
+  if ($webform['webform_ajax'] != WEBFORM_AJAX_NO_AJAX) {
+   foreach (array('previous', 'next', 'submit', 'draft') as $button) {
+      if (isset($form['actions'][$button])) {
+        unset($form['actions'][$button]['#pre_render']);
+      }
+    }  
+  }
+}
+
 
 /**
  * Implements hook_node_access().

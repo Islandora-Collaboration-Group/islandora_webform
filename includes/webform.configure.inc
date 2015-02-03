@@ -195,7 +195,7 @@ function _islandora_webform_insert_pid_component($nid) {
         'name' => 'Islandora object PID',
         'form_key' => 'islandora_object_pid',
         'type' => 'textfield',
-        'mandatory' => 0,
+        'mandatory' => 1,
         'weight' => 15,
         'extra' => array(
           'title_display' => 'inline',
