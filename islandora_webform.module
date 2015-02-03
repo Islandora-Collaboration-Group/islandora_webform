@@ -83,7 +83,7 @@ function islandora_webform_menu() {
   $items['islandora_webform/retrieve_form/%node/ajax'] = array(
      'delivery callback' => 'ajax_deliver',  
   )+ $items['islandora_webform/retrieve_form/%node/nojs'];
-    
+
   return $items;
 }
 
@@ -138,10 +138,10 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
 }
 /**
  * Implements hook_module_implements_alter().
+ *
  * Let's make sure our form alters are called at the end of all.
  * So we can be sure webform_ajax already has done it's own alters.
  */
-
 function islandora_webform_module_implements_alter(&$implementations, $hook) {
   if ($hook == 'form_alter') {
     $group = $implementations['islandora_webform'];
@@ -177,11 +177,11 @@ function islandora_webform_form_webform_configure_form_alter(&$form, &$form_stat
 function islandora_webform_form_webform_client_form_alter(&$form, &$form_state, $form_id) {
   $webform = $form['#node']->webform;
   if ($webform['webform_ajax'] != WEBFORM_AJAX_NO_AJAX) {
-   foreach (array('previous', 'next', 'submit', 'draft') as $button) {
+    foreach (array('previous', 'next', 'submit', 'draft') as $button) {
       if (isset($form['actions'][$button])) {
         unset($form['actions'][$button]['#pre_render']);
       }
-    }  
+    }
   }
 }
 
@@ -229,7 +229,8 @@ function islandora_webform_islandora_view_object_alter(&$object, &$rendered) {
       'webform_links' => theme('islandora_webform_links', array(
         'webform_data' => $webforms,
         'islandora_object' => $object,
-      ))
+        )
+      ),
     );
   }
 
@@ -240,9 +241,9 @@ function islandora_webform_islandora_view_object_alter(&$object, &$rendered) {
  */
 
 /**
- * Return user access = TRUE if user access for any listed permission is true
+ * Return user access = TRUE if user access for any listed permission is true.
  *
- * @param $permissions
+ * @param array|string $permissions
  *   array of permission strings
  *
  * @return bool
@@ -264,13 +265,16 @@ function _islandora_webform_user_access_or($permissions) {
 }
 
 /**
- * Access callback for viewing the submissions tab for a given object
+ * Access callback for viewing the submissions tab for a given object.
  *
- * We hide the tab if there are no submissions. This makes more sense than showing
- * the tab for all objects that could in theory have a submission.
+ * We hide the tab if there are no submissions. This makes more sense than
+ * showing the tab for all objects that could in theory have a submission.
  *
  * @param AbstractObject $object
+ *   The fedora object
+ *
  * @return bool
+ *   TRUE = has access
  */
 function islandora_webform_object_results_access(AbstractObject $object) {
 
@@ -278,7 +282,7 @@ function islandora_webform_object_results_access(AbstractObject $object) {
   if (user_access('access all webform results')) {
 
     // If so, then if the count of webform submissions associated with this object
-    // is greater than zero, then grant access
+    // is greater than zero, then grant access.
     $query = db_select('webform_submissions', 's');
     $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
     $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
@@ -286,4 +290,37 @@ function islandora_webform_object_results_access(AbstractObject $object) {
     return $query->countQuery()->execute()->fetchField() > 0 ? TRUE : FALSE;
   }
   return FALSE;
+}
+
+/**
+ * Fetch an array of metadata objects for a given fedora object.
+ *
+ * @param string $pid
+ *   The PID for the object
+ * @param string $fields
+ *   Comma-separated list of SOLR indexed fields.
+ * @param null $filter
+ *   Filter string, optional.
+ *
+ * @return array
+ *   The
+ */
+function iw_get_solr_data_array($pid, $fields = '', $filter = NULL) {
+
+  if (!empty($fields)) {
+    $qp = new IslandoraSolrQueryProcessor();
+    $query = 'PID:"' . $pid . '"';
+    $qp->buildQuery($query);
+    $qp->solrParams['fl'] = 'PID, ' . $fields;
+
+    if ($filter) {
+      $qp->solrParams['fq'] = $filter;
+    }
+    $qp->executeQuery();
+
+    if (!empty($qp->islandoraSolrResult['response']['numFound'])) {
+      return $qp->islandoraSolrResult['response']['objects'];
+    }
+  }
+  return array();
 }

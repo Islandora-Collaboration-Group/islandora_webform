@@ -54,15 +54,15 @@ function theme_islandora_webform_links(array $vars) {
     ),
     'html'       => TRUE,
     'query'      => array(
-      $destination
+      $destination,
     ),
   );
 
   foreach ($webforms as $webform) {
-    $inline = FALSE;
     $jqid = 'iw_iwebform_links_' . $webform->entity_id;
     $output .= '<div id="' . $jqid . '" class="webform-links-wrapper"><div class="webform-links">';
-    $webform_node_data = node_load($webform->entity_id)->webform; //Lets load the node 
+    // Lets load the node.
+    $webform_node_data = node_load($webform->entity_id)->webform;
     $inline = isset($webform_node_data['webform_ajax']) ? $webform_node_data['webform_ajax'] != WEBFORM_AJAX_NO_AJAX : FALSE;
     if ($inline) {
       $link_mode = 'inline';
@@ -134,9 +134,11 @@ function theme_islandora_webform_links(array $vars) {
  * @param array $webform_link_options
  *   an options array for the l() function. We expect it to have the "pid" query parameter
  *   included to make this a valid call to a islandora-enabled webform.
+ * @param string $link_mode
+ *   If value is 'inline', then an ajax link is created.
  *
  * @return string
- *   the themed link, or empty if no access
+ *   The themed link, or empty if no access
  */
 function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $link_mode = 'inline') {
   $webform_link = '';

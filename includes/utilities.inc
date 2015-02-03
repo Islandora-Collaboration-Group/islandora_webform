@@ -193,9 +193,7 @@ function iw_get_submission_pid($sid) {
  */
 function iw_get_submission_object($sid) {
   $pid = iw_get_submission_pid($sid);
-  if($pid) {
+  if ($pid) {
     return islandora_object_load($pid);
   }
 }
-
-

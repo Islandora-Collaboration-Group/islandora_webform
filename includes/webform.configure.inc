@@ -24,7 +24,6 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
     'islandora_webform_configure_form_submit',
   );
 
-
   $form['nid'] = array(
     '#type' => 'value',
     '#value' => $node->nid,
