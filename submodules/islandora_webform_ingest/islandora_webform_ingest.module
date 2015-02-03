@@ -224,7 +224,7 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
           '#type' => 'textfield',
           '#title' => 'Namespace of new object',
           '#description' => t('Provide a namespace for the newly created object.'),
-          '#default_value' => $default_values['namespace'] ? $default_values['namespace'] : 'islandora',
+          '#default_value' => !empty($default_values['namespace']) ? $default_values['namespace'] : 'islandora',
           '#states' => array(
             // Hide if cmodel is not chosen.
             'invisible' => array(
