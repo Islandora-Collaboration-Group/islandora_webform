@@ -603,11 +603,63 @@ function iwi_save_webform_configuration($form, &$form_state) {
     ->condition('m.nid', $nid)
     ->execute()->fetch()
   ) {
+
+    // If content model is changing, wipe out ingest mappings.
     if ($old_settings->cmodel != $cmodel) {
-      // Content model is changing, wipe out ingest mappings.
       db_delete('islandora_webform_ingest_map')->condition('nid', $nid)->execute();
       drupal_set_message(t('The destination content model was changed and therefore all existing component ingest mappings for this webform were deleted. You will have to edit each webform component that you wish to ingest.'), 'warning');
     }
+
+    // If the relation is changing, update the relations on any
+    // objects previously assigned the original relation term.
+    if ($old_settings->relation != $relation) {
+
+      // Find all objects with the old relation if it is not blank.
+      if ($old_settings->relation) {
+        module_load_include('inc', 'islandora_webform', 'includes/utilites');
+        $child_objects_data = iwi_query_objects_with_relation($old_settings->relation);
+
+        // Loop through the child (related) objects, updating their rels-ext
+        // to use the new relation term.
+        foreach ($child_objects_data as $child_object_data) {
+          $child_object = islandora_object_load($child_object_data['object']['value']);
+
+          // Get the old relation record.
+          $old_relations = $child_object->relationships->get('info:fedora/fedora-system:def/relations-external#', $old_settings->relation);
+          // In theory, there can be multiple relations matching this term,
+          // so we have to loop.
+          foreach ($old_relations as $old_relation) {
+
+            // Get the parent object pid from the old relation.
+            $old_relation_pid = $old_relation['object']['value'];
+
+            // If new relation is not blank, add it, using the old relation's
+            // parent object pid.
+            if ($relation) {
+              $child_object->relationships->add('info:fedora/fedora-system:def/relations-external#', $relation, $old_relation_pid);
+
+              // Update the block config to use the new relation as the delta.
+              db_update('block')
+                ->fields(array('delta' => $relation))
+                ->condition('delta', $old_settings->relation)
+                ->condition('module', 'islandora_webform_ingest')
+                ->execute();
+            }
+
+            // In any case, remove the old relation.
+            $child_object->relationships->remove('info:fedora/fedora-system:def/relations-external#', $old_settings->relation, $old_relation_pid);
+          }
+
+          drupal_set_message(format_string('@count objects had their relations updated from "@old" to "@new"', array(
+            '@count' => count($child_objects_data),
+            '@old' => $old_settings->relation,
+            '@new' => $relation,
+          )));
+        }
+      }
+    }
+
+    // Update the previous islandora webform ingest settings record.
     db_update('islandora_webform_ingest_webforms')
       ->fields(array(
         'ingest_enabled' => $enabled,
@@ -618,6 +670,9 @@ function iwi_save_webform_configuration($form, &$form_state) {
       ->condition('id', $old_settings->id)
       ->execute();
   }
+
+  // No previous islandora webform ingest settings record, so just create a new
+  // one.
   else {
     db_insert('islandora_webform_ingest_webforms')
       ->fields(array(
@@ -660,4 +715,56 @@ function iwi_get_mimetypes_from_extensions($extensions) {
     $mimetypes[] = 'application/octet-stream';
   }
   return $mode == 'array' ? $mimetypes : reset($mimetypes);
+}
+
+/**
+ * Get data about objects associated with this pid through any rels-ext.
+ *
+ * @param int $pid
+ *   The parent object's pid.
+ *
+ * @return array
+ *   An array containing pids of child objects
+ */
+function iwi_query_related_objects($pid) {
+  $connection = islandora_get_tuque_connection();
+  $query = <<<EOQ
+SELECT ?object ?predicate
+FROM <#ri>
+WHERE {
+  ?object <fedora-model:label> ?title ;
+         ?predicate <info:fedora/{$pid}>
+}
+EOQ;
+
+  $queryresults = $connection->repository->ri->sparqlQuery($query);
+
+  return $queryresults;
+}
+
+/**
+ * Get data about objects having this relation term.
+ *
+ * @param string $relation
+ *   The relation term.
+ *
+ * @return array
+ *   An array containing query results
+ */
+function iwi_query_objects_with_relation($relation) {
+  $connection = islandora_get_tuque_connection();
+  $query = <<<EOQ
+PREFIX islandora-rels-ext: <http://islandora.ca/ontology/relsext#>
+PREFIX fedora-rels-ext: <info:fedora/fedora-system:def/relations-external#>
+SELECT ?object ?predicate ?secondobject
+FROM <#ri>
+WHERE {
+  ?object <fedora-model:label> ?title ;
+  ?predicate ?secondobject .
+FILTER(sameTerm(?predicate, <fedora-rels-ext:{$relation}>))}
+EOQ;
+
+  $queryresults = $connection->repository->ri->sparqlQuery($query);
+
+  return $queryresults;
 }
