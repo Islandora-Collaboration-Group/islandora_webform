@@ -348,6 +348,14 @@ function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
     form_set_error('islandora_ingest][relation', t('Invalid string for relation. Relation must consist of upper and lower case letters without any spaces.'));
 
   }
+  elseif ($form_state['values']['islandora_ingest']['ingest_enabled']
+    && empty($form_state['values']['islandora_ingest']['relation'])
+  ) {
+
+    form_set_error('islandora_ingest][relation', t('To enable ingestion, a relation string must be provided (upper and lower case letters without any spaces).'));
+
+  }
+
 
   if ($form_state['values']['islandora_ingest']['ingest_enabled']
     && $form_state['values']['islandora_ingest']['cmodel']
