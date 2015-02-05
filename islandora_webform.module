@@ -237,6 +237,28 @@ function islandora_webform_islandora_view_object_alter(&$object, &$rendered) {
 }
 
 /**
+ * Implements hook_islandora_object_purged().
+ *
+ * Clean up dangling references to deleted PIDs
+ */
+function islandora_webform_islandora_object_purged($pid) {
+  // NOTE: We are going to leave webform submissions referring to this PID
+  // undisturbed.
+
+  // If the deleted object is a content model, find any webform configurations
+  // which have selected that content model as a filter and reset to none.
+  db_update('islandora_webform_webforms')
+    ->fields(array('cmodel_filter' => ''))
+    ->condition('cmodel_filter', $pid);
+
+  // If the deleted object is a collection, find any webform configurations
+  // which have selected that collection as a filter and reset to none.
+  db_update('islandora_webform_webforms')
+    ->fields(array('collection_filter' => ''))
+    ->condition('collection_filter', $pid);
+}
+
+/**
  * Utility functions
  */
 
