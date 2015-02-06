@@ -657,6 +657,14 @@ function iwi_save_webform_configuration($form, &$form_state) {
             ->condition('module', 'islandora_webform_ingest')
             ->execute();
         }
+        else {
+          // New relation is blank, so delete the related objects block
+          // configuration.
+          db_delete('block')
+            ->condition('delta', $old_settings->relation)
+            ->condition('module', 'islandora_webform_ingest')
+            ->execute();
+        }
       }
     }
 
