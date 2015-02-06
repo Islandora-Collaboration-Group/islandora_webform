@@ -637,13 +637,6 @@ function iwi_save_webform_configuration($form, &$form_state) {
             // parent object pid.
             if ($relation) {
               $child_object->relationships->add('info:fedora/fedora-system:def/relations-external#', $relation, $old_relation_pid);
-
-              // Update the block config to use the new relation as the delta.
-              db_update('block')
-                ->fields(array('delta' => $relation))
-                ->condition('delta', $old_settings->relation)
-                ->condition('module', 'islandora_webform_ingest')
-                ->execute();
             }
 
             // In any case, remove the old relation.
@@ -655,6 +648,14 @@ function iwi_save_webform_configuration($form, &$form_state) {
             '@old' => $old_settings->relation,
             '@new' => $relation,
           )));
+        }
+        if ($relation) {
+          // Update the block config to use the new relation as the delta.
+          db_update('block')
+            ->fields(array('delta' => $relation))
+            ->condition('delta', $old_settings->relation)
+            ->condition('module', 'islandora_webform_ingest')
+            ->execute();
         }
       }
     }
