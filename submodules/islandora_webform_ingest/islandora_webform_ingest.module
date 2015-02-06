@@ -493,17 +493,15 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
   $mode_value = isset($form_state['values']['ingest']['mode']) ? $form_state['values']['ingest']['mode'] : (isset($saved_values['mode']) ? $saved_values['mode'] : NULL);
   $datastream_value = isset($form_state['values']['ingest']['datastream']) ? $form_state['values']['ingest']['datastream'] : (isset($saved_values['datastream']) ? $saved_values['datastream'] : NULL);
   $field_value = isset($form_state['values']['ingest']['field_wrapper']['fields']) ? $form_state['values']['ingest']['field_wrapper']['fields'] : (isset($saved_values['field']) ? $saved_values['field'] : NULL);
-
   $elements = array(
     'mode' => array(
       '#title' => 'Ingest?',
-      '#description' => t('Do you want to ingest this component? If so, do you want to replace existing content, or append to it if possible?'),
+      '#description' => t('Do you want to ingest this component, replacing existing content in the destination datastream?'),
       '#type' => 'select',
       '#weight' => 1,
       '#options' => array(
         '' => 'Do not ingest',
         'replace' => 'Replace',
-        'append' => 'Append',
       ),
       '#default_value' => $mode_value,
     ),
@@ -532,6 +530,12 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
     ),
   );
 
+  // Include "Append" mode option if the component is a text field.
+  if (count($mimetypes) == 1 && reset($mimetypes) == 'text/plain') {
+    $elements['mode']['#options']['append'] = 'Append';
+    $elements['mode']['#description'] = t('Do you want to ingest this component? If so, do you want to replace existing content in the destination datastream, or append to it if possible?');
+
+  }
 
   if ($datastream_value && !empty($datastreams[$datastream_value]['form_name'])) {
     // Now work on the fields dropdown list.
