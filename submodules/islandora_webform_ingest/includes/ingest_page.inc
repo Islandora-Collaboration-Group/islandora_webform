@@ -213,11 +213,13 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       $data = $submission->data[$dsid_values['component']['cid']];
       $new_form['component'] = webform_component_invoke($dsid_values['component']['type'], 'display', $dsid_values['component'], $data);
 
-      // Include the file id in a hidden field.
-      $new_form['fid'] = array(
-        '#type' => 'hidden',
-        '#value' => $new_form['component']['#value']->fid,
-      );
+      if (!empty($new_form['component']['#value']->fid)) {
+        // Include the file id in a hidden field.
+        $new_form['fid'] = array(
+          '#type' => 'hidden',
+          '#value' => $new_form['component']['#value']->fid,
+        );
+      }
 
       $form[$dsid] = $new_form;
     }

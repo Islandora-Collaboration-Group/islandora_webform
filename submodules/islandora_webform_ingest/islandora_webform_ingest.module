@@ -348,6 +348,14 @@ function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
     form_set_error('islandora_ingest][relation', t('Invalid string for relation. Relation must consist of upper and lower case letters without any spaces.'));
 
   }
+  elseif ($form_state['values']['islandora_ingest']['ingest_enabled']
+    && empty($form_state['values']['islandora_ingest']['relation'])
+  ) {
+
+    form_set_error('islandora_ingest][relation', t('To enable ingestion, a relation string must be provided (upper and lower case letters without any spaces).'));
+
+  }
+
 
   if ($form_state['values']['islandora_ingest']['ingest_enabled']
     && $form_state['values']['islandora_ingest']['cmodel']
@@ -358,6 +366,54 @@ function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
     form_set_error('islandora_ingest][namespace', t('Invalid string for namespace. Namespace must consist of lower case letters only.'));
 
   }
+}
+
+/**
+ * Implements hook_islandora_object_purged().
+ *
+ * Clean up dangling references to deleted PIDs
+ */
+function islandora_webform_ingest_islandora_object_purged($pid) {
+
+  // If there are any child iw-ingested objects with a rels-ext relation to
+  // this object, delete the child iw-ingested objects.
+  module_load_include('inc', 'islandora_webform_ingest', 'includes/batch');
+  batch_set(islandora_webform_ingest_delete_related_batch($pid));
+
+  // If the deleted object is a content model..........
+
+  // Grab a list of webform nids that had been configured to use this
+  // content model, then delete component mappings on those nids.
+  $query = db_select('islandora_webform_ingest_webforms', 'w');
+  $query->fields('w', array('nid'));
+  $query->condition('cmodel', $pid);
+  $nids = $query->execute()->fetchCol();
+  if (!empty($nids)) {
+    db_delete('islandora_webform_ingest_map')
+      ->condition('nid', $nids)
+      ->execute();
+  }
+
+  // We want to disable ingest if the webform cmodel is blank and
+  // the ingest cmodel matches the one we're deleting.
+  $query = db_select('islandora_webform_webforms', 'w');
+  $query->join('islandora_webform_ingest_webforms', 'iw', "iw.nid = w.entity_id");
+  $query->fields('iw', array('nid'));
+  $query->condition(db_or()->condition('w.cmodel_filter', '')->condition('w.cmodel_filter', $pid));
+  $query->condition('iw.cmodel', $pid);
+  $disable_ingest_nids = $query->execute()->fetchCol();
+  if (!empty($disable_ingest_nids)) {
+    db_update('islandora_webform_ingest_webforms')
+      ->fields('ingest_enabled', 0)
+      ->condition('nid', $disable_ingest_nids)
+      ->execute();
+  }
+
+  // Reset webform ingest cmodels to ''.
+  db_update('islandora_webform_ingest_webforms')
+    ->fields(array('cmodel' => ''))
+    ->condition('cmodel', $pid);
+
 }
 
 
@@ -401,17 +457,15 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
   $mode_value = isset($form_state['values']['ingest']['mode']) ? $form_state['values']['ingest']['mode'] : (isset($saved_values['mode']) ? $saved_values['mode'] : NULL);
   $datastream_value = isset($form_state['values']['ingest']['datastream']) ? $form_state['values']['ingest']['datastream'] : (isset($saved_values['datastream']) ? $saved_values['datastream'] : NULL);
   $field_value = isset($form_state['values']['ingest']['field_wrapper']['fields']) ? $form_state['values']['ingest']['field_wrapper']['fields'] : (isset($saved_values['field']) ? $saved_values['field'] : NULL);
-
   $elements = array(
     'mode' => array(
       '#title' => 'Ingest?',
-      '#description' => t('Do you want to ingest this component? If so, do you want to replace existing content, or append to it if possible?'),
+      '#description' => t('Do you want to ingest this component, replacing existing content in the destination datastream?'),
       '#type' => 'select',
       '#weight' => 1,
       '#options' => array(
         '' => 'Do not ingest',
         'replace' => 'Replace',
-        'append' => 'Append',
       ),
       '#default_value' => $mode_value,
     ),
@@ -440,6 +494,12 @@ function islandora_webform_ingest_form_ingest_mapping_fields($form, $form_state,
     ),
   );
 
+  // Include "Append" mode option if the component is a text field.
+  if (count($mimetypes) == 1 && reset($mimetypes) == 'text/plain') {
+    $elements['mode']['#options']['append'] = 'Append';
+    $elements['mode']['#description'] = t('Do you want to ingest this component? If so, do you want to replace existing content in the destination datastream, or append to it if possible?');
+
+  }
 
   if ($datastream_value && !empty($datastreams[$datastream_value]['form_name'])) {
     // Now work on the fields dropdown list.

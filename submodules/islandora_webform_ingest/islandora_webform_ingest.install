@@ -48,7 +48,6 @@ function islandora_webform_ingest_schema() {
     'indexes' => array(
       'nid' => array('nid'),
       'sid' => array('sid'),
-      'cid' => array('cid'),
       'pid' => array('pid'),
     ),
     'primary key' => array('id'),
@@ -140,19 +139,8 @@ function islandora_webform_ingest_schema() {
 }
 
 /**
- * Implements hook_install().
+ * Update hooks.................................................................
  */
-function islandora_webform_ingest_install() {
-  drupal_install_schema('islandora_webform_ingest');
-}
-
-/**
- * Implements hook_uninstall().
- */
-function islandora_webform_ingest_uninstall() {
-  drupal_uninstall_schema('islandora_webform_ingest');
-}
-
 
 /**
  * Add islandora_webform_ingest_map database table.
@@ -166,6 +154,7 @@ function islandora_webform_ingest_update_7001() {
  * No need for cid in recorded islandora webform ingestions.
  */
 function islandora_webform_ingest_update_7002() {
+  db_drop_unique_key('islandora_webform_ingestions', 'cid');
   db_drop_field('islandora_webform_ingestions', 'cid');
 }
 
@@ -176,3 +165,12 @@ function islandora_webform_ingest_update_7003() {
   $schema = drupal_get_schema('islandora_webform_ingest_webforms', TRUE);
   db_create_table('islandora_webform_ingest_webforms', $schema);
 }
+
+/**
+ * Add namespace field to islandora_webform_ingest_webforms table
+ */
+function islandora_webform_ingest_update_7004() {
+  $schema = drupal_get_schema('islandora_webform_ingest_webforms', TRUE);
+  db_add_field('islandora_webform_ingest_webforms', 'namespace', $schema['fields']['namespace']);
+}
+

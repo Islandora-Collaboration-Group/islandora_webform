@@ -65,17 +65,3 @@ function islandora_webform_schema() {
 
   return $schema;
 }
-
-/**
- * Implements hook_install().
- */
-function islandora_webform_install() {
-  drupal_install_schema('islandora_webform');
-}
-
-/**
- * Implements hook_uninstall().
- */
-function islandora_webform_uninstall() {
-  drupal_uninstall_schema('islandora_webform');
-}
