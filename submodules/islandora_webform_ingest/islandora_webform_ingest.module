@@ -374,56 +374,20 @@ function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
  * Clean up dangling references to deleted PIDs
  */
 function islandora_webform_ingest_islandora_object_purged($pid) {
+
   // If there are any child iw-ingested objects with a rels-ext relation to
   // this object, delete the child iw-ingested objects.
-  module_load_include('inc', 'islandora_webform_ingest', 'includes/utilities');
-  $queryresults = iwi_query_related_objects($pid);
-
-  $relations = db_select('islandora_webform_ingest_webforms', 'w')
-    ->distinct()
-    ->fields('w', array('relation'))
-    ->execute()
-    ->fetchCol();
-  $predicate_filters = array();
-  foreach ($relations as $relation) {
-    $predicate_filters[] = 'info:fedora/fedora-system:def/relations-external#' . $relation;
-  }
-  $deleted_pids = array();
-  foreach ($queryresults as $queryresult) {
-    $object = islandora_object_load($queryresult['object']['value']);
-    $this_pid = $object->id;
-    $this_label = $object->label;
-    if (islandora_object_access(ISLANDORA_PURGE, $object)) {
-      if (in_array($queryresult['predicate']['value'], $predicate_filters)) {
-        $deleted = islandora_delete_object($object);
-        if ($deleted) {
-          $deleted_pids[] = $this_pid;
-          drupal_set_message(format_string('Deleted related object "@label" (PID=@pid)', array('@label' => $this_label, '@pid' => $this_pid)));
-        }
-        else {
-          drupal_set_message(format_string('Could not delete related object "@label" (PID=@pid)', array('@label' => $this_label, '@pid' => $this_pid), 'error'));
-        }
-      }
-    }
-    else {
-      drupal_set_message(format_string('Permission denied to delete related object "@label" (PID=@pid).', array('@label' => $this_label, '@pid' => $this_pid), 'error'));
-    }
-  }
-
-  // Remove iw-ingestion records for all child objects.
-  db_delete('islandora_webform_ingestions')
-    ->condition('pid', $deleted_pids)
-    ->execute();
+  module_load_include('inc', 'islandora_webform_ingest', 'includes/batch');
+  batch_set(islandora_webform_ingest_delete_related_batch($pid));
 
   // If the deleted object is a content model..........
 
   // Grab a list of webform nids that had been configured to use this
   // content model, then delete component mappings on those nids.
-  $nids = db_select('islandora_webform_ingest_webforms', 'w')
-    ->fields(array('nid'))
-    ->condition('cmodel', $pid)
-    ->execute()
-    ->fetchCol();
+  $query = db_select('islandora_webform_ingest_webforms', 'w');
+  $query->fields('w', array('nid'));
+  $query->condition('cmodel', $pid);
+  $nids = $query->execute()->fetchCol();
   if (!empty($nids)) {
     db_delete('islandora_webform_ingest_map')
       ->condition('nid', $nids)
@@ -432,12 +396,12 @@ function islandora_webform_ingest_islandora_object_purged($pid) {
 
   // We want to disable ingest if the webform cmodel is blank and
   // the ingest cmodel matches the one we're deleting.
-  $disable_ingest_nids = db_select('islandora_webform_webforms', 'w')
-    ->join('islandora_webform_ingest_webforms', 'iw', "iw.nid = w.entity_id")
-    ->condition(db_or()->condition('w.cmodel_filter', '')->condition('w.cmodel_filter', $pid))
-    ->condition('iw.cmodel', $pid)
-    ->execute()
-    ->fetchCol();
+  $query = db_select('islandora_webform_webforms', 'w');
+  $query->join('islandora_webform_ingest_webforms', 'iw', "iw.nid = w.entity_id");
+  $query->fields('iw', array('nid'));
+  $query->condition(db_or()->condition('w.cmodel_filter', '')->condition('w.cmodel_filter', $pid));
+  $query->condition('iw.cmodel', $pid);
+  $disable_ingest_nids = $query->execute()->fetchCol();
   if (!empty($disable_ingest_nids)) {
     db_update('islandora_webform_ingest_webforms')
       ->fields('ingest_enabled', 0)
