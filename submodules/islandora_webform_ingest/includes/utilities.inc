@@ -729,13 +729,22 @@ function iwi_get_mimetypes_from_extensions($extensions) {
 /**
  * Get data about objects associated with this pid through any rels-ext.
  *
+ * @TODO: Add exclusive option - only return objects whose only relation
+ * is to this object.
+ *
  * @param int $pid
  *   The parent object's pid.
+ *
+ * @param int $page_number
+ *   Used to calculate offset
+ *
+ * @param int $page_size
+ *   If > 0, limit count of results to this number
  *
  * @return array
  *   An array containing pids of child objects
  */
-function iwi_query_related_objects($pid) {
+function iwi_query_related_objects($pid, $page_number = 0, $page_size = 0) {
   $connection = islandora_get_tuque_connection();
   $query = <<<EOQ
 SELECT ?object ?predicate
@@ -744,7 +753,19 @@ WHERE {
   ?object <fedora-model:label> ?title ;
          ?predicate <info:fedora/{$pid}>
 }
+
 EOQ;
+
+  // Include paging parameters if provided.
+  if ($page_number > 0 && $page_size > 0) {
+    // Add in the offset.
+    $offset = $page_number * $page_size;
+    $query .= " offset $offset";
+  }
+  if ($page_size > 0) {
+    // Add in the limit.
+    $query .= " limit $page_size";
+  }
 
   $queryresults = $connection->repository->ri->sparqlQuery($query);
 
