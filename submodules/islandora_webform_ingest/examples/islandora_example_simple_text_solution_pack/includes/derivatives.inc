@@ -122,13 +122,15 @@ function islandora_example_simple_text_addparent_xlink(AbstractObject $object, $
   //Also allow if the object is new, means not HTML stream yet
   if ( (isset($object['MODS']) && $force === TRUE) || !isset($object['HTML']) ) { 
     //First we get the parent objects for the current one
+    //parentObjects is returned "filtered" by array_filter function to remove nulls, but keys are not
+    //reordered/reset, so we have to "array_shift" it to get the first one.
     $parentObjects = islandora_example_simple_text_get_parents_from_rels_ext($object);
     if (sizeof($parentObjects)>0) {
       //We will get only the first object here. If there are multiple then we don't know 
-      //How to define which one is the correct anyway.
+      //How to define which one is the correct anyway, so we get always the first one added
       //We could in theory discard parent collections, but comments/contribution
       //could also be done to Collections.
-      $parentObject=$parentObjects[0];
+      $parentObject=array_shift($parentObjects);
       $url_enconded_pid=urlencode($parentObject->id);
       $xlink = $GLOBALS['base_url']. "/islandora/object/{$url_enconded_pid}";
       //Now add this to the current object's MODS
