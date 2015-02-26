@@ -7,8 +7,8 @@ This module is an example of simple MODS based solution pack CMODEL to enable us
 This module requires the following modules/libraries:
 
 * [Islandora](https://github.com/islandora/islandora)
+* [Islandora XML Forms](https://github.com/islandora/islandora_xml_forms)
 * [Tuque](https://github.com/islandora/tuque)
-* [Islandora Webform]
 
 ## Installation
 
