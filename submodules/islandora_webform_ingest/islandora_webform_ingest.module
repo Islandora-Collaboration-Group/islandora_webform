@@ -209,10 +209,11 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
           '#options' => $cmodel_options,
         ),
         'relation' => array(
-          '#type' => 'textfield',
+          '#type' => 'select',
           '#title' => 'Relationship to current object',
-          '#description' => t('Provide a name for the relationship of the new object to the original object, e.g. "isTranscriptionOf". This must be a string with only upper and lower case letters and no spaces.'),
+          '#description' => t('Select from one of these valid Fedora ontology res-ext child relations.'),
           '#default_value' => $default_values['relation'] ? $default_values['relation'] : 'isChildOf',
+          '#options' => islandora_webform_ingest_rels_ext_predicates_options(),
           '#states' => array(
             // Hide if cmodel is not chosen.
             'invisible' => array(
@@ -1068,4 +1069,45 @@ function islandora_webform_ingest_preprocess_islandora_basic_collection_grid(&$v
       $vars['theme_hook_suggestions'][] = 'islandora_basic_collection_grid__' . $vars['block']['module'] . '__' . $vars['block']['delta'];
     }
   }
+}
+
+/**
+ * Get options for valid fedora ontology rdf predicates.
+ *
+ * @return array
+ *   An associative array of predicates as predicate => label pairs
+ */
+function islandora_webform_ingest_rels_ext_predicates_options() {
+  $options = &drupal_static(__FUNCTION__);
+  if (!isset($options)) {
+
+    // Cache for performance, because, why not?
+    if ($cache = cache_get(__FUNCTION__)) {
+      $options = $cache->data;
+    }
+    else {
+
+      $options = array();
+      // Get the xml and xslt files.
+      $rdf_file = drupal_get_path('module', 'islandora_webform_ingest') . '/xml/fedora-relsext-ontology.rdfs.xml';
+      if ($rdf_file) {
+        $xml = file_get_contents($rdf_file);
+        $info = array(
+          'xsl' => drupal_get_path('module', 'islandora_webform_ingest') . '/xsl/fedora-relsext-ontology-select-list.xsl',
+          'input' => $xml,
+        );
+        module_load_include('inc', 'islandora_webform_ingest', '/includes/xml');
+        $options = (array) json_decode(islandora_webform_run_xsl_transform($info));
+
+        // Only permit is<something>Of predicates.
+        foreach ($options as $key => $value) {
+          if (strpos($key, 'is') !== 0) {
+            unset($options[$key]);
+          }
+        }
+      }
+      cache_set(__FUNCTION__, $options, 'cache');
+    }
+  }
+  return $options;
 }
