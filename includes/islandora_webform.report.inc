@@ -68,7 +68,7 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
       format_date($submission->submitted, 'short'),
     );
     if (webform_results_access($node, $user)) {
-      $row[] = theme('username', array('account' => $submission));
+      $row[] = theme('username', array('account' => user_load($submission->uid)));
       $row[] = $submission->remote_addr;
     }
     $row[] = l(t('View'), "node/$node->nid/submission/$sid");
