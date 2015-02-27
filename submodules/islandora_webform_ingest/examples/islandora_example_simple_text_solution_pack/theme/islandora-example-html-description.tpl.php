@@ -9,5 +9,5 @@
 ?>
 
 <div class="islandora-example-simple-text-object-content-wrapper clearfix">
-    <?php print($html_description);?>
+  <?php print($html_description); ?>
 </div>

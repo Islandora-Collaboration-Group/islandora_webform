@@ -17,15 +17,16 @@
  */
 function islandora_example_simple_text_get_parents_from_rels_ext(AbstractObject $object) {
   try {
-      $parentobjects = $object->relationships->get(FEDORA_RELS_EXT_URI);
-      }
-  catch (RepositoryException $e) {
-      return array();
+    $parentobjects = $object->relationships->get(FEDORA_RELS_EXT_URI);
   }
-  $map = function($o) {
-    if ($o['predicate']['namespace'] != 'info:fedora/fedora-system:def/model#') { //Don't count fedora model relations
+  catch (RepositoryException $e) {
+    return array();
+  }
+  $map = function ($o) {
+    if ($o['predicate']['namespace'] != 'info:fedora/fedora-system:def/model#') {
+      // Don't count fedora model relations.
       return islandora_object_load($o['object']['value']);
-      }
+    }
   };
   $parentobjects = array_map($map, $parentobjects);
   return array_filter($parentobjects);

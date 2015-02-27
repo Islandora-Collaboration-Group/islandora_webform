@@ -4,9 +4,7 @@
  * @file
  * This file contains all theme and preprocess functions.
  */
-/**
- * Implements hook_preprocess_theme().
- */
+
 /**
  * Implements hook_preprocess().
  */
@@ -15,7 +13,6 @@ function islandora_example_simple_text_preprocess_islandora_example_html_descrip
   if (islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $islandora_object['HTML'])) {
     try {
       $html = $islandora_object['HTML']->content;
-     
     }
     catch (Exception $e) {
       drupal_set_message(t('Error retrieving object %s %t', array('%s' => $islandora_object->id, '%t' => $e->getMessage())), 'error', FALSE);
