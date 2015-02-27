@@ -7,18 +7,18 @@
 
 
 /**
- * We are defining our basic XPATH for mods:relatedItem and limiting this only attributes of type host
- * This can de modified to allow all type of relatedItems, available in the XML forms, to be used by
- * removing the [@type="host"] expression
+ * We are defining our basic XPATH for mods:relatedItem and limiting this only
+ * attributes of type host.  This can de modified to allow all type of
+ * relatedItems, available in the XML forms, to be used by removing the
+ * [@type="host"] expression.
  */
 define('ISLANDORA_EXAMPLE_SIMPLE_TEXT_MODS_RELATED_XPATH', '//mods:mods[1]/mods:relatedItem[@type="host"]');
 /**
  * Implements hook_islandora_view_print_object().
  */
 function islandora_example_simple_text_islandora_view_print_object($object) {
-  $output = array();
-  $variables =array();
-    // Theme html description
+  $variables = array();
+  // Theme html description.
   $variables['html_description'] = theme('islandora_example_html_description', array('islandora_object' => $object));
   $output = theme('islandora_example_simple_text_print', array(
     'islandora_content' => $variables['html_description']));
@@ -47,18 +47,17 @@ function islandora_example_simple_text_theme($existing, $type, $theme, $path) {
       'variables' => array('islandora_content' => NULL),
     ),
     'islandora_example_html_description' => array(
-          'file' => 'theme/theme.inc',
-          'template' => 'theme/islandora-example-html-description',
-          //This theme allow some cosmetic work on the HTML datastream printing 
-          // We can add PIDs to the end of this pattern in our preprocess function
-          // and templates will be able to have have a pid appended to the
-          // template name to overide a template on a per object basis.
-          // An example template might be named:
-          // "islandora-islandora-example-html-description--islandora-27.tpl.php".
-          'pattern' => 'islandora_example_html_description__',
-          'variables' => array('islandora_object' => NULL),
-        ),
-    
+      'file' => 'theme/theme.inc',
+      'template' => 'theme/islandora-example-html-description',
+      // This theme allow some cosmetic work on the HTML datastream printing
+      // We can add PIDs to the end of this pattern in our preprocess function
+      // and templates will be able to have have a pid appended to the
+      // template name to overide a template on a per object basis.
+      // An example template might be named:
+      // "islandora-islandora-example-html-description--islandora-27.tpl.php".
+      'pattern' => 'islandora_example_html_description__',
+      'variables' => array('islandora_object' => NULL),
+    ),
   );
 }
 
@@ -98,13 +97,13 @@ function islandora_example_simple_text_islandora_sp_example_text_islandora_view_
 
 /**
  * Implements hook_preprocess_theme().
+ *
  * Almost the same as the basic Islandora one
  */
 function islandora_example_simple_text_preprocess_islandora_example_simple_text(array &$variables) {
   drupal_add_js('misc/form.js');
   drupal_add_js('misc/collapse.js');
   $islandora_object = $variables['islandora_object'];
-  $repository = $islandora_object->repository;
   module_load_include('inc', 'islandora', 'includes/datastream');
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/metadata');
@@ -137,29 +136,28 @@ function islandora_example_simple_text_preprocess_islandora_example_simple_text(
     );
     $variables['islandora_thumbnail_img'] = theme('image', $params);
   }
-	$datastreams = array();
-	foreach ($islandora_object as $ds) {
-	  try {
-	    $pid = $islandora_object->id;
-	    $id = $ds->id;
-	    $label = $ds->label;
-	    $download_path = islandora_datastream_get_url($ds, 'download');
-	    $datastreams[$id]['id'] = $id;
-	    $datastreams[$id]['label'] = $label;
-	    $datastreams[$id]['label_link'] = islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $ds) ?
-	      l($label, $download_path) :
-	      $label;
-	    $datastreams[$id]['download_url'] = $download_path;
-	    $datastreams[$id]['mimetype'] = $ds->mimetype;
-	    $datastreams[$id]['size'] = islandora_datastream_get_human_readable_size($ds);
-	    $datastreams[$id]['created_date'] = $ds->createdDate->format("Y-m-d");
-	    $datastreams[$id]['class'] = drupal_strtolower(preg_replace('/[^A-Za-z0-9]/', '-', $id));
-	  }
-	  catch (RepositoryException $e) {
+  $datastreams = array();
+  foreach ($islandora_object as $ds) {
+    try {
+      $id = $ds->id;
+      $label = $ds->label;
+      $download_path = islandora_datastream_get_url($ds, 'download');
+      $datastreams[$id]['id'] = $id;
+      $datastreams[$id]['label'] = $label;
+      $datastreams[$id]['label_link'] = islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $ds) ?
+        l($label, $download_path) :
+        $label;
+      $datastreams[$id]['download_url'] = $download_path;
+      $datastreams[$id]['mimetype'] = $ds->mimetype;
+      $datastreams[$id]['size'] = islandora_datastream_get_human_readable_size($ds);
+      $datastreams[$id]['created_date'] = $ds->createdDate->format("Y-m-d");
+      $datastreams[$id]['class'] = drupal_strtolower(preg_replace('/[^A-Za-z0-9]/', '-', $id));
+    }
+    catch (RepositoryException $e) {
 
-	  }
-	}
-	$variables['datastreams'] = $datastreams;
+    }
+  }
+  $variables['datastreams'] = $datastreams;
   $variables['html_description'] = theme('islandora_example_html_description', array('islandora_object' => $islandora_object));
 }
 
@@ -168,7 +166,7 @@ function islandora_example_simple_text_preprocess_islandora_example_simple_text(
  */
 function islandora_example_simple_text_xml_form_builder_get_transforms() {
   $module_path = drupal_get_path('module', 'islandora_example_simple_text');
-  //Our modified slightly MODS to DC XSLT. Based on MODS 3.4. Adapt as needed.
+  // Our modified slightly MODS to DC XSLT. Based on MODS 3.4. Adapt as needed.
   return array(
     'modsrelated_to_dc.xsl' => "$module_path/xsl/modsrelated_to_dc.xsl",
   );
@@ -206,12 +204,14 @@ function islandora_example_simple_text_islandora_xml_form_builder_forms() {
 
 /**
  * Implements hook_islandora_CMODEL_PID_derivative().
- * Our derivatives work this way
- * islandora_example_simple_text_addparent_xlink reads a parent's object PID and add this to 
- * an xlink attribute for mods:relatedItem
  *
- * islandora_example_simple_text_create_html reads a few MODS elements and creates a HMTL version to be used 
- * as Object's description inside the view tab. Tune as needed.
+ * Our derivatives work this way
+ * islandora_example_simple_text_addparent_xlink reads a parent's object PID
+ * and add this to an xlink attribute for mods:relatedItem
+ *
+ * islandora_example_simple_text_create_html reads a few MODS elements and
+ * creates a HMTL version to be used  as Object's description inside the view
+ * tab. Tune as needed.
  */
 function islandora_example_simple_text_islandora_sp_example_text_islandora_derivative() {
   return array(
@@ -233,6 +233,5 @@ function islandora_example_simple_text_islandora_sp_example_text_islandora_deriv
       ),
       'file' => drupal_get_path('module', 'islandora_example_simple_text') . '/includes/derivatives.inc',
     ),
-   
   );
 }
