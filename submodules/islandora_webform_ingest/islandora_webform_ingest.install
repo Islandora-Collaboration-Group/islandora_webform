@@ -48,7 +48,8 @@ function islandora_webform_ingest_schema() {
     'indexes' => array(
       'nid' => array('nid'),
       'sid' => array('sid'),
-      'pid' => array('pid'),
+      // Restrict index to 255 characters to prevent index limit errors.
+      'pid' => array(array('pid', 255)),
     ),
     'primary key' => array('id'),
   );

@@ -57,8 +57,9 @@ function islandora_webform_schema() {
     ),
     'indexes' => array(
       'enabled' => array('enabled'),
-      'cmodel_filter' => array('cmodel_filter'),
-      'pid_filter' => array('pid_filter'),
+      // Restrict indexes to 255 characters to prevent index limit errors.
+      'cmodel_filter' => array(array('cmodel_filter', 255)),
+      'pid_filter' => array(array('pid_filter', 255)),
     ),
     'primary key' => array('entity_id'),
   );
