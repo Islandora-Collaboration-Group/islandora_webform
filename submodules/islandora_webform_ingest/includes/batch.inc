@@ -161,5 +161,4 @@ function islandora_webform_ingest_delete_all_related_batch_operation($pid, array
       )
     ));
   }
-  dqdpm(get_defined_vars());
 }
