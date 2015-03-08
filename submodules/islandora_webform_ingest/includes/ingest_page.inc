@@ -25,7 +25,8 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   form_load_include($form_state, 'inc', 'islandora', '/includes/ingest.form');
   form_load_include($form_state, 'inc', 'islandora', '/includes/utilities');
   // Get the submission data.
-  $submission = array_shift(webform_get_submissions(array('sid' => $sid)));
+  $submissions = webform_get_submissions(array('sid' => $sid));
+  $submission = array_shift($submissions);
   // Get the webform ingest configuration.
   $iwi_settings = iwi_webform_ingest_settings($submission->nid);
   // Get the submission component mappings.
