@@ -303,10 +303,17 @@ function iwi_save_component_mapping($form, $form_state) {
     ->condition('m.cid', $cid)
     ->execute()->fetchField()
   ) {
-    db_update('islandora_webform_ingest_map')
-      ->fields(array('data' => serialize($data)))
-      ->condition('id', $id)
-      ->execute();
+    if (empty($field)) {
+      db_delete('islandora_webform_ingest_map')
+        ->condition('id', $id)
+        ->execute();
+    }
+    else {
+      db_update('islandora_webform_ingest_map')
+        ->fields(array('data' => serialize($data)))
+        ->condition('id', $id)
+        ->execute();
+    }
   }
   else {
     db_insert('islandora_webform_ingest_map')
