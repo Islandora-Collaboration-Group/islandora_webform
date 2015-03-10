@@ -116,6 +116,7 @@ function iwi_datastream_mime_from_component($component) {
     'number' => array('text/plain'),
     'select' => array('text/plain'),
     'textarea' => array('text/plain'),
+    'html_textarea' => array('text/html'),
     'textfield' => array('text/plain'),
     'time' => array('text/plain'),
     'tag' => array('text/plain'),

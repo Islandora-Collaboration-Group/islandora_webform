@@ -551,6 +551,7 @@ function islandora_webform_ingest_get_component_types() {
     'textarea',
     'textfield',
     'time',
+    'html_textarea',
   );
 
   return array_intersect($eligible_component_types, array_keys(webform_components()));
