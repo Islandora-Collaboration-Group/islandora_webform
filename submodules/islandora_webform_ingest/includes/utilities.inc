@@ -303,7 +303,8 @@ function iwi_save_component_mapping($form, $form_state) {
     ->condition('m.cid', $cid)
     ->execute()->fetchField()
   ) {
-    if (empty($field)) {
+    // Empty mode means "do not ingest", so remove the mapping.
+    if (empty($mode)) {
       db_delete('islandora_webform_ingest_map')
         ->condition('id', $id)
         ->execute();
@@ -315,7 +316,7 @@ function iwi_save_component_mapping($form, $form_state) {
         ->execute();
     }
   }
-  else {
+  elseif (!empty($mode)) {
     db_insert('islandora_webform_ingest_map')
       ->fields(array(
           'nid' => $nid,
