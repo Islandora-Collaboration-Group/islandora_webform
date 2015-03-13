@@ -361,7 +361,7 @@ function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
   if ($form_state['values']['islandora_ingest']['ingest_enabled']
     && $form_state['values']['islandora_ingest']['cmodel']
     && !empty($form_state['values']['islandora_ingest']['namespace'])
-    && preg_match("/[^a-z]/", $form_state['values']['islandora_ingest']['namespace'])
+    && preg_match("/[^A-Za-z0-9\\-\\.]/", $form_state['values']['islandora_ingest']['namespace'])
   ) {
 
     form_set_error('islandora_ingest][namespace', t('Invalid string for namespace. Namespace must consist of lower case letters only.'));
