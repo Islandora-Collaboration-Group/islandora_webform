@@ -34,7 +34,7 @@
     <children>
       <element name="relatedItems">
         <properties>
-          <type>markup</type>
+          <type>fieldset</type>
           <access>TRUE</access>
           <collapsed>FALSE</collapsed>
           <collapsible>FALSE</collapsible>
@@ -46,8 +46,8 @@
           <tree>TRUE</tree>
           <actions>
             <create>
-              <path>self::node()</path>
-              <context>parent</context>
+              <path>/mods:mods</path>
+              <context>document</context>
               <schema/>
               <type>element</type>
               <prefix>NULL</prefix>
@@ -58,10 +58,7 @@
               <context>document</context>
             </read>
             <update>NULL</update>
-            <delete>
-              <path>self::node()</path>
-              <context>self</context>
-            </delete>
+            <delete>NULL</delete>
           </actions>
         </properties>
         <children>
@@ -325,25 +322,6 @@
                   <resizable>FALSE</resizable>
                   <title>Type</title>
                   <tree>TRUE</tree>
-                  <actions>
-                    <create>
-                      <path>self::node()</path>
-                      <context>parent</context>
-                      <schema/>
-                      <type>attribute</type>
-                      <prefix>NULL</prefix>
-                      <value>type</value>
-                    </create>
-                    <read>
-                      <path>@type</path>
-                      <context>parent</context>
-                    </read>
-                    <update>
-                      <path>self::node()</path>
-                      <context>self</context>
-                    </update>
-                    <delete>NULL</delete>
-                  </actions>
                 </properties>
                 <children/>
               </element>
@@ -608,6 +586,15 @@
               <resizable>FALSE</resizable>
               <title>Notes</title>
               <tree>TRUE</tree>
+              <actions>
+                <create>NULL</create>
+                <read>
+                  <path>/mods:mods/mods:relatedItem</path>
+                  <context>document</context>
+                </read>
+                <update>NULL</update>
+                <delete>NULL</delete>
+              </actions>
             </properties>
             <children>
               <element name="0">
@@ -624,16 +611,16 @@
                   <tree>TRUE</tree>
                   <actions>
                     <create>
-                      <path>self::node()</path>
-                      <context>parent</context>
+                      <path>/mods:mods/mods:relatedItem</path>
+                      <context>document</context>
                       <schema/>
                       <type>element</type>
                       <prefix>NULL</prefix>
                       <value>note</value>
                     </create>
                     <read>
-                      <path>mods:note[not(@type='compound')]</path>
-                      <context>parent</context>
+                      <path>/mods:mods/mods:relatedItem/mods:note[not(@type='compound')]</path>
+                      <context>document</context>
                     </read>
                     <update>NULL</update>
                     <delete>
@@ -643,7 +630,7 @@
                   </actions>
                 </properties>
                 <children>
-                  <element name="note">
+                  <element name="noteText">
                     <properties>
                       <type>textarea</type>
                       <access>TRUE</access>
@@ -657,14 +644,7 @@
                       <title>Note</title>
                       <tree>TRUE</tree>
                       <actions>
-                        <create>
-                          <path>self::node()</path>
-                          <context>parent</context>
-                          <schema/>
-                          <type>xml</type>
-                          <prefix>NULL</prefix>
-                          <value>%value%</value>
-                        </create>
+                        <create>NULL</create>
                         <read>
                           <path>self::node()</path>
                           <context>parent</context>
@@ -673,10 +653,7 @@
                           <path>self::node()</path>
                           <context>parent</context>
                         </update>
-                        <delete>
-                          <path>self::node()</path>
-                          <context>self</context>
-                        </delete>
+                        <delete>NULL</delete>
                       </actions>
                     </properties>
                     <children/>
@@ -727,13 +704,19 @@
         <properties>
           <type>hidden</type>
           <access>TRUE</access>
+          <collapsed>FALSE</collapsed>
+          <collapsible>FALSE</collapsible>
           <default_value>http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd</default_value>
+          <disabled>FALSE</disabled>
+          <executes_submit_callback>FALSE</executes_submit_callback>
+          <multiple>FALSE</multiple>
           <required>FALSE</required>
+          <resizable>FALSE</resizable>
           <tree>TRUE</tree>
           <actions>
             <create>
-              <path>self::node()</path>
-              <context>parent</context>
+              <path>/mods:mods</path>
+              <context>document</context>
               <schema/>
               <type>attribute</type>
               <prefix>xsi</prefix>

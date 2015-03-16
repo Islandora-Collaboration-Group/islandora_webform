@@ -98,6 +98,7 @@ function islandora_webform_ingest_delete_related_batch($pid) {
  */
 function islandora_webform_ingest_delete_all_related_batch_operation($pid, array &$context) {
   if (!isset($context['sandbox']['total_count'])) {
+    $context['sandbox']['deleted'] = 0;
     $context['sandbox']['total_count'] = count(iwi_query_related_objects($pid));
     if ($context['sandbox']['total_count'] === 0) {
       $context['finished'] = 1;
@@ -143,7 +144,7 @@ function islandora_webform_ingest_delete_all_related_batch_operation($pid, array
   }
 
   $context['sandbox']['current'] += $count;
-
+  $context['sandbox']['deleted'] += count($deleted_pids);
   if ($count === 0) {
     $context['finished'] = 1;
   }
@@ -152,7 +153,7 @@ function islandora_webform_ingest_delete_all_related_batch_operation($pid, array
   }
 
   if (!$query_results || $context['finished'] == 1) {
-    drupal_set_message(format_plural($context['sandbox']['current'],
+    drupal_set_message(format_plural($context['sandbox']['deleted'],
       'Deleted 1 child from <a href="@collection-url">@collection</a>.',
       'Deleted @count children from <a href="@collection-url">@collection</a>.',
       array(

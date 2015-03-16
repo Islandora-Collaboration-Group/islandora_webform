@@ -405,7 +405,7 @@ function islandora_webform_ingest_islandora_object_purged($pid) {
   $disable_ingest_nids = $query->execute()->fetchCol();
   if (!empty($disable_ingest_nids)) {
     db_update('islandora_webform_ingest_webforms')
-      ->fields('ingest_enabled', 0)
+      ->fields(array('ingest_enabled' => 0))
       ->condition('nid', $disable_ingest_nids)
       ->execute();
   }
