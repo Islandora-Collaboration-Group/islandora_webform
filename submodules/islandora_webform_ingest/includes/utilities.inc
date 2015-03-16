@@ -751,11 +751,35 @@ SELECT ?object ?predicate
 FROM <#ri>
 WHERE {
   ?object <fedora-model:label> ?title ;
-         ?predicate <info:fedora/{$pid}>
+  ?predicate <info:fedora/{$pid}> .
+  !optionals
+  !optexclude
+  !filters
 }
 
 EOQ;
-
+  //Be consistent with REPO's XACML permissions
+  $query_optionals = (array) module_invoke('islandora_xacml_api', 'islandora_basic_collection_get_query_optionals', 'manage');
+  $query_filters = (array) module_invoke('islandora_xacml_api', 'islandora_basic_collection_get_query_filters');
+  //Exclude collection predicates here
+  $collection_predicate_filters .= " !sameTerm(?predicate, <fedora-rels-ext:isMemberOfCollection>) && !sameTerm(?predicate, <fedora-rels-ext:isMemberOf>)";
+  $query_filters[] = $collection_predicate_filters;
+  $filter_map = function ($filter) {
+    return "FILTER($filter)";
+  };
+  //Basicly this query statement exludes every object that also has a relationship to a collection. This avoids deleting object that would not really became orphan if deleting it's parent 
+  //@TODO we should really extend this to any relation that connects this object to any other different than $PID
+  $query_unbound_optionals = "?object2 <fedora-model:label> ?title ; ?predicate <info:fedora/{$pid}>. ?object2 <fedora-rels-ext:isMemberOfCollection> ?collection";
+  $query_filters[]= "!bound(?collection)";
+ 
+  $query = format_string($query, array(
+    '!optionals' => !empty($query_optionals) ? ('OPTIONAL {{' . implode('} UNION {', $query_optionals) . '}}') : '',
+    '!filters' => implode(' ', array_map($filter_map, $query_filters)),
+  ));
+  $query = format_string($query, array(
+    '!optexclude' => !empty($query_unbound_optionals) ? ('. OPTIONAL { '.$query_unbound_optionals.'}') : '',
+  ));
+ 
   // Include paging parameters if provided.
   if ($page_number > 0 && $page_size > 0) {
     // Add in the offset.
@@ -766,7 +790,7 @@ EOQ;
     // Add in the limit.
     $query .= " limit $page_size";
   }
-
+  error_log($query);
   $queryresults = $connection->repository->ri->sparqlQuery($query);
 
   return $queryresults;
