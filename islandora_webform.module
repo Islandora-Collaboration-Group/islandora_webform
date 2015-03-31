@@ -176,7 +176,7 @@ function islandora_webform_form_webform_configure_form_alter(&$form, &$form_stat
  */
 function islandora_webform_form_webform_client_form_alter(&$form, &$form_state, $form_id) {
   $webform = $form['#node']->webform;
-  if ($webform['webform_ajax'] != WEBFORM_AJAX_NO_AJAX) {
+  if (module_exists('webform_ajax') && $webform['webform_ajax'] != WEBFORM_AJAX_NO_AJAX) {
     foreach (array('previous', 'next', 'submit', 'draft') as $button) {
       if (isset($form['actions'][$button])) {
         unset($form['actions'][$button]['#pre_render']);

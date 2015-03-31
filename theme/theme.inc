@@ -63,7 +63,7 @@ function theme_islandora_webform_links(array $vars) {
     $output .= '<div id="' . $jqid . '" class="webform-links-wrapper"><div class="webform-links">';
     // Lets load the node.
     $webform_node_data = node_load($webform->entity_id)->webform;
-    $inline = isset($webform_node_data['webform_ajax']) ? $webform_node_data['webform_ajax'] != WEBFORM_AJAX_NO_AJAX : FALSE;
+    $inline = module_exists('webform_ajax') && isset($webform_node_data['webform_ajax']) ? $webform_node_data['webform_ajax'] != WEBFORM_AJAX_NO_AJAX : FALSE;
     if ($inline) {
       $link_mode = 'inline';
       $webform_link_options['attributes']['class'] = array('webform-link', 'use-ajax');
