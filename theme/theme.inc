@@ -144,7 +144,7 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
   $webform_link = '';
   $node = node_load($islandora_webform_record->entity_id);
   module_load_include('inc', 'islandora_webform', 'includes/webform_access');
-  if (islandora_webform_user_can_submit_webform($node)) {
+  if ($node->status && islandora_webform_user_can_submit_webform($node)) {
     $link_path = $link_mode == 'inline' ? 'islandora_webform/retrieve_form/' . $islandora_webform_record->entity_id . '/nojs' : drupal_get_path_alias('node/' . $islandora_webform_record->entity_id);
     $webform_link_options['attributes']['title'] = $islandora_webform_record->link_help;
     $webform_link = l($islandora_webform_record->link_text, $link_path, $webform_link_options);
