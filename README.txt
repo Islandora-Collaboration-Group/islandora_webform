@@ -26,15 +26,12 @@ Installation
 2. Login as an administrator. Enable the Islandora Webform module in the
    "Administer" -> "Modules"
 
-3. (Optional) Edit the settings under "Administer" -> "Islandora" ->
-   "Configuration" -> "Islandora Webform"
+3. Create a webform node at node/add/webform.
 
-4. Create a webform node at node/add/webform.
-
-5. Configure Islandora settings for the webform to define which repository objects
+4. Configure Islandora settings for the webform to define which repository objects
    can show a link to this webform.
 
-6. If manual webform linking is selected, go to each object that you want to link
+5. If manual webform linking is selected, go to each object that you want to link
    to a webform, and click the link to add it.
 
 
