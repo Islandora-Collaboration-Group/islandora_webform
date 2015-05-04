@@ -29,7 +29,7 @@ Installation and Configuration
    case of new object, its content model, relationship to the existing object,
    and namespace.
    NOTE that if you will be ingesting to the current object, a content model must
-   be selected in the Islandora Options section above.
+   be selected in the Islandora Settings section above.
    NOTE also that any changes in the destination content model will cause any
    previously saved ingest mappings for this form (see next) to be lost.
 

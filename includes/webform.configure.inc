@@ -66,7 +66,7 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
 
   $form['islandora'] = array(
     '#type' => 'fieldset',
-    '#title' => 'Islandora Options',
+    '#title' => 'Islandora Settings',
     '#collapsible' => FALSE,
     '#tree' => TRUE,
     '#group' => 'additional_settings',
