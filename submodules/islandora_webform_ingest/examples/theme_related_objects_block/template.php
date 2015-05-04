@@ -21,7 +21,9 @@ function YOUR_THEME_preprocess_islandora_basic_collection_grid(&$vars) {
 
       // This function provides a handy way to get particular data for an
       // object. Separate multiple fields by commas.
-      $solr_data = iw_get_solr_data_array($object_data['object']->id, 'mods_abstract_ms');
+      // Note that in this example, we are grabbing note and name fields from
+      // the example simple text content model's mods schema.
+      $solr_data = iw_get_solr_data_array($object_data['object']->id, 'mods_relatedItem_host_note_ms, mods_relatedItem_host_name_namePart_ms');
       $object_data['solr_data'] = $solr_data[0]['solr_doc'];
     }
   }
