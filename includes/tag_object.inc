@@ -45,8 +45,6 @@ function islandora_webform_action_tag_object($webform_id, $pid, $ajax) {
 
     $commands[] = ajax_command_replace('#islandora_webform_object_tag_links', $html);
 
-    watchdog('debug', 'tag', $commands, WATCHDOG_DEBUG);
-
     return array(
       '#type' => 'ajax',
       '#commands' => $commands,
@@ -89,7 +87,6 @@ function islandora_webform_action_untag_object($webform_id, $pid, $ajax) {
     ));
 
     $commands[] = ajax_command_replace('#islandora_webform_object_tag_links', $html);
-    watchdog('debug', 'untag', $commands, WATCHDOG_DEBUG);
 
     return array(
       '#type' => 'ajax',
