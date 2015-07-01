@@ -13,6 +13,16 @@
  * Implements hook_menu().
  */
 function islandora_webform_menu() {
+  $items['admin/islandora/configure/iw'] = array(
+    'title'            => 'Islandora Webform',
+    'description'      => 'Configuration page for Islandora Webform module',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('islandora_webform_admin'),
+    'file'             => 'includes/admin.form.inc',
+    'access arguments' => array('administer site configuration'),
+    'type'             => MENU_NORMAL_ITEM,
+    'weight'           => -1,
+  );
 
   $items['node/%webform_menu/webform/islandora'] = array(
     'title'            => 'Islandora settings',
