@@ -6,6 +6,31 @@
  */
 
 /**
+ * Create a multistep islandora configuration form webforms.
+ * this a wrapper form
+ *
+ * @param array $form
+ *   A drupal form array
+ * @param array $form_state
+ *   A drupal form_state array
+ * @param object $node
+ *   The webform node object
+ *
+ * @return array
+ *   A drupal form render array
+ */
+function islandora_webform_configure_stepped_form($form, &$form_state, $node) {
+  if (!isset($form_state['step'])) { 
+    $form_state['step'] = 'configure'; 
+  }
+  if ($form_state['step'] == 'configure') {
+     return islandora_webform_configure_form($form, $form_state, $node);
+  }
+  return $form;
+}
+
+
+/**
  * Create a islandora configuration page for webforms.
  *
  * @param array $form
@@ -137,7 +162,7 @@ function islandora_webform_configure_form($form, &$form_state, $node) {
  * @param array $form_state
  *   The Drupal form_state array
  */
-function islandora_webform_configure_form_submit($node, $form_state) {
+function islandora_webform_configure_form_submit($node, &$form_state) {
 
   $nid = $node['nid']['#value'];
   _islandora_webform_insert_pid_component($nid);
