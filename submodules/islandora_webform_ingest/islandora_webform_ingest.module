@@ -891,6 +891,13 @@ function islandora_webform_ingest_block_configure($delta = '') {
       'links' => 'Links',
     ),
   );
+  $form['only_iw'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Only IW'),
+    '#description' => t('Show only IW ingested objects'),
+    '#default_value' => variable_get('islandora_webform_ingest_block_only_iw_' . $delta, 0),
+  );
+  
   $form['page_count'] = array(
     '#type' => 'textfield',
     '#title' => t('Page count'),
@@ -917,6 +924,9 @@ function islandora_webform_ingest_block_configure($delta = '') {
 function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
   if (isset($edit['view_mode'])) {
     variable_set('islandora_webform_ingest_block_view_mode_' . $delta, $edit['view_mode']);
+  }
+  if (isset($edit['only_iw'])) {
+    variable_set('islandora_webform_ingest_block_only_iw_' . $delta, $edit['only_iw']);
   }
   if (isset($edit['page_count'])) {
     variable_set('islandora_webform_ingest_block_page_count_' . $delta, $edit['page_count']);
@@ -955,11 +965,12 @@ function islandora_webform_ingest_block_view($relation = '') {
     $block['subject'] = $relation;
     if (($object) && (!$is_a_collection)) {
       $view_mode = variable_get('islandora_webform_ingest_block_view_mode_' . $relation, 'grid');
+      $only_iw = variable_get('islandora_webform_ingest_block_only_iw_' . $relation, 0);
       $page_number = (empty($_GET['page'])) ? 0 : $_GET['page'];
       $page_size = (empty($_GET['pagesize'])) ? variable_get('islandora_webform_ingest_block_page_count_' . $relation, '10') : $_GET['pagesize'];
 
       // Get objects.
-      list($results_count, $results) = islandora_webform_ingest_get_related_objects($object, $relation, $page_number, $page_size, $type = 'view');
+      list($results_count, $results) = islandora_webform_ingest_get_related_objects($object, $relation, $page_number, $page_size, $type = 'view', NULL, $only_iw);
 
       // Theme the objects using the selected view mode.
       if ($results_count) {
@@ -1030,8 +1041,12 @@ function islandora_webform_ingest_islandora_basic_collection_query_param_alter(&
       }
       break;
     }
-
   }
+  if (!empty($params['only_iw'])) {
+  $query_statements[] = '?object <http://islandora.ca/ontology/relsext#'.ISLANDORA_WEBFORM_ISIW_PREDICATE.'> "true"';  
+  }
+
+  
 }
 
 
@@ -1090,12 +1105,13 @@ function islandora_webform_ingest_islandora_basic_collection_query_alter(&$query
  *   - The tuples in the slice according to $page_number and $page_size.
  *   or boolean FALSE if the query fails.
  */
-function islandora_webform_ingest_get_related_objects(AbstractObject $object, $relation, $page_number = 0, $page_size = 20, $type = 'view', $cmodel = NULL) {
+function islandora_webform_ingest_get_related_objects(AbstractObject $object, $relation, $page_number = 0, $page_size = 20, $type = 'view', $cmodel = NULL, $only_iw = 0) {
   $params = array(
     'object' => $object,
     'page_number' => $page_number,
     'page_size' => $page_size,
     'relation' => $relation,
+    'only_iw' => $only_iw,
   );
 
   if (isset($cmodel)) {
