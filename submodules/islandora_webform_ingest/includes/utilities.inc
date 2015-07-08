@@ -606,76 +606,35 @@ function iwi_save_webform_configuration($form, &$form_state) {
   $nid = $form['nid']['#value'];
   $enabled = !empty($form_state['values']['islandora_ingest']['ingest_enabled']) ? $form_state['values']['islandora_ingest']['ingest_enabled'] : 0;
   $cmodel = !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['cmodel'] : '';
-  $relation = !empty($form_state['values']['islandora_ingest']['relation']) ? $form_state['values']['islandora_ingest']['relation'] : 'child';
+  //Makes no sense to store a relation if we are not creating new objects with this form anymore.
+  $relation = !empty($form_state['values']['islandora_ingest']['relation']) && !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['relation'] : '';
   $namespace = !empty($form_state['values']['islandora_ingest']['namespace']) ? $form_state['values']['islandora_ingest']['namespace'] : 'islandora';
   if ($old_settings = db_select('islandora_webform_ingest_webforms', 'm')
     ->fields('m')
     ->condition('m.nid', $nid)
     ->execute()->fetch()
   ) {
-
+    // If cmodel is empty we keep the old relation and namespace. Admin could have modified this first,
+    // then changed cmodel to 'empty', and by doing this, made those fields invisible, not being aware of the change anymore.
+    if (empty($cmodel)) { 
+      $relation = $old_settings->relation;
+      $namespace = $old_settings->$namespace;
+    }
     // If content model is changing, wipe out ingest mappings.
     if ($old_settings->cmodel != $cmodel) {
       db_delete('islandora_webform_ingest_map')->condition('nid', $nid)->execute();
       drupal_set_message(t('The destination content model was changed and therefore all existing component ingest mappings for this webform were deleted. You will have to edit each webform component that you wish to ingest.'), 'warning');
     }
-
-    // If the relation is changing, update the relations on any
-    // objects previously assigned the original relation term.
-    if ($old_settings->relation != $relation) {
-
-      // Find all objects with the old relation if it is not blank.
-      if ($old_settings->relation) {
-        module_load_include('inc', 'islandora_webform', 'includes/utilites');
-        $child_objects_data = iwi_query_objects_with_relation($old_settings->relation);
-
-        // Loop through the child (related) objects, updating their rels-ext
-        // to use the new relation term.
-        foreach ($child_objects_data as $child_object_data) {
-          $child_object = islandora_object_load($child_object_data['object']['value']);
-
-          // Get the old relation record.
-          $old_relations = $child_object->relationships->get('info:fedora/fedora-system:def/relations-external#', $old_settings->relation);
-          // In theory, there can be multiple relations matching this term,
-          // so we have to loop.
-          foreach ($old_relations as $old_relation) {
-
-            // Get the parent object pid from the old relation.
-            $old_relation_pid = $old_relation['object']['value'];
-
-            // If new relation is not blank, add it, using the old relation's
-            // parent object pid.
-            if ($relation) {
-              $child_object->relationships->add('info:fedora/fedora-system:def/relations-external#', $relation, $old_relation_pid);
-            }
-
-            // In any case, remove the old relation.
-            $child_object->relationships->remove('info:fedora/fedora-system:def/relations-external#', $old_settings->relation, $old_relation_pid);
-          }
-
-          drupal_set_message(format_string('@count objects had their relations updated from "@old" to "@new"', array(
-            '@count' => count($child_objects_data),
-            '@old' => $old_settings->relation,
-            '@new' => $relation,
-          )));
-        }
-        if ($relation) {
-          // Update the block config to use the new relation as the delta.
-          db_update('block')
-            ->fields(array('delta' => $relation))
-            ->condition('delta', $old_settings->relation)
-            ->condition('module', 'islandora_webform_ingest')
-            ->execute();
-        }
-        else {
-          // New relation is blank, so delete the related objects block
-          // configuration.
-          db_delete('block')
-            ->condition('delta', $old_settings->relation)
-            ->condition('module', 'islandora_webform_ingest')
-            ->execute();
-        }
-      }
+    // If the relation is changing, show a new form and let the admin choose
+    // Additionally test if we are giving a new relation here && there is a cmodel in place.
+    // Makes no sense to modify existing objects if the new form is converted from creation to update
+    if (($old_settings->relation != $relation) && !empty($relation) && !empty($cmodel)) {
+      $form_state['stepdata']['form_build_id'] = $form_state['values']['form_build_id'];
+      $form_state['stepdata']['old_relation'] = $old_settings->relation;
+      $form_state['stepdata']['new_relation'] = $relation;
+      $form_state['stepdata']['nid'] = $nid;
+      $form_state['step'] = 'confirm';
+      $form_state['rebuild'] = TRUE;
     }
 
     // Update the previous islandora webform ingest settings record.
@@ -688,7 +647,9 @@ function iwi_save_webform_configuration($form, &$form_state) {
       ))
       ->condition('id', $old_settings->id)
       ->execute();
-  }
+    drupal_set_message(t('Your ingest settings where saved'), 'status');
+    
+    }
 
   // No previous islandora webform ingest settings record, so just create a new
   // one.
@@ -702,8 +663,106 @@ function iwi_save_webform_configuration($form, &$form_state) {
         'namespace' => $namespace,
       ))
       ->execute();
+  drupal_set_message(t('Your ingest settings where saved'), 'status');
   }
 }
+
+/**
+ * Migrate objects from one predicate to other based admins choice
+ *
+ * @param array $form
+ *   The webform confirm form
+ * @param array $form_state
+ *   The webform confirm form_state
+ *
+ * @throws \Exception
+ */
+function iwi_migrate_webform_objects($form, &$form_state) {
+
+  module_load_include('inc', 'islandora_webform', 'includes/utilites');
+  $old_relation = !empty($form_state['stepdata']['old_relation']) ? $form_state['stepdata']['old_relation'] : '';
+  $new_relation = $form_state['stepdata']['new_relation'];
+  $choice = $form_state['values']['islandora_confirm']['migrate_predicates']; 
+  $nid = $form_state['stepdata']['nid'];
+  $subject_avoid_index = array();
+  $old_relations_modified=array();
+  $removedcount=0;
+  $addedcount=0;
+  $alreadyinplace=0;
+  switch ($choice) {
+    case 'all':
+    $child_objects_data = iwi_get_objects_with_relation(NULL, $nid);
+    break;
+    case 'oldpredicate':
+    $child_objects_data = iwi_get_objects_with_relation($old_relation, $nid);
+    break;
+    case 'none':
+    default:
+    $child_objects_data = NULL;
+    break;
+  }
+
+  
+  // If the relation is changing, read the admin's choice on this.
+  if ((!is_null($child_objects_data)) && (!empty($new_relation))){
+    foreach ($child_objects_data as $key => $child_object_data) {
+      //Our idea
+      //First, if the $new_relation is already in place, mark this subjects and leave them alone
+      //Second, even whem migrating all, we must give existing predicates having '$old_relation' priority
+      //Third, if a subject has multiple relations and $old_relation was not found we will only replace the first one. It's a poor's man approach to
+      //not knowing which one really was created by our webform, but removing everything is even worse
+      //Fourth. Only add one relation. Our webforms generates only one, so why should we do more?
+      if (!array_key_exists($child_object_data['object']['value'], $subject_avoid_index)) {
+        if ($child_object_data['predicate']['uri'] == 'info:fedora/fedora-system:def/relations-external#'.$new_relation) {
+          //We already have our new predicate. This subject gets marked 
+          $subject_avoid_index[$child_object_data['object']['value']] = 1;
+        } 
+        elseif (($child_object_data['predicate']['uri'] == 'info:fedora/fedora-system:def/relations-external#'.$old_relation) && !empty($old_relation)){
+          //The old predicate is present. 
+          $child_object = islandora_object_load($child_object_data['object']['value']);
+          if ($child_object->relationships->remove(FEDORA_RELS_EXT_URI, $old_relation, $child_object_data['secondobject']['value'],RELS_TYPE_URI)) {
+            $removedcount++;
+            $old_relations_modified[$old_relation] = 1;
+          }
+          //Now add our new relation
+          if ($new_relation) {
+            $child_object->relationships->add(FEDORA_RELS_EXT_URI, $new_relation, $child_object_data['secondobject']['value'],RELS_TYPE_URI);
+            $addedcount++;
+          }
+          //And dismiss this subject. We are done with him.
+          $subject_avoid_index[$child_object_data['object']['value']] = 1;
+        }
+      }  
+    }
+    //Now iterate again to manage the rest, if any 
+    foreach ($child_objects_data as $child_object_data) {
+      if (!array_key_exists($child_object_data['object']['value'], $subject_avoid_index)) {
+        $child_object = islandora_object_load($child_object_data['object']['value']);
+        $current_rel = array();
+        $current_rel = explode('#', $child_object_data['predicate']['uri']);
+        if (isset($current_rel[1]) && !empty($current_rel[1])) {
+          if ($child_object->relationships->remove(FEDORA_RELS_EXT_URI, $current_rel[1], $child_object_data['secondobject']['value'], RELS_TYPE_URI)) {
+             $removedcount++;
+             $old_relations_modified[$current_rel[1]] = 1;
+          }
+        }
+        //Now add our new relation
+        if ($new_relation) {
+          $child_object->relationships->add(FEDORA_RELS_EXT_URI, $new_relation, $child_object_data['secondobject']['value'], RELS_TYPE_URI);
+          $addedcount++;
+        }
+        //And dismiss this subject. We are done with him.
+        $subject_avoid_index[$child_object_data['object']['value']] = 1;
+      }
+    }
+  }
+  drupal_set_message(format_string('@count objects had their relations updated from "@old" to "@new"', array(
+      '@count' => $addedcount,
+      '@old' => implode(",",array_keys($old_relations_modified)),
+      '@new' => $new_relation,
+    )));
+}
+
 
 /**
  * Utility function returns mime types given file extensions.
@@ -771,13 +830,13 @@ EOQ;
   // Be consistent with REPO's XACML permissions.
   $query_optionals = (array) module_invoke('islandora_xacml_api', 'islandora_basic_collection_get_query_optionals', 'manage');
   $query_filters = (array) module_invoke('islandora_xacml_api', 'islandora_basic_collection_get_query_filters');
-  // Exclude collection predicates here.
-  $collection_predicate_filters = " !sameTerm(?predicate, <fedora-rels-ext:isMemberOfCollection>) && !sameTerm(?predicate, <fedora-rels-ext:isMemberOf>)";
+  // Exclude collection predicates and CMODEL predicates here.
+  $collection_predicate_filters = " !sameTerm(?predicate, <fedora-rels-ext:isMemberOfCollection>) && !sameTerm(?predicate, <fedora-rels-ext:isMemberOf>) && !sameTerm(?predicate, <fedora-model:hasModel>)";
   $query_filters[] = $collection_predicate_filters;
   $filter_map = function ($filter) {
     return "FILTER($filter)";
   };
-  // Basicly this query statement exludes every object that also has a
+  // Basicly this query statement excludes every object that also has a
   // relationship to a collection. This avoids deleting object that would not
   // really became orphan if deleting it's parent.
   // @TODO we should really extend this to any relation that connects this
@@ -810,28 +869,145 @@ EOQ;
 }
 
 /**
- * Get data about objects having this relation term.
- *
+ * Get data about objects having this relation term and are related to a given webform .
+ * This function can be used also with no relation or nid to fetch any combination needed
  * @param string $relation
  *   The relation term.
- *
+ * @param string $nid
+ *   The webform's node id that originally was used to create the object.
  * @return array
  *   An array containing query results
  */
-function iwi_query_objects_with_relation($relation) {
+function iwi_get_objects_with_relation($relation = NULL, $nid = NULL) {
   $connection = islandora_get_tuque_connection();
+  $query=iwi_get_objects_with_relation_query($relation,$nid);
+  $queryresults = $connection->repository->ri->query($query,'sparql');
+  return $queryresults;
+}
+/**
+ * Get object count for objects having this relation term and are related to a given webform .
+ * This function can be used also with no relation or nid to fetch any combination needed
+ * @param string $relation
+ *   The relation term.
+ * @param string $nid
+ *   The webform's node id that originally was used to create the object.
+ * @return int
+ *   Number of objects in query results
+ */
+function iwi_count_objects_with_relation($relation = NULL, $nid = NULL) {
+  
+  $connection = islandora_get_tuque_connection();
+  $query=iwi_get_objects_with_relation_countquery($relation,$nid);
+  $queryresults = $connection->repository->ri->countQuery($query,'sparql');
+  return $queryresults;
+}
+/**
+ * Get sparql query for fetching objects having this relation term and are related to a given webform .
+ * This function can be used also with no relation or nid to fetch any combination needed
+ * @param string $relation
+ *   The relation term.
+ * @param string $nid
+ *   The webform's node id that originally was used to create the object.
+ * @return array
+ *   An array containing query results
+ */
+function iwi_get_objects_with_relation_query($relation = NULL, $nid = NULL) {
+  $iw_is_predicate = ISLANDORA_WEBFORM_ISIW_PREDICATE;
+  $iw_has_predicate = ISLANDORA_WEBFORM_HASIW_PREDICATE;
   $query = <<<EOQ
 PREFIX islandora-rels-ext: <http://islandora.ca/ontology/relsext#>
 PREFIX fedora-rels-ext: <info:fedora/fedora-system:def/relations-external#>
-SELECT ?object ?predicate ?secondobject
+SELECT DISTINCT ?object ?predicate ?secondobject
 FROM <#ri>
 WHERE {
   ?object <fedora-model:label> ?title ;
+  islandora-rels-ext:$iw_is_predicate "true";
+  !iw_node_match
   ?predicate ?secondobject .
-FILTER(sameTerm(?predicate, <fedora-rels-ext:{$relation}>))}
+  ?secondobject <info:fedora/fedora-system:def/model#hasModel> <info:fedora/fedora-system:FedoraObject-3.0> .
+  !filters
+}
 EOQ;
 
-  $queryresults = $connection->repository->ri->sparqlQuery($query);
+  $filter_map = function ($filter) {
+    return "FILTER($filter)\n";
+  };
+  $query_filters = array();
+  $query_extramatch = array();
+  
+  $iw_onlyuris_filters = "isIRI(?secondobject)"; //we want only relations that point to an object.
+  
+  $query_filters[] = $iw_onlyuris_filters;
+  $query_filters[] ="regex(str(?predicate), 'info:fedora/fedora-system:def/relations-external#','i')";
+  if (isset($relation) && !empty($relation)) {
+  $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
+  $query_filters[] = $iw_predicate_filters;
+  }
+  
+  if (isset($nid) && !empty($nid)) {
+  $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
+  $query_extramatch[] = $iw_nodeid_match;
+  }
+ 
+  $query = format_string($query, array(
+    '!iw_node_match' => !empty($query_extramatch) ? implode(' ;', $query_extramatch)." ;" : '',
+    '!filters' => implode(' ', array_map($filter_map, $query_filters)),
+  ));  
+ return $query;
+  
+}
+/**
+ * Get sparql query for counting objects having this relation term and are related to a given webform .
+ * This function can be used also with no relation or nid to fetch any combination needed
+ * @param string $relation
+ *   The relation term.
+ * @param string $nid
+ *   The webform's node id that originally was used to create the object.
+ * @return array
+ *   An array containing query results
+ */
+function iwi_get_objects_with_relation_countquery($relation = NULL, $nid = NULL) {
+  $iw_is_predicate = ISLANDORA_WEBFORM_ISIW_PREDICATE;
+  $iw_has_predicate = ISLANDORA_WEBFORM_HASIW_PREDICATE;
+  $query = <<<EOQ
+PREFIX islandora-rels-ext: <http://islandora.ca/ontology/relsext#>
+PREFIX fedora-rels-ext: <info:fedora/fedora-system:def/relations-external#>
+SELECT DISTINCT ?object
+FROM <#ri>
+WHERE {
+  ?object <fedora-model:label> ?title ;
+  islandora-rels-ext:$iw_is_predicate "true";
+  !iw_node_match
+  ?predicate ?secondobject .
+  ?secondobject <info:fedora/fedora-system:def/model#hasModel> <info:fedora/fedora-system:FedoraObject-3.0> .
+  !filters
+}
+EOQ;
 
-  return $queryresults;
+  $filter_map = function ($filter) {
+    return "FILTER($filter)\n";
+  };
+  $query_filters = array();
+  $query_extramatch = array();
+  
+  $iw_onlyuris_filters = "isIRI(?secondobject)"; //we want only relations that point to an object.
+  
+  $query_filters[] = $iw_onlyuris_filters;
+  $query_filters[] ="regex(str(?predicate), 'info:fedora/fedora-system:def/relations-external#','i')";
+  if (isset($relation) && !empty($relation)) {
+  $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
+  $query_filters[] = $iw_predicate_filters;
+  }
+  
+  if (isset($nid) && !empty($nid)) {
+  $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
+  $query_extramatch[] = $iw_nodeid_match;
+  }
+ 
+  $query = format_string($query, array(
+    '!iw_node_match' => !empty($query_extramatch) ? implode(' ;', $query_extramatch)." ;" : '',
+    '!filters' => implode(' ', array_map($filter_map, $query_filters)),
+  ));  
+ return $query;
+  
 }
