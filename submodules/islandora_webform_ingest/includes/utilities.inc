@@ -682,41 +682,43 @@ function iwi_migrate_webform_objects($form, &$form_state) {
   module_load_include('inc', 'islandora_webform', 'includes/utilites');
   $old_relation = !empty($form_state['stepdata']['old_relation']) ? $form_state['stepdata']['old_relation'] : '';
   $new_relation = $form_state['stepdata']['new_relation'];
-  $choice = $form_state['values']['islandora_confirm']['migrate_predicates']; 
+  $choice = $form_state['values']['islandora_confirm']['migrate_predicates'];
   $nid = $form_state['stepdata']['nid'];
   $subject_avoid_index = array();
-  $old_relations_modified=array();
-  $removedcount=0;
-  $addedcount=0;
-  $alreadyinplace=0;
+  $old_relations_modified = array();
+  $removedcount = 0;
+  $addedcount = 0;
+  $alreadyinplace = 0;
   switch ($choice) {
     case 'all':
-    $child_objects_data = iwi_get_objects_with_relation(NULL, $nid);
-    break;
+      $child_objects_data = iwi_get_objects_with_relation(NULL, $nid);
+      break;
+
     case 'oldpredicate':
-    $child_objects_data = iwi_get_objects_with_relation($old_relation, $nid);
-    break;
+      $child_objects_data = iwi_get_objects_with_relation($old_relation, $nid);
+      break;
+
     case 'none':
     default:
-    $child_objects_data = NULL;
-    break;
+      $child_objects_data = NULL;
+      break;
   }
 
   
   // If the relation is changing, read the admin's choice on this.
   if ((!is_null($child_objects_data)) && (!empty($new_relation))){
     foreach ($child_objects_data as $key => $child_object_data) {
-      //Our idea
-      //First, if the $new_relation is already in place, mark this subjects and leave them alone
-      //Second, even whem migrating all, we must give existing predicates having '$old_relation' priority
-      //Third, if a subject has multiple relations and $old_relation was not found we will only replace the first one. It's a poor's man approach to
-      //not knowing which one really was created by our webform, but removing everything is even worse
-      //Fourth. Only add one relation. Our webforms generates only one, so why should we do more?
+      // Our idea
+      // First, if the $new_relation is already in place, mark this subjects and leave them alone
+      // Second, even whem migrating all, we must give existing predicates having '$old_relation' priority
+      // Third, if a subject has multiple relations and $old_relation was not found we will only replace the first one. It's a poor's man approach to
+      // not knowing which one really was created by our webform, but removing everything is even worse
+      // Fourth. Only add one relation. Our webforms generates only one, so why should we do more?
       if (!array_key_exists($child_object_data['object']['value'], $subject_avoid_index)) {
         if ($child_object_data['predicate']['uri'] == 'info:fedora/fedora-system:def/relations-external#'.$new_relation) {
           //We already have our new predicate. This subject gets marked 
           $subject_avoid_index[$child_object_data['object']['value']] = 1;
-        } 
+        }
         elseif (($child_object_data['predicate']['uri'] == 'info:fedora/fedora-system:def/relations-external#'.$old_relation) && !empty($old_relation)){
           //The old predicate is present. 
           $child_object = islandora_object_load($child_object_data['object']['value']);
