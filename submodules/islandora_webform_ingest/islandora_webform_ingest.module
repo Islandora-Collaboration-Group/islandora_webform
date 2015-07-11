@@ -24,6 +24,16 @@ function islandora_webform_ingest_menu() {
       'access arguments' => array(2),
       'access callback' => 'iwi_ingest_access',
     ),
+    'admin/islandora/tools/ingest_webform' => array(
+      'title' => 'Webform Ingest',
+      'description' => 'Islandora Webform Ingest settings and operations.',
+      'page callback' => 'drupal_get_form',
+      'access arguments' => array('administer site configuration'),
+      'page arguments' => array('islandora_ingest_webform_admin_settings'),
+      'type' => MENU_NORMAL_ITEM,
+      'file path' => drupal_get_path('module', 'islandora_webform_ingest') . '/includes',
+      'file' => 'fix_ingest_relations.inc',
+    ),
   );
 }
 
@@ -367,6 +377,10 @@ function iwi_webform_component_edit_form_validate($form, &$form_state) {
     if (preg_match('/\((.*)\)/U', $form_state['values']['ingest']['datastream'], $matches)) {
       $ds_mime = $matches[1];
       $types = $form_state['values']['extra']['filtering']['types'];
+      // Delete extra 'jpeg' type if present.
+      if ($key = array_search('jpeg', $types) && in_array('jpg', $types)) {
+        unset($types[$key]);
+      }
       if (count($types) == 0) {
         form_set_error('validation', t('You must specify one allowed file extension in the validation section when mapping a file component to a binary datastream.'));
       }
