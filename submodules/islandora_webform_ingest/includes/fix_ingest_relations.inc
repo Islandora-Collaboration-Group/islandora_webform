@@ -28,14 +28,12 @@ function islandora_ingest_webform_admin_settings() {
 function iwi_retroactive_fix_collection_submit() {
   iwi_retroactive_fix_all_collection_predicates();
   iwi_retroactive_fix_all_iw_relation_tags();
-
-  batch_process();
 }
 
 /**
  * Fix collection relationships.
  *
- * Search for all objects that have rels-ext relations to collections, and
+ * Search for all objects that have rels-ext relations to collections, not tagged by RC1, and
  * re-set their relationship predicate to 'isMemberOfCollection'.
  */
 function iwi_retroactive_fix_all_collection_predicates() {
@@ -46,24 +44,12 @@ function iwi_retroactive_fix_all_collection_predicates() {
   $predicates = islandora_webform_ingest_rels_ext_predicates_options();
   unset($predicates['isMemberOfCollection']);
 
-  // Find all collection objects.
-  $collections = iwi_get_all_collection_objects();
-
-  // Iterate through each collection object, and find objects related to
-  // it through each available relationship predicate in turn.
   $operations = array();
-
-  foreach ($collections as $collection) {
-    $pid = $collection['pid'];
-
-    foreach (array_keys($predicates) as $predicate) {
-      array_push($operations, array(
-          "iwi_fix_retroactive_single_collection_predicate",
-          array($pid, $predicate),
+  array_push($operations, array(
+          "iwi_fix_retroactive_collection_predicate",
+          array($predicates),
         )
       );
-    }
-  }
   // Construct the batch array for processing.
   $batch = array(
     'operations' => $operations,
@@ -83,37 +69,73 @@ function iwi_retroactive_fix_all_collection_predicates() {
  * @param string $predicate
  *   The predicate that we want to change to isMemberOfCollection
  */
-function iwi_fix_retroactive_single_collection_predicate($pid, $predicate) {
-  // Create sparql query to find child objects related to this collection
-  // with this predicate.
-  $query = <<<EOQ
-SELECT ?pid ?label
-FROM <#ri>
-WHERE {
-  ?pid <fedora-model:label> ?label ;
-       <fedora-model:$predicate> <info:fedora/$pid>
-}
+function iwi_fix_retroactive_collection_predicate($predicates, &$context) {
+  $query = "";
+  if (!isset($context['sandbox']['progress'])) {
+    $query = iwi_get_all_objects_in_collections_query($predicates);
+    $connection = islandora_get_tuque_connection(); 
+    $child_objects_count = $connection->repository->ri->countQuery($query, 'sparql');
+    $context['sandbox']['max'] = $child_objects_count;
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['results_toprocess'] = array();
+  }  
+  if ($context['sandbox']['max'] == 0) {
+    // Nothing to process.
+    $context['finished'] = 1;
+    return t('No relation to existing Collections to fix.');
+  }
+  if (empty($context['sandbox']['results_toprocess'])) {
+    if (!isset($connection)) {
+      $connection = islandora_get_tuque_connection(); 
+      $query = iwi_get_all_objects_in_collections_query($predicates);
+    }
+    $offset = 100;
+    $limited_query = $query . <<<EOQ
+LIMIT $offset
 EOQ;
-  $connection = islandora_get_tuque_connection();
-  $child_objects = $connection->repository->ri->sparqlQuery($query);
 
-  $collection = islandora_object_load($pid);
-
-  // Loop through the child objects, removing the old relationship and
+   $context['sandbox']['results_toprocess'] = $connection->repository->ri->sparqlQuery($limited_query);
+   if (empty($context['sandbox']['results_toprocess'])) {
+    //Nothing more to fetch. 
+    $context['finished'] = 1; 
+    return;
+   }
+  }
+  // Get one child object, removing the old relationship and
   // adding the isMemberOfCollection relationship.
-  if (!empty($child_objects)) {
-    foreach ($child_objects as $target_object) {
-      $target_object->relationships->remove(FEDORA_RELS_EXT_URI, $predicate);
+  if (!empty($context['sandbox']['results_toprocess'])) {
+    $target_object_array = array_pop($context['sandbox']['results_toprocess']);
+    $context['message'] = t('Now processing object %pid', array('%pid' => $target_object_array['pid']['value']));
+    $target_object = islandora_object_load($target_object_array['pid']['value']);
+  
+    if ($target_object !== FALSE) {
 
-      // Check to see if there already is an isMemberOfCollection relation;
-      // Add if not present.
-      $memberofcollection_relationships = $target_object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
-      if (empty($memberofcollection_relationships)) {
-        $target_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection, RELS_TYPE_URI);
+      $processedobject = FALSE;
+      if (islandora_object_access(ISLANDORA_MANAGE_PROPERTIES, $target_object)) {
+        $rels = $target_object->relationships;
+        $current_rel = explode('#', $target_object_array['predicate']['uri']); //Had to split. No way making -> relationships understand the full uri.
+        $rels->autoCommit = FALSE;
+        if ($rels->remove(FEDORA_RELS_EXT_URI, $current_rel[1], $target_object_array['collection']['value'], RELS_TYPE_URI)) {
+          $processedobject = TRUE;
+        }
+        // Check to see if there already is an isMemberOfCollection relation;
+        // Add if not present.
+        $memberofcollection_relationships = $rels->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
+        if (empty($memberofcollection_relationships)) {
+          $rels->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $target_object_array['collection']['value'], RELS_TYPE_URI);
+          $processedobject = TRUE;
+        }
+        if ($processedobject) {
+          $rels->commitRelationships();
+          $context['results'][] = $target_object->id;
+        }
       }
     }
+    //Increment progress even if we could not process an object
+    //Also set maximum progress to originally object count, in case someone is messing with our relations somewhere in paralell so we don't iterate forever.
+    $context['sandbox']['progress'] = min( $context['sandbox']['max'], $context['sandbox']['progress'] + 1); 
   }
-
+  $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
 }
 
 /**
@@ -169,14 +191,18 @@ function iwi_retroactive_fix_all_iw_relation_tags() {
  * @param int $nid
  *   node id of the webform
  */
-function iwi_retroactive_fix_single_iw_relation_tag($pid, $nid) {
+function iwi_retroactive_fix_single_iw_relation_tag($pid, $nid, &$context) {
   $object = islandora_object_load($pid);
 
-  if ($object) {
-    $object->relationships->remove(FEDORA_RELS_EXT_URI, ISLANDORA_WEBFORM_ISIW_PREDICATE);
-    $object->relationships->remove(FEDORA_RELS_EXT_URI, ISLANDORA_WEBFORM_HASIW_PREDICATE);
+  if (($object) && (islandora_object_access(ISLANDORA_MANAGE_PROPERTIES, $object))) {
+    $rels = $object->relationships;
+    $rels->autoCommit = FALSE;
+    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, ISLANDORA_WEBFORM_ISIW_PREDICATE);
+    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, ISLANDORA_WEBFORM_HASIW_PREDICATE);
     $object->relationships->add(ISLANDORA_RELS_EXT_URI, ISLANDORA_WEBFORM_ISIW_PREDICATE, "true", RELS_TYPE_PLAIN_LITERAL);
     $object->relationships->add(ISLANDORA_RELS_EXT_URI, ISLANDORA_WEBFORM_HASIW_PREDICATE, "{$nid}", RELS_TYPE_PLAIN_LITERAL);
+    $rels->commitRelationships();
+    $context['results'][] = $object->id;
   }
 }
 
@@ -195,25 +221,43 @@ function iwi_retroactive_fix_all_iw_relation_tags_finished($success, $results, $
 
 
 /**
- * Get all islandora collections as objects.
+ * Get all islandora objects related to a collection.
  *
- * @return mixed
- *   array of islandora objects
+ * @return string
+ *   a Sparql Query
  */
-function iwi_get_all_collection_objects() {
+function iwi_get_all_objects_in_collections_query($predicates) {
 
   module_load_include('inc', 'islandora', 'includes/utilities');
-
+  //Avoid objects already tagged as created by RC1
   $content_model = 'islandora:collectionCModel';
   $query = <<<EOQ
-SELECT ?pid ?label
-FROM <#ri>
-WHERE {
-  ?pid <fedora-model:label> ?label ;
-       <fedora-model:hasModel> <info:fedora/$content_model>
-}
+    PREFIX fedora-rels-ext: <info:fedora/fedora-system:def/relations-external#>
+    PREFIX islandora-rels-ext: <http://islandora.ca/ontology/relsext#>
+    SELECT ?pid ?predicate ?collection ?nid
+    FROM <#ri>
+    WHERE {
+      ?pid ?predicate ?collection.
+      ?collection <fedora-model:hasModel> <info:fedora/$content_model>.
+      ?pid <fedora-model:state> <fedora-model:Active> .
+      optional {?pid islandora-rels-ext:hasIW ?nid .}
+     FILTER(!sameTerm(?predicate, <fedora-rels-ext:isMemberOfCollection>))
+     !predicatefilter
+     FILTER (!bound(?nid))
+    }
 EOQ;
-  // Connect to Tuque and grab the results.
-  $connection = islandora_get_tuque_connection();
-  return $connection->repository->ri->sparqlQuery($query);
+  $filter_map = function ($filter) {
+    return "sameTerm(?predicate, <fedora-rels-ext:$filter>)";
+  };
+  $collection_predicate_filters = "";
+
+
+  if (count($predicates)>0) {
+  $collection_predicate_filters = implode(' || ', array_map($filter_map, array_keys($predicates)));
+  }
+
+  $query = format_string($query, array(
+    '!predicatefilter' => !empty($collection_predicate_filters) ? "FILTER({$collection_predicate_filters})" : '',
+  ));
+  return $query;
 }
