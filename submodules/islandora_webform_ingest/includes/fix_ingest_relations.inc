@@ -14,7 +14,7 @@ function islandora_ingest_webform_admin_settings() {
         '#type' => 'submit',
         '#value' => t('Go'),
         '#submit' => array('iwi_retroactive_fix_collection_submit'),
-        '#prefix' => '<p>' . t('Repair collection object predicates and add/replace islandora webform relation tags') . '</p>',
+        '#prefix' => '<p>' . t('Repair collection object predicates and add/replace islandora webform relation tags. You should only need to run this one time to fix missing collection memberships and erroneous relationship predicates that may have been caused by changing the relationship predicate name for a webform when using the RC1 version of Islandora Webform.') . '</p>',
       ),
     ),
   );
