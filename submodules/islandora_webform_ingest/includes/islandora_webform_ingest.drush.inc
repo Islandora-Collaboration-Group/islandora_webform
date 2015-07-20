@@ -31,7 +31,7 @@ function islandora_webform_ingest_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'callback' => 'islandora_webform_ingest_setup_batch',
     'description' => dt('Repair repository relations impacted by RC1 version of the iwlandora_webform_ingest module'),
-    'alias' => array('iwirr'),
+    'aliases' => array('iwirr'),
   );
   return $items;
 }
