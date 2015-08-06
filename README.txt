@@ -10,6 +10,10 @@ The Islandora Webform Ingest module, which is provided with this module and can
 be enabled separately, provides digital repository curators the ability to directly
 ingest webform submissions into a datastream of the associated object.
 
+Online documentation
+----------------------
+For more complete documentation of how to use islandora_webform and islandora_webform_ingest modules;
+see https://sites.google.com/site/islandoraconsortiagroup/home/iw-module
 
 Requirements
 ------------
@@ -72,4 +76,8 @@ Upgrading from previous versions
 
 Support
 -------
+TODO
+
+Credits and thanks
+------------------
 TODO
