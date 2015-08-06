@@ -262,6 +262,9 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
       $relationships = array('relationship' => $form['#iwi_settings']->relation, 'pid' => $form['#submission']->islandora_object->id);
       $label = "New Object";
       $object = islandora_prepare_new_object($new_pid, $label, array(), array($form['#iwi_settings']->cmodel), array($relationships));
+      //Now add our control predicates, so we can keep track of this object
+      $object->relationships->add(ISLANDORA_RELS_EXT_URI, ISLANDORA_WEBFORM_ISIW_PREDICATE, "true", RELS_TYPE_PLAIN_LITERAL);
+      $object->relationships->add(ISLANDORA_RELS_EXT_URI, ISLANDORA_WEBFORM_HASIW_PREDICATE, "{$form['#submission']->nid}", RELS_TYPE_PLAIN_LITERAL);
       // Don't add the Object to the REPO yet, let's do this at the end, if
       // $datastream_count > 0
     }

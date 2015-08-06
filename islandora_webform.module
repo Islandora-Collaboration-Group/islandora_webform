@@ -5,6 +5,11 @@
  * Implements hooks and theme preprocess functions for this module.
  */
 
+/** Internal predicates used to mark objects created by a Webform
+*/
+define('ISLANDORA_WEBFORM_ISIW_PREDICATE', 'isIWContributed');
+define('ISLANDORA_WEBFORM_HASIW_PREDICATE', 'hasIW');
+
 /**
  * Hook implementations...
  */
@@ -17,7 +22,7 @@ function islandora_webform_menu() {
   $items['node/%webform_menu/webform/islandora'] = array(
     'title'            => 'Islandora settings',
     'page callback'    => 'drupal_get_form',
-    'page arguments'   => array('islandora_webform_configure_form', 1),
+    'page arguments'   => array('islandora_webform_configure_stepped_form', 1),
     'access callback'  => 'node_access',
     'access arguments' => array('update', 1),
     'file'             => 'includes/webform.configure.inc',

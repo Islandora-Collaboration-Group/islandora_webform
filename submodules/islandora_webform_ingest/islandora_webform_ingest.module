@@ -24,6 +24,16 @@ function islandora_webform_ingest_menu() {
       'access arguments' => array(2),
       'access callback' => 'iwi_ingest_access',
     ),
+    'admin/islandora/tools/ingest_webform' => array(
+      'title' => 'Webform Ingest',
+      'description' => 'Islandora Webform Ingest settings and operations.',
+      'page callback' => 'drupal_get_form',
+      'access arguments' => array('administer site configuration'),
+      'page arguments' => array('islandora_ingest_webform_admin_settings'),
+      'type' => MENU_NORMAL_ITEM,
+      'file path' => drupal_get_path('module', 'islandora_webform_ingest') . '/includes',
+      'file' => 'fix_ingest_relations.inc',
+    ),
   );
 }
 
@@ -170,78 +180,160 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
     }
   }
   else {
-    if ($form_id == 'islandora_webform_configure_form') {
+    if ($form_id == 'islandora_webform_configure_stepped_form') {
+      switch ($form_state['step']) {
+        case 'configure':
+          $default_values = db_select('islandora_webform_ingest_webforms', 'm')
+            ->fields('m')
+            ->condition('m.nid', $form['nid']['#value'])
+            ->execute()->fetchAssoc();
 
-      $default_values = db_select('islandora_webform_ingest_webforms', 'm')
-        ->fields('m')
-        ->condition('m.nid', $form['nid']['#value'])
-        ->execute()->fetchAssoc();
+          $cmodel_options = array('' => 'Update datastreams on current object');
+          form_load_include($form_state, 'inc', 'islandora', 'includes/utilities');
+          form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
+          $cmodels = islandora_get_content_models();
+          asort($cmodels);
+          foreach ($cmodels as $cmodel) {
+            $cmodel_options[$cmodel['pid']] = t('Create new @cmodel', array('@cmodel' => $cmodel['label']));
+          }
 
-      $cmodel_options = array('' => 'Update datastreams on current object');
-      form_load_include($form_state, 'inc', 'islandora', 'includes/utilities');
-      $cmodels = islandora_get_content_models();
-      asort($cmodels);
-      foreach ($cmodels as $cmodel) {
-        $cmodel_options[$cmodel['pid']] = t('Create new @cmodel', array('@cmodel' => $cmodel['label']));
+          $form['islandora_ingest'] = array(
+            '#type' => 'fieldset',
+            '#title' => 'Islandora Ingest',
+            '#description' => t('Configure ingest settings for this webform.'),
+            '#collapsible' => FALSE,
+            '#tree' => TRUE,
+            'ingest_enabled' => array(
+              '#type' => 'checkbox',
+              '#title' => t('Enable'),
+              '#description' => t('Enable ingest for this webform'),
+              '#default_value' => $default_values['ingest_enabled'] ? $default_values['ingest_enabled'] : 0,
+            ),
+            'cmodel' => array(
+              '#type' => 'select',
+              '#title' => 'Ingest destination',
+              '#description' => t('Select whether to ingest to the current object, or to a new object/content-model. <br />
+            <strong>If you change a previously saved ingestion destination, all component ingestion mappings that you had previously defined for this webform will be deleted and will need to be recreated.</strong>
+             <br />
+            If you select to ingest to the current object, then a content model filter must be selected above.
+            This is needed in order to be able to map submitted data to datastreams in your content model.'),
+              '#default_value' => $default_values['cmodel'] ? $default_values['cmodel'] : '',
+              '#options' => $cmodel_options,
+            ),
+            'relation' => array(
+              '#type' => 'select',
+              '#title' => 'Relationship to current object',
+              '#description' => t('Select from one of these valid Fedora ontology rels-ext child relations.'),
+              '#default_value' => $default_values['relation'] ? $default_values['relation'] : 'isChildOf',
+              '#options' => islandora_webform_ingest_rels_ext_predicates_options(),
+              '#states' => array(
+                // Hide if cmodel is not chosen.
+                'invisible' => array(
+                  ':input[name="islandora_ingest[cmodel]"]' => array('value' => ''),
+                ),
+              ),
+            ),
+            'namespace' => array(
+              '#type' => 'textfield',
+              '#title' => 'Namespace of new object',
+              '#description' => t('Provide a namespace for the newly created object.'),
+              '#default_value' => !empty($default_values['namespace']) ? $default_values['namespace'] : 'islandora',
+              '#states' => array(
+                // Hide if cmodel is not chosen.
+                'invisible' => array(
+                  ':input[name="islandora_ingest[cmodel]"]' => array('value' => ''),
+                ),
+              ),
+            ),
+          );
+
+          // Lets check if this webform already was used to generate some objects.
+          // Count all objects generated by this form, independently of the predicated used.
+          $existing_objects_count = iwi_count_objects_with_relation(NULL, $form['nid']['#value']);
+          $existing_objects_count_current_rel = $default_values['relation'] ? iwi_count_objects_with_relation($default_values['relation'], $form['nid']['#value']) : 0;
+          if ($existing_objects_count > 0) {
+            $existing_objects_count_msg = format_plural($existing_objects_count,
+              'You have already created 1 object using this form',
+              'You have already created @count objects using this form'
+            );
+            $existing_objects_count_current_rel_msg = $default_values['relation'] ?
+              format_plural($existing_objects_count_current_rel,
+                'One object is using current relationship predicate "@predicate"',
+                '@count of these objects are using current relationship "@predicate"',
+                array(
+                  '@predicate' => $default_values['relation'],
+                )
+              ) : ''; //Don't give any information if we don't have a current predicate
+
+            // Store this info in the form; we are going to need this again.
+            $form['islandora_ingest']['existing_objects_count'] = array(
+              '#type' => 'value',
+              '#default_value' => $existing_objects_count,
+            );
+            $form['islandora_ingest']['existing_objects_count_current_rel'] = array(
+              '#type' => 'value',
+              '#default_value' => $existing_objects_count_current_rel,
+            );
+
+            drupal_set_message($existing_objects_count_msg . "<br>" . $existing_objects_count_current_rel_msg, 'warning');
+            $form['islandora_ingest']['message_warning'] = array(
+              '#type' => 'markup',
+              '#markup' => theme('status_messages'),
+              '#weight' => -1,
+            );
+          }
+          $form['#submit'][] = 'iwi_islandora_webform_configure_form_submit';
+          $form['#validate'][] = 'iwi_islandora_webform_configure_form_validate';
+
+          // Adjust weights.
+          $form['islandora']['#weight'] = 0;
+          $form['islandora_ingest']['#weight'] = 1;
+          $form['actions']['#weight'] = 2;
+          break;
+
+        case 'confirm':
+          $form['#submit'] = array(
+            'iwi_islandora_webform_confirm_form_submit',
+          );
+          $form['islandora_confirm'] = array(
+            '#type' => 'fieldset',
+            '#title' => 'Islandora Settings Predicate Migration Confirmation',
+            '#collapsible' => FALSE,
+            '#tree' => TRUE,
+            '#group' => 'additional_settings',
+            'migrate_predicates' => array(
+              '#type' => 'select',
+              '#title' => t('Objects to migrate to new predicate "@predicate"', array('@predicate' => $form_state['stepdata']['new_relation'])),
+              '#description' => '',
+              '#default_value' => 'none',
+              '#options' => array(
+                'oldpredicate' => 'Only those objects that are using the former predicate "' . $form_state['stepdata']['old_relation'] . '"',
+                'all' => 'All objects associated to this webform',
+                'none' => 'Leave existing objects untouched',
+              ),
+            ),
+            'migrate_predicates_notice' => array(
+              '#type' => 'container',
+              '#states' => array(
+                'visible' => array(
+                  ':input[name="islandora_confirm[migrate_predicates]"]' => array('value' => 'all'),
+                ),
+              ),
+              '#attributes' => array(
+                'class' => array(
+                  'messages warning'
+                ),
+              ),
+              'markup' => array(
+                '#markup' => 'Selecting "All objects" will, in case an associated Object does not contain "' . $form_state['stepdata']['old_relation'] . '" predicate, replace the first predicate found with "' . $form_state['stepdata']['new_relation'] . '".<br><em>This may produce undesired results if you related webform ingested objects using other modules.</em>',
+              ),
+            ),
+          );
+          $form['actions']['submit'] = array(
+            '#type' => 'submit',
+            '#value' => t('Execute Task'),
+          );
       }
-
-      $form['islandora_ingest'] = array(
-        '#type' => 'fieldset',
-        '#title' => 'Islandora Ingest',
-        '#description' => t('Configure ingest settings for this webform.'),
-        '#collapsible' => FALSE,
-        '#tree' => TRUE,
-        'ingest_enabled' => array(
-          '#type' => 'checkbox',
-          '#title' => t('Enable'),
-          '#description' => t('Enable ingest for this webform'),
-          '#default_value' => $default_values['ingest_enabled'] ? $default_values['ingest_enabled'] : 0,
-        ),
-        'cmodel' => array(
-          '#type' => 'select',
-          '#title' => 'Ingest destination',
-          '#description' => t('Select whether to ingest to the current object, or to a new object/content-model. <br />
-          <strong>If you change a previously saved ingestion destination, all component ingestion mappings that you had previously defined for this webform will be deleted and will need to be recreated.</strong>
-           <br />
-          If you select to ingest to the current object, then a content model filter must be selected above.
-          This is needed in order to be able to map submitted data to datastreams in your content model.'),
-          '#default_value' => $default_values['cmodel'] ? $default_values['cmodel'] : '',
-          '#options' => $cmodel_options,
-        ),
-        'relation' => array(
-          '#type' => 'select',
-          '#title' => 'Relationship to current object',
-          '#description' => t('Select from one of these valid Fedora ontology res-ext child relations.'),
-          '#default_value' => $default_values['relation'] ? $default_values['relation'] : 'isChildOf',
-          '#options' => islandora_webform_ingest_rels_ext_predicates_options(),
-          '#states' => array(
-            // Hide if cmodel is not chosen.
-            'invisible' => array(
-              ':input[name="islandora_ingest[cmodel]"]' => array('value' => ''),
-            ),
-          ),
-        ),
-        'namespace' => array(
-          '#type' => 'textfield',
-          '#title' => 'Namespace of new object',
-          '#description' => t('Provide a namespace for the newly created object.'),
-          '#default_value' => !empty($default_values['namespace']) ? $default_values['namespace'] : 'islandora',
-          '#states' => array(
-            // Hide if cmodel is not chosen.
-            'invisible' => array(
-              ':input[name="islandora_ingest[cmodel]"]' => array('value' => ''),
-            ),
-          ),
-        ),
-      );
-      $form['#submit'][] = 'iwi_islandora_webform_configure_form_submit';
-      $form['#validate'][] = 'iwi_islandora_webform_configure_form_validate';
-
-      // Adjust weights.
-      $form['islandora']['#weight'] = 0;
-      $form['islandora_ingest']['#weight'] = 1;
-      $form['actions']['#weight'] = 2;
-
     }
   }
 }
@@ -286,6 +378,10 @@ function iwi_webform_component_edit_form_validate($form, &$form_state) {
     if (preg_match('/\((.*)\)/U', $form_state['values']['ingest']['datastream'], $matches)) {
       $ds_mime = $matches[1];
       $types = $form_state['values']['extra']['filtering']['types'];
+      // Delete extra 'jpeg' type if present.
+      if ($key = array_search('jpeg', $types) && in_array('jpg', $types)) {
+        unset($types[$key]);
+      }
       if (count($types) == 0) {
         form_set_error('validation', t('You must specify one allowed file extension in the validation section when mapping a file component to a binary datastream.'));
       }
@@ -322,6 +418,21 @@ function iwi_webform_component_edit_form_validate($form, &$form_state) {
 function iwi_islandora_webform_configure_form_submit($form, &$form_state) {
   form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
   iwi_save_webform_configuration($form, $form_state);
+
+}
+
+/**
+ * Submit handler for webform ingest confirmation sub-form.
+ *
+ * @param array $form
+ *   the form
+ * @param array $form_state
+ *   the form state, passed by reference
+ */
+function iwi_islandora_webform_confirm_form_submit($form, &$form_state) {
+  form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
+  iwi_migrate_webform_objects($form, $form_state);
+
 }
 
 /**
@@ -334,6 +445,9 @@ function iwi_islandora_webform_configure_form_submit($form, &$form_state) {
  */
 function iwi_islandora_webform_configure_form_validate($form, &$form_state) {
 
+  if ($form_state['triggering_element']['#value'] == 'Back') {
+    return;
+  }
   if ($form_state['values']['islandora_ingest']['ingest_enabled'] && empty($form_state['values']['islandora']['cmodel_filter']) && empty($form_state['values']['islandora_ingest']['cmodel'])) {
 
     form_set_error('islandora][cmodel_filter', t('If ingesting to current object, a content model filter must be chosen.'));
@@ -400,7 +514,9 @@ function islandora_webform_ingest_islandora_object_purged($pid) {
   $query = db_select('islandora_webform_webforms', 'w');
   $query->join('islandora_webform_ingest_webforms', 'iw', "iw.nid = w.entity_id");
   $query->fields('iw', array('nid'));
-  $query->condition(db_or()->condition('w.cmodel_filter', '')->condition('w.cmodel_filter', $pid));
+  $query->condition(db_or()
+    ->condition('w.cmodel_filter', '')
+    ->condition('w.cmodel_filter', $pid));
   $query->condition('iw.cmodel', $pid);
   $disable_ingest_nids = $query->execute()->fetchCol();
   if (!empty($disable_ingest_nids)) {
@@ -760,15 +876,13 @@ function iwi_preview_ingest_submission_form_callback($js, $sid) {
  * ingest configurations.
  */
 function islandora_webform_ingest_block_info() {
-  $webforms = db_select('islandora_webform_ingest_webforms', 'iw')
-    ->distinct()
-    ->fields('iw', array('relation'))
-    ->execute()->fetchAll();
+
+  $predicates = islandora_webform_ingest_rels_ext_predicates_options();
   $items = array();
 
-  foreach ($webforms as $webform) {
-    $items[$webform->relation] = array(
-      'info' => 'Objects with ' . $webform->relation . ' relation',
+  foreach ($predicates as $predicate => $label) {
+    $items[$predicate] = array(
+      'info' => 'Objects with ' . $label . ' relation',
       'cache' => DRUPAL_NO_CACHE,
       'visibility' => BLOCK_VISIBILITY_LISTED,
       'pages' => 'islandora/object/*',
@@ -794,6 +908,13 @@ function islandora_webform_ingest_block_configure($delta = '') {
       'links' => 'Links',
     ),
   );
+  $form['only_iw'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Only IW'),
+    '#description' => t('Show only IW ingested objects'),
+    '#default_value' => variable_get('islandora_webform_ingest_block_only_iw_' . $delta, 0),
+  );
+
   $form['page_count'] = array(
     '#type' => 'textfield',
     '#title' => t('Page count'),
@@ -821,6 +942,9 @@ function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
   if (isset($edit['view_mode'])) {
     variable_set('islandora_webform_ingest_block_view_mode_' . $delta, $edit['view_mode']);
   }
+  if (isset($edit['only_iw'])) {
+    variable_set('islandora_webform_ingest_block_only_iw_' . $delta, $edit['only_iw']);
+  }
   if (isset($edit['page_count'])) {
     variable_set('islandora_webform_ingest_block_page_count_' . $delta, $edit['page_count']);
   }
@@ -835,7 +959,8 @@ function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
  *
  * Displays objects related by the rels-ext $relation to the currently
  * displayed object, using view mode configured in the block settings.
- *
+ * If the current object is a collection and delta is a collection predicate,
+ * then we don't show anything because islandora_basic_collection should handle this.
  * We are calling $delta "$relation" - they are the same thing in this case.
  */
 function islandora_webform_ingest_block_view($relation = '') {
@@ -843,14 +968,26 @@ function islandora_webform_ingest_block_view($relation = '') {
   if ($relation) {
 
     $object = islandora_object_load(arg(2));
+    $collection_models = islandora_basic_collection_get_collection_content_models();
+    $collection_predicates = array(
+      'isMemberOfCollection',
+      'isMemberOf',
+    );
+    $is_a_collection = (
+      (count(array_intersect($collection_models, $object->models)) > 0) &&
+      isset($object['COLLECTION_POLICY']) &&
+      (count(array_intersect($collection_predicates, array($relation))) > 0)
+    );
+
     $block['subject'] = $relation;
-    if ($object) {
+    if (($object) && (!$is_a_collection)) {
       $view_mode = variable_get('islandora_webform_ingest_block_view_mode_' . $relation, 'grid');
+      $only_iw = variable_get('islandora_webform_ingest_block_only_iw_' . $relation, 0);
       $page_number = (empty($_GET['page'])) ? 0 : $_GET['page'];
       $page_size = (empty($_GET['pagesize'])) ? variable_get('islandora_webform_ingest_block_page_count_' . $relation, '10') : $_GET['pagesize'];
 
       // Get objects.
-      list($results_count, $results) = islandora_webform_ingest_get_related_objects($object, $relation, $page_number, $page_size, $type = 'view');
+      list($results_count, $results) = islandora_webform_ingest_get_related_objects($object, $relation, $page_number, $page_size, $type = 'view', NULL, $only_iw);
 
       // Theme the objects using the selected view mode.
       if ($results_count) {
@@ -921,8 +1058,12 @@ function islandora_webform_ingest_islandora_basic_collection_query_param_alter(&
       }
       break;
     }
-
   }
+  if (!empty($params['only_iw'])) {
+    $query_statements[] = '?object <http://islandora.ca/ontology/relsext#' . ISLANDORA_WEBFORM_ISIW_PREDICATE . '> "true"';
+  }
+
+
 }
 
 
@@ -981,12 +1122,13 @@ function islandora_webform_ingest_islandora_basic_collection_query_alter(&$query
  *   - The tuples in the slice according to $page_number and $page_size.
  *   or boolean FALSE if the query fails.
  */
-function islandora_webform_ingest_get_related_objects(AbstractObject $object, $relation, $page_number = 0, $page_size = 20, $type = 'view', $cmodel = NULL) {
+function islandora_webform_ingest_get_related_objects(AbstractObject $object, $relation, $page_number = 0, $page_size = 20, $type = 'view', $cmodel = NULL, $only_iw = 0) {
   $params = array(
     'object' => $object,
     'page_number' => $page_number,
     'page_size' => $page_size,
     'relation' => $relation,
+    'only_iw' => $only_iw,
   );
 
   if (isset($cmodel)) {
