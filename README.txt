@@ -39,6 +39,15 @@ Installation
    to a webform, and click the link to add it.
 
 
+Permissions
+-----------------------------
+This module defines the following permissions:
+1. Manage Islandora Webform - enable for roles that should be able
+   to add webform links to objects generally.
+2. Link islandora objects to webforms - when manual webform linking is selected,
+   enable for roles to add webform links on individual objects.
+
+
 
 SOLR/GSearch Configuration
 --------------------------

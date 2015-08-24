@@ -50,6 +50,13 @@ Installation and Configuration
    sorted, and how many should appear in the block.
 
 
+Permissions
+-----------------------------
+This module defines the following permissions:
+1. Ingest Islandora Webform Submissions - enable for roles that should be able
+   to ingest webform submissions.
+
+
 Ingesting Webform Submissions
 -----------------------------
 1. Once you have received some webform submissions, you will see them listed under the
