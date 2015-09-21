@@ -171,6 +171,15 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
             );
             $form['#submit'][] = 'iwi_webform_component_edit_form_submit';
             $form['#validate'][] = 'iwi_webform_component_edit_form_validate';
+            // Validation for date components fails during ajax reload. Substitute
+            // a validate handler that loads the dependency.
+            if($form['type']['#value'] == 'date') {
+              foreach($form['#validate'] as $validate_key => $validate) {
+                if ($validate == '_webform_edit_date_validate') {
+                  $form['#validate'][$validate_key] = '_iwi_webform_edit_date_validate';
+                }
+              }
+            }
           }
           else {
             $form['ingest']['#description'] = t('@cmodel provides no datastreams that can be populated from this webform field type.', array('@cmodel' => $cmodel->label));
@@ -336,6 +345,15 @@ function islandora_webform_ingest_form_alter(&$form, &$form_state, $form_id) {
       }
     }
   }
+}
+
+/**
+ * Substitute validation function for webform date fields.
+ */
+function _iwi_webform_edit_date_validate($form, &$form_state) {
+  // Force include.
+  form_load_include($form_state, 'inc', 'webform', '/components/date');
+  _webform_edit_date_validate($form, $form_state);
 }
 
 /**
