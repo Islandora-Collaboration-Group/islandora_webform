@@ -91,7 +91,7 @@ function islandora_webform_requirements($phase) {
           if(version_compare($info['version'], $tests[$result->name]) < 0) {
             $requirements[$result->name] = array(
               'title' => $result->name,
-              'description' => $result->name . ' must be at least version ' . $tests[$result->name],
+              'description' => 'islandora_webform requires that ' . $result->name . ' be at least version ' . $tests[$result->name],
               'value' => $info['version'],
               'severity' => REQUIREMENT_ERROR,
             );
