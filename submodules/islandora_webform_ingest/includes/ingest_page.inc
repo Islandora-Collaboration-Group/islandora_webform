@@ -198,6 +198,8 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       // Recover the #hash.
       $new_form['#hash'] = $form2['#hash'];
 
+      // Permit other modules to modify the form before it is returned.
+      drupal_alter('iwi_set_form', $new_form, $form_state_new, $submission);
 
       $form[$dsid] = $new_form;
     }
