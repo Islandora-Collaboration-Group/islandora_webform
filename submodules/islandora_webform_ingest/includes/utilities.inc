@@ -439,6 +439,13 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
   // This means: if we got i.e a submited field like name[0]manePart and then
   // later a name[0]role we can't clone again. So we store the first clone
   // element, and just add the value to this one.
+  if(is_numeric($mode)) {
+    $tab_delta = (int) $mode;
+    $mode = 'append';
+  }
+  else {
+    $tab_delta = NULL;
+  }
   switch ($mode) {
     case 'append':
       $ref = &$form;
@@ -496,6 +503,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
             case "tabpanel":
               $tab = $element->findElement($child_element_hash);
               if ($tab) {
+//                if (($tab_delta !== NULL && !array_key_exists($child_element_hash, $cloned_elements)) || !array_key_exists($child_element_hash, $cloned_elements)) {
                 if (!array_key_exists($child_element_hash, $cloned_elements)) {
                   // If not already cloned clone it.
                   $new_tab = clone $tab;
@@ -505,8 +513,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
                   };
                   // Set element properties on the descendants.
                   $new_tab->eachDecendant($set_element_properties);
-
-                  $element->adopt($new_tab);
+                  $element->adopt($new_tab, $tab_delta);
                   $new_tab_drupal = $new_tab->toArray();
 
                   drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#attributes')), $input_value['#attributes']);
