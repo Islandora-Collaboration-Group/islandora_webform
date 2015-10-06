@@ -420,14 +420,14 @@ function iwi_webform_ingest_settings($webform_nid) {
  *   the passed arraay of attributes for the target element
  * @param string $mode
  *   either "append" or "replace" (default)
- * @param string $delimiter
- *   the character used to delimit the $elementspath
  * @param int $offset
  *   when == 0 will act as a replace, higher values will append
  *   if the element does not exist. If already in place will replace.
  *   Must be in range of [0,10], being 1 the default.
+ * @param string $delimiter
+ *   the character used to delimit the $elementspath.
  */
-function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input_value, $mode = 'replace', $delimiter = ':', $offset = 1) {
+function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input_value, $mode = 'replace', $offset = 1, $delimiter = ':') {
 
   $parents = explode($delimiter, $elementspath);
   // Check if offset is int and in range of [0,10]
