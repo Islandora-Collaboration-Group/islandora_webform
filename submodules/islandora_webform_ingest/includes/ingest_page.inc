@@ -111,13 +111,6 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   $form_state['datastreams'] = $datastreams;
   $islandora_webform_values = array();
 
-  // We are going to store the already cloned elements to avoid multiple
-  // new form elements with partial equal paths to generate multiple children.
-  // (like a tabpanel) e.g if we have "name:0:namePart" and "name:0:role"
-  // ...this could give to additional tab panels being added, even when both
-  // belong to only one. Used in iwi_set_form_element_byhash, utilities.inc
-  $cloned_elements = array();
-
   // Loop through the component mappings, adding submitted values to
   // appropriate datastream sub-forms
   foreach ($mappings as $mapping) {
@@ -180,7 +173,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       if (!isset($form_state['rebuild']) || $form_state['rebuild'] == FALSE) {
         // Loop through the submitted values, setting them into $form2.
         foreach ($dsid_values['data_values'] as $input) {
-          iwi_set_form_element_byhash($form2, $form_state_new, $cloned_elements, $input['path'], $input['input_value'], $input['mode']);
+          iwi_set_form_element_byhash($form2, $form_state_new, $input['path'], $input['input_value'], $input['mode']);
         }
       }
       // Build our own local and multiple objective_form_storage for every dsid.
@@ -243,54 +236,6 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   $form['#ingest_cmodel'] = $ingest_content_model;
   return $form;
 
-}
-
-/**
- * Implements hook_iwi_set_form_element_alter().
- */
-function islandora_webform_ingest_iwi_set_form_alter(&$form, $form_state, $submission) {
-  $cloned_elements = array();
-  // Delta is meant to set which tabset delta to write to - this doesn't work (yet).
-  $delta = 0;
-  $attributes = array(
-    'class' => array(
-      'submitted-value',
-    ),
-  );
-  // Corporations.
-  if(!empty($submission->data[1][0])) {
-    $names = array_map('trim', explode(',', $submission->data[1][0]));
-    foreach($names as $name) {
-      $input_value = array(
-        '#default_value' => 'corporate',
-        '#attributes' => $attributes,
-        );
-      iwi_set_form_element_byhash($form, $form_state, $cloned_elements, 'nameTabs:namePanel:nameSet:nameType', $input_value, $delta);
-      $input_value = array(
-        '#default_value' => $name,
-        '#attributes' => $attributes,
-      );
-      iwi_set_form_element_byhash($form, $form_state, $cloned_elements, 'nameTabs:namePanel:nameSet:namePart', $input_value, $delta);
-      $delta++;
-    }
-  }
-  // Private individuals.
-  if(!empty($submission->data[5][0])) {
-    $names = array_map('trim', explode(',', $submission->data[5][0]));
-    foreach($names as $name) {
-      $input_value = array(
-        '#default_value' => 'personal',
-        '#attributes' => $attributes,
-      );
-      iwi_set_form_element_byhash($form, $form_state, $cloned_elements, 'nameTabs:namePanel:nameSet:nameType', $input_value, $delta);
-      $input_value = array(
-        '#default_value' => $name,
-        '#attributes' => $attributes,
-      );
-      iwi_set_form_element_byhash($form, $form_state, $cloned_elements, 'nameTabs:namePanel:nameSet:namePart', $input_value, $delta);
-      $delta++;
-    }
-  }
 }
 
 /**
@@ -435,7 +380,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
         '@cmodel' => $form['#ingest_cmodel']->label,
         '@pid' => $object->id,
         '!link' => $link,
-        )));
+      )));
     }
     else {
       // Report original object modified.
