@@ -420,32 +420,34 @@ function iwi_webform_ingest_settings($webform_nid) {
  *   the passed arraay of attributes for the target element
  * @param string $mode
  *   either "append" or "replace" (default)
+ * @param int $offset
+ *   when == 0 will act as a replace, higher values will append
+ *   if the element does not exist. If already in place will replace.
+ *   Must be in range of [0,10], being 1 the default.
  * @param string $delimiter
- *   the character used to delimit the $elementspath
+ *   the character used to delimit the $elementspath.
  */
-function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $elementspath, $input_value, $mode = 'replace', $delimiter = ':') {
+function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input_value, $mode = 'replace', $offset = 1, $delimiter = ':') {
 
   $parents = explode($delimiter, $elementspath);
+  // Check if offset is int and in range of [0,10]
+  if ((intval($offset) < 0) || (intval($offset) > 10)) {
+    drupal_set_message(t('Attempted to set a value at %path with a not allowed offset of %offset in this form', array('%path' => $elementspath, '%offset' => intval($offset))), 'error');
+    return;
+  }
+
   // XML forms have two special form elements, whose children need to be cloned:
   // if #type in (tags,tabs) and $mode=='append'
   // So we are going to check for those types before deciding how
   // to handle appends.
-
   $special_xmlform_elements = array('tags' => 'tag', 'tabs' => 'tabpanel');
 
   // We are handling append different, because replace means just setting the
   // value to an existing element. But if the element was already cloned we
   // will have to switch to a replace functionality.
-  // This means: if we got i.e a submited field like name[0]manePart and then
-  // later a name[0]role we can't clone again. So we store the first clone
-  // element, and just add the value to this one.
-  if(is_numeric($mode)) {
-    $tab_delta = (int) $mode;
-    $mode = 'append';
-  }
-  else {
-    $tab_delta = NULL;
-  }
+  // This means: if we got i.e a submited field like name[0]manePart - offset 1
+  // and then later a name[0]role with the same offset we can't clone again.
+
   switch ($mode) {
     case 'append':
       $ref = &$form;
@@ -465,7 +467,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
           if (count($special_element_ref) > 0 && $ref[$parent]['#type'] == $special_element_child_type) {
             // Means we already have found an special element container in a
             // previous iteration and we are standing at a child element;
-
             // Keep track of where we are, store tree descending path.
             $future_partial_path = array_slice($parents, $level);
             // Tree up path.
@@ -485,13 +486,12 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
             // element.
             $target_element_hash = $ref[$parent]['#hash'];
           }
-
           $ref = &$ref[$parent];
         }
         else {
           // We passed an invalid path.
           $key_exists = FALSE;
-          drupal_set_message(t('Attempted to set a value at %path in this form, but it does not exist.', array('%path' => $elementspath)), 'error');
+          drupal_set_message(t('Attempted to resolve path %path in this form, but it does not exist.', array('%path' => $elementspath)), 'error');
         }
       }
       if (($key_exists && !empty($target_element_hash)) && (!empty($child_element_hash))) {
@@ -503,40 +503,35 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
             case "tabpanel":
               $tab = $element->findElement($child_element_hash);
               if ($tab) {
-//                if (($tab_delta !== NULL && !array_key_exists($child_element_hash, $cloned_elements)) || !array_key_exists($child_element_hash, $cloned_elements)) {
-                if (!array_key_exists($child_element_hash, $cloned_elements)) {
-                  // If not already cloned clone it.
-                  $new_tab = clone $tab;
-
-                  $set_element_properties = function ($element) {
-                    $element->default_value = NULL;
-                  };
-                  // Set element properties on the descendants.
-                  $new_tab->eachDecendant($set_element_properties);
-                  $element->adopt($new_tab, $tab_delta);
-                  $new_tab_drupal = $new_tab->toArray();
-
-                  drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#attributes')), $input_value['#attributes']);
-                  drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#default_value')), $input_value['#default_value']);
-
-                  $special_element_ref[] = $new_tab_drupal;
-
-                  // Appending the drupal form array back to where it belongs.
-                  // Lets store where do we put this one, so we can later just
-                  // fill out the values if we need to.
-                  $special_element_children = element_children($special_element_ref);
-                  $cloned_elements[$child_element_hash] = end($special_element_children);
+                $special_element_children = element_children($special_element_ref);
+                if (!isset($special_element_children[$offset])) {
+                  $lastkid = end($special_element_children);
+                  for ($i = $lastkid; $i < $offset; $i++) {
+                    // If not already cloned for this offset clone it.
+                    $new_tab = clone $tab;
+                    $set_element_properties = function ($element) {
+                      $element->default_value = NULL;
+                    };
+                    // Set element properties on the descendants.
+                    $new_tab->eachDecendant($set_element_properties);
+                    $element->adopt($new_tab);
+                    $new_tab_drupal = $new_tab->toArray();
+                    // Set element properties into form only for $offset.
+                    if ($i == ($offset - 1)) {
+                      drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#attributes')), $input_value['#attributes']);
+                      drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#default_value')), $input_value['#default_value']);
+                    }
+                    // Appending the drupal form array back to where it belongs.
+                    $special_element_ref[] = $new_tab_drupal;
+                  }
                 }
                 else {
-                  // Means we have already clone the container, so just put
+                  // Means we have already cloned the container, so just put
                   // the values there. We can't use the hash here; we don't
                   // know it.
-
                   // This gives us the real path to the previously cloned
                   // element.
-                  $fullnewpath = array_merge($previous_partial_path, array($cloned_elements[$child_element_hash]), $future_partial_path);
-                  // We could also just get the last element_children of the
-                  // container, and add there...
+                  $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
                   drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
                   drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
                 }
@@ -544,26 +539,41 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
               break;
 
             case "tag":
-              // Now appending at the end. This means the new value is
-              // "themed" like a tag. Should, in case of having no previous
-              // value, just add the value to the existing input ?([0])
-              // ..it's like replacing...
-              $form_children = element_children($special_element_ref);
-              $input_field = &$special_element_ref[array_shift($form_children)];
-              $input_field['#value'] = '';
-              $element_children = array_values($element->children);
-              $input = array_shift($element_children);
-              $new_tag = clone $input;
-              // Create new tag and have it stored in the state.
-              $input->parent->adopt($new_tag);
-              $new_tag_drupal = $new_tag->toArray();
-              $new_tag_drupal['#default_value'] = $input_value['#default_value'];
-              // Update drupal form.
-              $special_element_ref[] = $new_tag_drupal;
+              // Now appending at offset. This means the new value is
+              // "themed" like a tag.
+              $special_element_children = element_children($special_element_ref);
+              if (!isset($special_element_children[$offset])) {
+                $lastkid = end($special_element_children);
+                $input_field = &$special_element_ref[array_shift($special_element_children)];
+                $element_children = array_values($element->children);
+                $input = array_shift($element_children);
+                for ($i = $lastkid; $i < $offset; $i++) {
+                  $new_tag = clone $input;
+                  // Create new tag and have it stored in the state.
+                  $new_tag->default_value = NULL;
+                  $input->parent->adopt($new_tag);
+                  $new_tag_drupal = $new_tag->toArray();
+                  // Set element properties into form only for $offset.
+                  if ($i == ($offset - 1)) {
+                    $new_tag_drupal['#default_value'] = $input_value['#default_value'];
+                    $new_tag_drupal['#attributes'] = $input_value['#attributes'];
+                  }
+                  // Update drupal form.
+                  $special_element_ref[] = $new_tag_drupal;
+                }
+              }
+              else {
+                $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
+                // We could also just get the last element_children of the
+                // container, and add there...
+                drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
+                drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
+              }
               break;
 
             default:
               break;
+
           }
         }
       }
@@ -580,7 +590,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
           }
           $element->default_value = $input_value['#default_value'];
         }
-
       }
       break;
 
@@ -613,7 +622,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
   $nid = $form['nid']['#value'];
   $enabled = !empty($form_state['values']['islandora_ingest']['ingest_enabled']) ? $form_state['values']['islandora_ingest']['ingest_enabled'] : 0;
   $cmodel = !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['cmodel'] : '';
-  //Makes no sense to store a relation if we are not creating new objects with this form anymore.
+  // Makes no sense to store a relation if we are not creating new objects with this form anymore.
   $relation = !empty($form_state['values']['islandora_ingest']['relation']) && !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['relation'] : '';
   $namespace = !empty($form_state['values']['islandora_ingest']['namespace']) ? $form_state['values']['islandora_ingest']['namespace'] : 'islandora';
   if ($old_settings = db_select('islandora_webform_ingest_webforms', 'm')
@@ -622,8 +631,9 @@ function iwi_save_webform_configuration($form, &$form_state) {
     ->execute()->fetch()
   ) {
     // If cmodel is empty we keep the old relation and namespace. Admin could have modified this first,
-    // then changed cmodel to 'empty', and by doing this, made those fields invisible, not being aware of the change anymore.
-    if (empty($cmodel)) { 
+    // then changed cmodel to 'empty', and by doing this, made those fields invisible,
+    // not being aware of the change anymore.
+    if (empty($cmodel)) {
       $relation = $old_settings->relation;
       $namespace = $old_settings->$namespace;
     }
@@ -632,9 +642,9 @@ function iwi_save_webform_configuration($form, &$form_state) {
       db_delete('islandora_webform_ingest_map')->condition('nid', $nid)->execute();
       drupal_set_message(t('The destination content model was changed and therefore all existing component ingest mappings for this webform were deleted. You will have to edit each webform component that you wish to ingest.'), 'warning');
     }
-    // If the relation is changing, show a new form and let the admin choose
+    // If the relation is changing, show a new form and let the admin choose.
     // Additionally test if we are giving a new relation here && there is a cmodel in place.
-    // Makes no sense to modify existing objects if the new form is converted from creation to update
+    // Makes no sense to modify existing objects if the new form is converted from creation to update.
     if (($old_settings->relation != $relation) && !empty($relation) && !empty($cmodel)) {
       $form_state['stepdata']['form_build_id'] = $form_state['values']['form_build_id'];
       $form_state['stepdata']['old_relation'] = $old_settings->relation;
@@ -655,8 +665,8 @@ function iwi_save_webform_configuration($form, &$form_state) {
       ->condition('id', $old_settings->id)
       ->execute();
     drupal_set_message(t('Your ingest settings where saved'), 'status');
-    
-    }
+
+  }
 
   // No previous islandora webform ingest settings record, so just create a new
   // one.
@@ -670,7 +680,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
         'namespace' => $namespace,
       ))
       ->execute();
-  drupal_set_message(t('Your ingest settings where saved'), 'status');
+    drupal_set_message(t('Your ingest settings where saved'), 'status');
   }
 }
 
@@ -711,7 +721,7 @@ function iwi_migrate_webform_objects($form, &$form_state) {
       break;
   }
 
-  
+
   // If the relation is changing, read the admin's choice on this.
   if ((!is_null($child_objects_data)) && (!empty($new_relation))){
     foreach ($child_objects_data as $key => $child_object_data) {
@@ -741,7 +751,7 @@ function iwi_migrate_webform_objects($form, &$form_state) {
           //And dismiss this subject. We are done with him.
           $subject_avoid_index[$child_object_data['object']['value']] = 1;
         }
-      }  
+      }
     }
     //Now iterate again to manage the rest, if any 
     foreach ($child_objects_data as $child_object_data) {
@@ -751,8 +761,8 @@ function iwi_migrate_webform_objects($form, &$form_state) {
         $current_rel = explode('#', $child_object_data['predicate']['uri']);
         if (isset($current_rel[1]) && !empty($current_rel[1])) {
           if ($child_object->relationships->remove(FEDORA_RELS_EXT_URI, $current_rel[1], $child_object_data['secondobject']['value'], RELS_TYPE_URI)) {
-             $removedcount++;
-             $old_relations_modified[$current_rel[1]] = 1;
+            $removedcount++;
+            $old_relations_modified[$current_rel[1]] = 1;
           }
         }
         //Now add our new relation
@@ -766,10 +776,10 @@ function iwi_migrate_webform_objects($form, &$form_state) {
     }
   }
   drupal_set_message(format_string('@count objects had their relations updated from "@old" to "@new"', array(
-      '@count' => $addedcount,
-      '@old' => implode(",",array_keys($old_relations_modified)),
-      '@new' => $new_relation,
-    )));
+    '@count' => $addedcount,
+    '@old' => implode(",",array_keys($old_relations_modified)),
+    '@new' => $new_relation,
+  )));
 }
 
 
@@ -904,7 +914,7 @@ function iwi_get_objects_with_relation($relation = NULL, $nid = NULL) {
  *   Number of objects in query results
  */
 function iwi_count_objects_with_relation($relation = NULL, $nid = NULL) {
-  
+
   $connection = islandora_get_tuque_connection();
   $query=iwi_get_objects_with_relation_countquery($relation,$nid);
   $queryresults = $connection->repository->ri->countQuery($query,'sparql');
@@ -943,27 +953,27 @@ EOQ;
   };
   $query_filters = array();
   $query_extramatch = array();
-  
+
   $iw_onlyuris_filters = "isIRI(?secondobject)"; //we want only relations that point to an object.
-  
+
   $query_filters[] = $iw_onlyuris_filters;
   $query_filters[] ="regex(str(?predicate), 'info:fedora/fedora-system:def/relations-external#','i')";
   if (isset($relation) && !empty($relation)) {
-  $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
-  $query_filters[] = $iw_predicate_filters;
+    $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
+    $query_filters[] = $iw_predicate_filters;
   }
-  
+
   if (isset($nid) && !empty($nid)) {
-  $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
-  $query_extramatch[] = $iw_nodeid_match;
+    $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
+    $query_extramatch[] = $iw_nodeid_match;
   }
- 
+
   $query = format_string($query, array(
     '!iw_node_match' => !empty($query_extramatch) ? implode(' ;', $query_extramatch)." ;" : '',
     '!filters' => implode(' ', array_map($filter_map, $query_filters)),
-  ));  
- return $query;
-  
+  ));
+  return $query;
+
 }
 /**
  * Get sparql query for counting objects having this relation term and are related to a given webform .
@@ -998,25 +1008,25 @@ EOQ;
   };
   $query_filters = array();
   $query_extramatch = array();
-  
+
   $iw_onlyuris_filters = "isIRI(?secondobject)"; //we want only relations that point to an object.
-  
+
   $query_filters[] = $iw_onlyuris_filters;
   $query_filters[] ="regex(str(?predicate), 'info:fedora/fedora-system:def/relations-external#','i')";
   if (isset($relation) && !empty($relation)) {
-  $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
-  $query_filters[] = $iw_predicate_filters;
+    $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
+    $query_filters[] = $iw_predicate_filters;
   }
-  
+
   if (isset($nid) && !empty($nid)) {
-  $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
-  $query_extramatch[] = $iw_nodeid_match;
+    $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
+    $query_extramatch[] = $iw_nodeid_match;
   }
- 
+
   $query = format_string($query, array(
     '!iw_node_match' => !empty($query_extramatch) ? implode(' ;', $query_extramatch)." ;" : '',
     '!filters' => implode(' ', array_map($filter_map, $query_filters)),
-  ));  
- return $query;
-  
+  ));
+  return $query;
+
 }
