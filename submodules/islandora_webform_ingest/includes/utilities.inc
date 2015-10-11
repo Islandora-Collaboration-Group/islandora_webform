@@ -412,36 +412,36 @@ function iwi_webform_ingest_settings($webform_nid) {
  *   the form we are modifying
  * @param array $form_state
  *   the form state
- * @param array $cloned_elements
- *   previous cloned elements so we don't clone and reclone.
  * @param string $elementspath
  *   the full path(in case of multivalued, theorical) to the target element.
  * @param array $input_value
- *   the passed arraay of attributes for the target element
+ *   the passed array of attributes for the target element
  * @param string $mode
  *   either "append" or "replace" (default)
- * @param int $offset
- *   when == 0 will act as a replace, higher values will append
- *   if the element does not exist. If already in place will replace.
- *   Must be in range of [0,10], being 1 the default.
+ * @param int|str $offset
+ *   Ignored if $mode != "append".
+ *   If NULL (default) will append at the end.
+ *   When == existing child element key will replace.
+ *   Other values will append using the defined $offset as key.
  * @param string $delimiter
  *   the character used to delimit the $elementspath.
  */
-function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input_value, $mode = 'replace', $offset = 1, $delimiter = ':') {
+function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input_value, $mode = 'replace', $offset = NULL, $delimiter = ':') {
 
   $parents = explode($delimiter, $elementspath);
-  // Check if offset is int and in range of [0,10]
-  if ((intval($offset) < 0) || (intval($offset) > 10)) {
-    drupal_set_message(t('Attempted to set a value at %path with a not allowed offset of %offset in this form', array('%path' => $elementspath, '%offset' => intval($offset))), 'error');
+  if (!is_array($input_value)) {
+    drupal_set_message(t('The input_value passed to path %path in this form is not an array', array('%path' => $elementspath)), 'error');
     return;
   }
-
+  else {
+    // In case $input_value is empty Array give it something;
+    $input_value += array('#attributes' => array(), '#default_value' => NULL);
+  }
   // XML forms have two special form elements, whose children need to be cloned:
   // if #type in (tags,tabs) and $mode=='append'
   // So we are going to check for those types before deciding how
   // to handle appends.
   $special_xmlform_elements = array('tags' => 'tag', 'tabs' => 'tabpanel');
-
   // We are handling append different, because replace means just setting the
   // value to an existing element. But if the element was already cloned we
   // will have to switch to a replace functionality.
@@ -505,23 +505,25 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
               if ($tab) {
                 $special_element_children = element_children($special_element_ref);
                 if (!isset($special_element_children[$offset])) {
-                  $lastkid = end($special_element_children);
-                  for ($i = $lastkid; $i < $offset; $i++) {
-                    // If not already cloned for this offset clone it.
-                    $new_tab = clone $tab;
-                    $set_element_properties = function ($element) {
-                      $element->default_value = NULL;
-                    };
-                    // Set element properties on the descendants.
-                    $new_tab->eachDecendant($set_element_properties);
-                    $element->adopt($new_tab);
-                    $new_tab_drupal = $new_tab->toArray();
-                    // Set element properties into form only for $offset.
-                    if ($i == ($offset - 1)) {
-                      drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#attributes')), $input_value['#attributes']);
-                      drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#default_value')), $input_value['#default_value']);
-                    }
-                    // Appending the drupal form array back to where it belongs.
+                  // If not already cloned for this offset clone it.
+                  $new_tab = clone $tab;
+                  $set_element_properties = function ($element) {
+                    $element->default_value = NULL;
+                  };
+                  // Set element properties on the descendants.
+                  $new_tab->eachDecendant($set_element_properties);
+                  $element->adopt($new_tab, $offset);
+                  $new_tab_drupal = $new_tab->toArray();
+                  // Set element properties into form only for $offset.
+                  drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#attributes')), $input_value['#attributes']);
+                  drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#default_value')), $input_value['#default_value']);
+                  // Appending the drupal form array back to where it belongs.
+                  if (isset($offset)) {
+                    $special_element_ref[$offset] = $new_tab_drupal;
+                  }
+                  else {
+                    // If no $offset given and 'appending' then 
+                    // just put at the end.
                     $special_element_ref[] = $new_tab_drupal;
                   }
                 }
@@ -529,7 +531,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
                   // Means we have already cloned the container, so just put
                   // the values there. We can't use the hash here; we don't
                   // know it.
-                  // This gives us the real path to the previously cloned
+                  // This gives us the real path to a previously cloned
                   // element.
                   $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
                   drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
@@ -543,29 +545,29 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
               // "themed" like a tag.
               $special_element_children = element_children($special_element_ref);
               if (!isset($special_element_children[$offset])) {
-                $lastkid = end($special_element_children);
                 $input_field = &$special_element_ref[array_shift($special_element_children)];
                 $element_children = array_values($element->children);
                 $input = array_shift($element_children);
-                for ($i = $lastkid; $i < $offset; $i++) {
-                  $new_tag = clone $input;
-                  // Create new tag and have it stored in the state.
-                  $new_tag->default_value = NULL;
-                  $input->parent->adopt($new_tag);
-                  $new_tag_drupal = $new_tag->toArray();
-                  // Set element properties into form only for $offset.
-                  if ($i == ($offset - 1)) {
-                    $new_tag_drupal['#default_value'] = $input_value['#default_value'];
-                    $new_tag_drupal['#attributes'] = $input_value['#attributes'];
-                  }
-                  // Update drupal form.
+                $new_tag = clone $input;
+                // Create new tag and have it stored in the state.
+                $new_tag->default_value = NULL;
+                $input->parent->adopt($new_tag, $offset);
+                $new_tag_drupal = $new_tag->toArray();
+                // Set element properties into form only for $offset.
+                $new_tag_drupal['#default_value'] = $input_value['#default_value'];
+                $new_tag_drupal['#attributes'] = $input_value['#attributes'];
+                // Update drupal form.
+                if (isset($offset)) {
+                  $special_element_ref[$offset] = $new_tag_drupal;
+                }
+                else {
+                  // If no $offset given and 'appending' then 
+                  // just put at the end.
                   $special_element_ref[] = $new_tag_drupal;
                 }
               }
               else {
                 $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
-                // We could also just get the last element_children of the
-                // container, and add there...
                 drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
                 drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
               }
