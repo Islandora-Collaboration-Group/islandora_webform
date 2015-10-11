@@ -412,33 +412,42 @@ function iwi_webform_ingest_settings($webform_nid) {
  *   the form we are modifying
  * @param array $form_state
  *   the form state
- * @param array $cloned_elements
- *   previous cloned elements so we don't clone and reclone.
  * @param string $elementspath
  *   the full path(in case of multivalued, theorical) to the target element.
  * @param array $input_value
- *   the passed arraay of attributes for the target element
+ *   the passed array of attributes for the target element
  * @param string $mode
  *   either "append" or "replace" (default)
+ * @param int|str $offset
+ *   Ignored if $mode != "append".
+ *   If NULL (default) will append at the end.
+ *   When == existing child element key will replace.
+ *   Other values will append using the defined $offset as key.
  * @param string $delimiter
- *   the character used to delimit the $elementspath
+ *   the character used to delimit the $elementspath.
  */
-function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $elementspath, $input_value, $mode = 'replace', $delimiter = ':') {
+function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input_value, $mode = 'replace', $offset = NULL, $delimiter = ':') {
 
   $parents = explode($delimiter, $elementspath);
+  if (!is_array($input_value)) {
+    drupal_set_message(t('The input_value passed to path %path in this form is not an array', array('%path' => $elementspath)), 'error');
+    return;
+  }
+  else {
+    // In case $input_value is empty Array give it something;
+    $input_value += array('#attributes' => array(), '#default_value' => NULL);
+  }
   // XML forms have two special form elements, whose children need to be cloned:
   // if #type in (tags,tabs) and $mode=='append'
   // So we are going to check for those types before deciding how
   // to handle appends.
-
   $special_xmlform_elements = array('tags' => 'tag', 'tabs' => 'tabpanel');
-
   // We are handling append different, because replace means just setting the
   // value to an existing element. But if the element was already cloned we
   // will have to switch to a replace functionality.
-  // This means: if we got i.e a submited field like name[0]manePart and then
-  // later a name[0]role we can't clone again. So we store the first clone
-  // element, and just add the value to this one.
+  // This means: if we got i.e a submited field like name[0]manePart - offset 1
+  // and then later a name[0]role with the same offset we can't clone again.
+
   switch ($mode) {
     case 'append':
       $ref = &$form;
@@ -458,7 +467,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
           if (count($special_element_ref) > 0 && $ref[$parent]['#type'] == $special_element_child_type) {
             // Means we already have found an special element container in a
             // previous iteration and we are standing at a child element;
-
             // Keep track of where we are, store tree descending path.
             $future_partial_path = array_slice($parents, $level);
             // Tree up path.
@@ -478,13 +486,12 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
             // element.
             $target_element_hash = $ref[$parent]['#hash'];
           }
-
           $ref = &$ref[$parent];
         }
         else {
           // We passed an invalid path.
           $key_exists = FALSE;
-          drupal_set_message(t('Attempted to set a value at %path in this form, but it does not exist.', array('%path' => $elementspath)), 'error');
+          drupal_set_message(t('Attempted to resolve path %path in this form, but it does not exist.', array('%path' => $elementspath)), 'error');
         }
       }
       if (($key_exists && !empty($target_element_hash)) && (!empty($child_element_hash))) {
@@ -496,40 +503,37 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
             case "tabpanel":
               $tab = $element->findElement($child_element_hash);
               if ($tab) {
-                if (!array_key_exists($child_element_hash, $cloned_elements)) {
-                  // If not already cloned clone it.
+                $special_element_children = element_children($special_element_ref);
+                if (!isset($special_element_children[$offset])) {
+                  // If not already cloned for this offset clone it.
                   $new_tab = clone $tab;
-
                   $set_element_properties = function ($element) {
                     $element->default_value = NULL;
                   };
                   // Set element properties on the descendants.
                   $new_tab->eachDecendant($set_element_properties);
-
-                  $element->adopt($new_tab);
+                  $element->adopt($new_tab, $offset);
                   $new_tab_drupal = $new_tab->toArray();
-
+                  // Set element properties into form only for $offset.
                   drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#attributes')), $input_value['#attributes']);
                   drupal_array_set_nested_value($new_tab_drupal, array_merge($future_partial_path, array('#default_value')), $input_value['#default_value']);
-
-                  $special_element_ref[] = $new_tab_drupal;
-
                   // Appending the drupal form array back to where it belongs.
-                  // Lets store where do we put this one, so we can later just
-                  // fill out the values if we need to.
-                  $special_element_children = element_children($special_element_ref);
-                  $cloned_elements[$child_element_hash] = end($special_element_children);
+                  if (isset($offset)) {
+                    $special_element_ref[$offset] = $new_tab_drupal;
+                  }
+                  else {
+                    // If no $offset given and 'appending' then 
+                    // just put at the end.
+                    $special_element_ref[] = $new_tab_drupal;
+                  }
                 }
                 else {
-                  // Means we have already clone the container, so just put
+                  // Means we have already cloned the container, so just put
                   // the values there. We can't use the hash here; we don't
                   // know it.
-
-                  // This gives us the real path to the previously cloned
+                  // This gives us the real path to a previously cloned
                   // element.
-                  $fullnewpath = array_merge($previous_partial_path, array($cloned_elements[$child_element_hash]), $future_partial_path);
-                  // We could also just get the last element_children of the
-                  // container, and add there...
+                  $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
                   drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
                   drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
                 }
@@ -537,26 +541,41 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
               break;
 
             case "tag":
-              // Now appending at the end. This means the new value is
-              // "themed" like a tag. Should, in case of having no previous
-              // value, just add the value to the existing input ?([0])
-              // ..it's like replacing...
-              $form_children = element_children($special_element_ref);
-              $input_field = &$special_element_ref[array_shift($form_children)];
-              $input_field['#value'] = '';
-              $element_children = array_values($element->children);
-              $input = array_shift($element_children);
-              $new_tag = clone $input;
-              // Create new tag and have it stored in the state.
-              $input->parent->adopt($new_tag);
-              $new_tag_drupal = $new_tag->toArray();
-              $new_tag_drupal['#default_value'] = $input_value['#default_value'];
-              // Update drupal form.
-              $special_element_ref[] = $new_tag_drupal;
+              // Now appending at offset. This means the new value is
+              // "themed" like a tag.
+              $special_element_children = element_children($special_element_ref);
+              if (!isset($special_element_children[$offset])) {
+                $input_field = &$special_element_ref[array_shift($special_element_children)];
+                $element_children = array_values($element->children);
+                $input = array_shift($element_children);
+                $new_tag = clone $input;
+                // Create new tag and have it stored in the state.
+                $new_tag->default_value = NULL;
+                $input->parent->adopt($new_tag, $offset);
+                $new_tag_drupal = $new_tag->toArray();
+                // Set element properties into form only for $offset.
+                $new_tag_drupal['#default_value'] = $input_value['#default_value'];
+                $new_tag_drupal['#attributes'] = $input_value['#attributes'];
+                // Update drupal form.
+                if (isset($offset)) {
+                  $special_element_ref[$offset] = $new_tag_drupal;
+                }
+                else {
+                  // If no $offset given and 'appending' then 
+                  // just put at the end.
+                  $special_element_ref[] = $new_tag_drupal;
+                }
+              }
+              else {
+                $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
+                drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
+                drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
+              }
               break;
 
             default:
               break;
+
           }
         }
       }
@@ -573,7 +592,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, &$cloned_elements, $e
           }
           $element->default_value = $input_value['#default_value'];
         }
-
       }
       break;
 
@@ -606,7 +624,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
   $nid = $form['nid']['#value'];
   $enabled = !empty($form_state['values']['islandora_ingest']['ingest_enabled']) ? $form_state['values']['islandora_ingest']['ingest_enabled'] : 0;
   $cmodel = !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['cmodel'] : '';
-  //Makes no sense to store a relation if we are not creating new objects with this form anymore.
+  // Makes no sense to store a relation if we are not creating new objects with this form anymore.
   $relation = !empty($form_state['values']['islandora_ingest']['relation']) && !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['relation'] : '';
   $namespace = !empty($form_state['values']['islandora_ingest']['namespace']) ? $form_state['values']['islandora_ingest']['namespace'] : 'islandora';
   if ($old_settings = db_select('islandora_webform_ingest_webforms', 'm')
@@ -615,7 +633,8 @@ function iwi_save_webform_configuration($form, &$form_state) {
     ->execute()->fetch()
   ) {
     // If cmodel is empty we keep the old relation and namespace. Admin could have modified this first,
-    // then changed cmodel to 'empty', and by doing this, made those fields invisible, not being aware of the change anymore.
+    // then changed cmodel to 'empty', and by doing this, made those fields invisible,
+    // not being aware of the change anymore.
     if (empty($cmodel)) { 
       $relation = $old_settings->relation;
       $namespace = $old_settings->$namespace;
@@ -625,9 +644,9 @@ function iwi_save_webform_configuration($form, &$form_state) {
       db_delete('islandora_webform_ingest_map')->condition('nid', $nid)->execute();
       drupal_set_message(t('The destination content model was changed and therefore all existing component ingest mappings for this webform were deleted. You will have to edit each webform component that you wish to ingest.'), 'warning');
     }
-    // If the relation is changing, show a new form and let the admin choose
+    // If the relation is changing, show a new form and let the admin choose.
     // Additionally test if we are giving a new relation here && there is a cmodel in place.
-    // Makes no sense to modify existing objects if the new form is converted from creation to update
+    // Makes no sense to modify existing objects if the new form is converted from creation to update.
     if (($old_settings->relation != $relation) && !empty($relation) && !empty($cmodel)) {
       $form_state['stepdata']['form_build_id'] = $form_state['values']['form_build_id'];
       $form_state['stepdata']['old_relation'] = $old_settings->relation;
