@@ -175,7 +175,11 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         foreach ($dsid_values['data_values'] as $input) {
           iwi_set_form_element_byhash($form2, $form_state_new, $input['path'], $input['input_value'], $input['mode']);
         }
+
+        // Permit other modules to modify the form.
+        drupal_alter('iwi_set_form', $form2, $form_state_new, $submission);
       }
+
       // Build our own local and multiple objective_form_storage for every dsid.
       $form_state['storage']['islandora_webform'][$dsid] = $form_state_new['storage']['objective_form_storage'];
 
@@ -190,9 +194,6 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       }
       // Recover the #hash.
       $new_form['#hash'] = $form2['#hash'];
-
-      // Permit other modules to modify the form before it is returned.
-      drupal_alter('iwi_set_form', $new_form, $form_state_new, $submission);
 
       $form[$dsid] = $new_form;
     }
