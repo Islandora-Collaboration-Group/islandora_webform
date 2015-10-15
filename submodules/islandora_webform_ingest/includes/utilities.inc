@@ -545,7 +545,6 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
               // "themed" like a tag.
               $special_element_children = element_children($special_element_ref);
               if (!isset($special_element_children[$offset])) {
-                $input_field = &$special_element_ref[array_shift($special_element_children)];
                 $element_children = array_values($element->children);
                 $input = array_shift($element_children);
                 $new_tag = clone $input;
