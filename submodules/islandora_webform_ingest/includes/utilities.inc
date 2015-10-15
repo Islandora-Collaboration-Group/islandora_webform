@@ -504,7 +504,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
               $tab = $element->findElement($child_element_hash);
               if ($tab) {
                 $special_element_children = element_children($special_element_ref);
-                if (!isset($special_element_children[$offset])) {
+                if (!in_array($offset, $special_element_children, TRUE)) {
                   // If not already cloned for this offset clone it.
                   $new_tab = clone $tab;
                   $set_element_properties = function ($element) {
@@ -544,7 +544,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
               // Now appending at offset. This means the new value is
               // "themed" like a tag.
               $special_element_children = element_children($special_element_ref);
-              if (!isset($special_element_children[$offset])) {
+              if (!in_array($offset, $special_element_children, TRUE)) {
                 $element_children = array_values($element->children);
                 $input = array_shift($element_children);
                 $new_tag = clone $input;
