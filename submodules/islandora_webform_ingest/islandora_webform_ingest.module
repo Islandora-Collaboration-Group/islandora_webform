@@ -984,7 +984,6 @@ function islandora_webform_ingest_block_save($delta = '', $edit = array()) {
 function islandora_webform_ingest_block_view($relation = '') {
   $block = array();
   if ($relation) {
-
     $object = islandora_object_load(arg(2));
     $collection_models = islandora_basic_collection_get_collection_content_models();
     $collection_predicates = array(
@@ -1073,6 +1072,7 @@ function islandora_webform_ingest_islandora_basic_collection_query_param_alter(&
     foreach ($query_filters as &$query_filter) {
       if (strpos($query_filter, 'sameTerm(?collection_predicate') !== FALSE && strpos($query_filter, "<fedora-rels-ext:" . $params['relation'] . ">)") === FALSE) {
         $query_filter = "sameTerm(?collection_predicate, <fedora-rels-ext:" . $params['relation'] . ">)";
+        break;
       }
       break;
     }
