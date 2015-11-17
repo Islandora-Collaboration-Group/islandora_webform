@@ -70,9 +70,9 @@ function iwi_ingestible_datastreams(FedoraObject $object, $mimetypes = array('te
                 'mime' => $dsmime,
               );
               $ingestible_dsids[$ds] = $ds;
+              // Only map the datastream once!
+              break;
             }
-            // Only map the datastream once!
-            break;
           }
         }
         // We aren't filtering mimetype, just add the datastream to the results.
@@ -522,7 +522,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
                     $special_element_ref[$offset] = $new_tab_drupal;
                   }
                   else {
-                    // If no $offset given and 'appending' then 
+                    // If no $offset given and 'appending' then
                     // just put at the end.
                     $special_element_ref[] = $new_tab_drupal;
                   }
@@ -543,33 +543,33 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
             case "tag":
               // Now appending at offset. This means the new value is
               // "themed" like a tag.
-              $special_element_children = element_children($special_element_ref);
-              if (!isset($special_element_children[$offset])) {
-                $input_field = &$special_element_ref[array_shift($special_element_children)];
-                $element_children = array_values($element->children);
-                $input = array_shift($element_children);
-                $new_tag = clone $input;
-                // Create new tag and have it stored in the state.
-                $new_tag->default_value = NULL;
-                $input->parent->adopt($new_tag, $offset);
-                $new_tag_drupal = $new_tag->toArray();
-                // Set element properties into form only for $offset.
-                $new_tag_drupal['#default_value'] = $input_value['#default_value'];
-                $new_tag_drupal['#attributes'] = $input_value['#attributes'];
-                // Update drupal form.
-                if (isset($offset)) {
-                  $special_element_ref[$offset] = $new_tag_drupal;
+              $tag = $element->findElement($child_element_hash);
+              if ($tag) {
+                $special_element_children = element_children($special_element_ref);
+                if (!isset($special_element_children[$offset])) {
+                  $new_tag = clone $tag;
+                  // Create new tag and have it stored in the state.
+                  $new_tag->default_value = $input_value['#default_value'];
+                  $element->adopt($new_tag, $offset);
+                  $new_tag_drupal = $new_tag->toArray();
+                  // Set element properties into form only for $offset.
+                  $new_tag_drupal['#default_value'] = $input_value['#default_value'];
+                  $new_tag_drupal['#attributes'] = $input_value['#attributes'];
+                  // Update drupal form.
+                  if (isset($offset)) {
+                    $special_element_ref[$offset] = $new_tag_drupal;
+                  }
+                  else {
+                    // If no $offset given and 'appending' then
+                    // just put at the end.
+                    $special_element_ref[] = $new_tag_drupal;
+                  }
                 }
                 else {
-                  // If no $offset given and 'appending' then 
-                  // just put at the end.
-                  $special_element_ref[] = $new_tag_drupal;
+                  $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
+                  drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
+                  drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
                 }
-              }
-              else {
-                $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
-                drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
-                drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
               }
               break;
 
