@@ -70,9 +70,9 @@ function iwi_ingestible_datastreams(FedoraObject $object, $mimetypes = array('te
                 'mime' => $dsmime,
               );
               $ingestible_dsids[$ds] = $ds;
+              // Only map the datastream once!
+              break;
             }
-            // Only map the datastream once!
-            break;
           }
         }
         // We aren't filtering mimetype, just add the datastream to the results.
@@ -504,7 +504,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
               $tab = $element->findElement($child_element_hash);
               if ($tab) {
                 $special_element_children = element_children($special_element_ref);
-                if (!in_array($offset, $special_element_children, TRUE)) {
+                if (!isset($special_element_children[$offset])) {
                   // If not already cloned for this offset clone it.
                   $new_tab = clone $tab;
                   $set_element_properties = function ($element) {
@@ -522,7 +522,7 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
                     $special_element_ref[$offset] = $new_tab_drupal;
                   }
                   else {
-                    // If no $offset given and 'appending' then 
+                    // If no $offset given and 'appending' then
                     // just put at the end.
                     $special_element_ref[] = $new_tab_drupal;
                   }
@@ -543,32 +543,33 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
             case "tag":
               // Now appending at offset. This means the new value is
               // "themed" like a tag.
-              $special_element_children = element_children($special_element_ref);
-              if (!in_array($offset, $special_element_children, TRUE)) {
-                $element_children = array_values($element->children);
-                $input = array_shift($element_children);
-                $new_tag = clone $input;
-                // Create new tag and have it stored in the state.
-                $new_tag->default_value = NULL;
-                $input->parent->adopt($new_tag, $offset);
-                $new_tag_drupal = $new_tag->toArray();
-                // Set element properties into form only for $offset.
-                $new_tag_drupal['#default_value'] = $input_value['#default_value'];
-                $new_tag_drupal['#attributes'] = $input_value['#attributes'];
-                // Update drupal form.
-                if (isset($offset)) {
-                  $special_element_ref[$offset] = $new_tag_drupal;
+              $tag = $element->findElement($child_element_hash);
+              if ($tag) {
+                $special_element_children = element_children($special_element_ref);
+                if (!isset($special_element_children[$offset])) {
+                  $new_tag = clone $tag;
+                  // Create new tag and have it stored in the state.
+                  $new_tag->default_value = $input_value['#default_value'];
+                  $element->adopt($new_tag, $offset);
+                  $new_tag_drupal = $new_tag->toArray();
+                  // Set element properties into form only for $offset.
+                  $new_tag_drupal['#default_value'] = $input_value['#default_value'];
+                  $new_tag_drupal['#attributes'] = $input_value['#attributes'];
+                  // Update drupal form.
+                  if (isset($offset)) {
+                    $special_element_ref[$offset] = $new_tag_drupal;
+                  }
+                  else {
+                    // If no $offset given and 'appending' then
+                    // just put at the end.
+                    $special_element_ref[] = $new_tag_drupal;
+                  }
                 }
                 else {
-                  // If no $offset given and 'appending' then 
-                  // just put at the end.
-                  $special_element_ref[] = $new_tag_drupal;
+                  $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
+                  drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
+                  drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
                 }
-              }
-              else {
-                $fullnewpath = array_merge($previous_partial_path, array($offset), $future_partial_path);
-                drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#attributes')), $input_value['#attributes']);
-                drupal_array_set_nested_value($form, array_merge($fullnewpath, array('#default_value')), $input_value['#default_value']);
               }
               break;
 
@@ -634,7 +635,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
     // If cmodel is empty we keep the old relation and namespace. Admin could have modified this first,
     // then changed cmodel to 'empty', and by doing this, made those fields invisible,
     // not being aware of the change anymore.
-    if (empty($cmodel)) {
+    if (empty($cmodel)) { 
       $relation = $old_settings->relation;
       $namespace = $old_settings->$namespace;
     }
@@ -666,8 +667,8 @@ function iwi_save_webform_configuration($form, &$form_state) {
       ->condition('id', $old_settings->id)
       ->execute();
     drupal_set_message(t('Your ingest settings where saved'), 'status');
-
-  }
+    
+    }
 
   // No previous islandora webform ingest settings record, so just create a new
   // one.
@@ -681,7 +682,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
         'namespace' => $namespace,
       ))
       ->execute();
-    drupal_set_message(t('Your ingest settings where saved'), 'status');
+  drupal_set_message(t('Your ingest settings where saved'), 'status');
   }
 }
 
@@ -722,7 +723,7 @@ function iwi_migrate_webform_objects($form, &$form_state) {
       break;
   }
 
-
+  
   // If the relation is changing, read the admin's choice on this.
   if ((!is_null($child_objects_data)) && (!empty($new_relation))){
     foreach ($child_objects_data as $key => $child_object_data) {
@@ -752,7 +753,7 @@ function iwi_migrate_webform_objects($form, &$form_state) {
           //And dismiss this subject. We are done with him.
           $subject_avoid_index[$child_object_data['object']['value']] = 1;
         }
-      }
+      }  
     }
     //Now iterate again to manage the rest, if any 
     foreach ($child_objects_data as $child_object_data) {
@@ -762,8 +763,8 @@ function iwi_migrate_webform_objects($form, &$form_state) {
         $current_rel = explode('#', $child_object_data['predicate']['uri']);
         if (isset($current_rel[1]) && !empty($current_rel[1])) {
           if ($child_object->relationships->remove(FEDORA_RELS_EXT_URI, $current_rel[1], $child_object_data['secondobject']['value'], RELS_TYPE_URI)) {
-            $removedcount++;
-            $old_relations_modified[$current_rel[1]] = 1;
+             $removedcount++;
+             $old_relations_modified[$current_rel[1]] = 1;
           }
         }
         //Now add our new relation
@@ -777,10 +778,10 @@ function iwi_migrate_webform_objects($form, &$form_state) {
     }
   }
   drupal_set_message(format_string('@count objects had their relations updated from "@old" to "@new"', array(
-    '@count' => $addedcount,
-    '@old' => implode(",",array_keys($old_relations_modified)),
-    '@new' => $new_relation,
-  )));
+      '@count' => $addedcount,
+      '@old' => implode(",",array_keys($old_relations_modified)),
+      '@new' => $new_relation,
+    )));
 }
 
 
@@ -915,7 +916,7 @@ function iwi_get_objects_with_relation($relation = NULL, $nid = NULL) {
  *   Number of objects in query results
  */
 function iwi_count_objects_with_relation($relation = NULL, $nid = NULL) {
-
+  
   $connection = islandora_get_tuque_connection();
   $query=iwi_get_objects_with_relation_countquery($relation,$nid);
   $queryresults = $connection->repository->ri->countQuery($query,'sparql');
@@ -954,27 +955,27 @@ EOQ;
   };
   $query_filters = array();
   $query_extramatch = array();
-
+  
   $iw_onlyuris_filters = "isIRI(?secondobject)"; //we want only relations that point to an object.
-
+  
   $query_filters[] = $iw_onlyuris_filters;
   $query_filters[] ="regex(str(?predicate), 'info:fedora/fedora-system:def/relations-external#','i')";
   if (isset($relation) && !empty($relation)) {
-    $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
-    $query_filters[] = $iw_predicate_filters;
+  $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
+  $query_filters[] = $iw_predicate_filters;
   }
-
+  
   if (isset($nid) && !empty($nid)) {
-    $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
-    $query_extramatch[] = $iw_nodeid_match;
+  $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
+  $query_extramatch[] = $iw_nodeid_match;
   }
-
+ 
   $query = format_string($query, array(
     '!iw_node_match' => !empty($query_extramatch) ? implode(' ;', $query_extramatch)." ;" : '',
     '!filters' => implode(' ', array_map($filter_map, $query_filters)),
-  ));
-  return $query;
-
+  ));  
+ return $query;
+  
 }
 /**
  * Get sparql query for counting objects having this relation term and are related to a given webform .
@@ -1009,25 +1010,25 @@ EOQ;
   };
   $query_filters = array();
   $query_extramatch = array();
-
+  
   $iw_onlyuris_filters = "isIRI(?secondobject)"; //we want only relations that point to an object.
-
+  
   $query_filters[] = $iw_onlyuris_filters;
   $query_filters[] ="regex(str(?predicate), 'info:fedora/fedora-system:def/relations-external#','i')";
   if (isset($relation) && !empty($relation)) {
-    $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
-    $query_filters[] = $iw_predicate_filters;
+  $iw_predicate_filters = "sameTerm(?predicate, <fedora-rels-ext:{$relation}>)"; //Only for a given predicate
+  $query_filters[] = $iw_predicate_filters;
   }
-
+  
   if (isset($nid) && !empty($nid)) {
-    $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
-    $query_extramatch[] = $iw_nodeid_match;
+  $iw_nodeid_match = "islandora-rels-ext:{$iw_has_predicate} \"{$nid}\""; //Only for a given Node id association
+  $query_extramatch[] = $iw_nodeid_match;
   }
-
+ 
   $query = format_string($query, array(
     '!iw_node_match' => !empty($query_extramatch) ? implode(' ;', $query_extramatch)." ;" : '',
     '!filters' => implode(' ', array_map($filter_map, $query_filters)),
-  ));
-  return $query;
-
+  ));  
+ return $query;
+  
 }
