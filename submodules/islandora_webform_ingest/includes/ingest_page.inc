@@ -109,6 +109,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
     'submission' => webform_submission_render($webform, $submission, NULL, NULL),
   );
   $islandora_webform_values = array();
+  $used_associations = array();
 
   // Loop through the component mappings, adding submitted values to
   // appropriate datastream sub-forms
