@@ -507,8 +507,13 @@ function iwi_set_form_element_byhash(&$form, &$form_state, $elementspath, $input
                 if (!isset($special_element_children[$offset])) {
                   // If not already cloned for this offset clone it.
                   $new_tab = clone $tab;
-                  $set_element_properties = function ($element) {
+                  $set_element_properties = function ($element) use ($special_xmlform_elements) {
                     $element->default_value = NULL;
+                    foreach($element->children as $key => &$child) {
+                      if($key !== 0 && in_array($child->controls['#type'], $special_xmlform_elements) ) {
+                        $child->orphan();
+                      }
+                    }
                   };
                   // Set element properties on the descendants.
                   $new_tab->eachDecendant($set_element_properties);
