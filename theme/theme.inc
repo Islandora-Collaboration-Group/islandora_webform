@@ -58,6 +58,7 @@ function theme_islandora_webform_links(array $vars) {
     ),
   );
 
+  $link_mode = variable_get('islandora_webform_link_target', 'new');
   foreach ($webforms as $webform) {
     $jqid = 'iw_iwebform_links_' . $webform->entity_id;
     $output .= '<div id="' . $jqid . '" class="webform-links-wrapper"><div class="webform-links">';
@@ -70,9 +71,10 @@ function theme_islandora_webform_links(array $vars) {
       unset($webform_link_options['query']['destination']);
     }
     else {
-      $link_mode = 'normal';
       $webform_link_options['attributes']['class'] = array('webform-link');
-      $webform_link_options['attributes']['target'] = '_islandora_webform_page';
+      if ($link_mode != 'same') {
+        $webform_link_options['attributes']['target'] = '_islandora_webform_page';
+      }
     }
 
     if ($webform->scope != 'tagged') {
