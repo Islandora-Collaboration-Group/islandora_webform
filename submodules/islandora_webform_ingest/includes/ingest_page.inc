@@ -109,6 +109,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
     'submission' => webform_submission_render($webform, $submission, NULL, NULL),
   );
   $islandora_webform_values = array();
+  $used_associations = array();
 
   // Loop through the component mappings, adding submitted values to
   // appropriate datastream sub-forms
@@ -178,7 +179,11 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         foreach ($dsid_values['data_values'] as $input) {
           iwi_set_form_element_byhash($form2, $form_state_new, $input['path'], $input['input_value'], $input['mode']);
         }
+
+        // Permit other modules to modify the form.
+        drupal_alter('iwi_set_form', $form2, $form_state_new, $submission);
       }
+
       // Build our own local and multiple objective_form_storage for every dsid.
       $form_state['storage']['islandora_webform'][$dsid] = $form_state_new['storage']['objective_form_storage'];
 
@@ -193,7 +198,6 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       }
       // Recover the #hash.
       $new_form['#hash'] = $form2['#hash'];
-
 
       $form[$dsid] = $new_form;
     }
@@ -381,7 +385,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
         '@cmodel' => $form['#ingest_cmodel']->label,
         '@pid' => $object->id,
         '!link' => $link,
-        )));
+      )));
     }
     else {
       // Report original object modified.
