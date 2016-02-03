@@ -88,7 +88,7 @@ function islandora_webform_requirements($phase) {
       foreach($results as $result) {
         $info = unserialize($result->info);
         if(!empty($info['version'])) {
-          if(version_compare($info['version'], $tests[$result->name]) < 0) {
+          if(version_compare($info['version'], $tests[$result->name]) < 0 && $info['version'] != '7.x-dev') {
             $requirements[$result->name] = array(
               'title' => $result->name,
               'description' => 'islandora_webform requires that ' . $result->name . ' be at least version ' . $tests[$result->name],
