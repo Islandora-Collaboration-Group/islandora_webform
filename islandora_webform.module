@@ -381,3 +381,14 @@ function iw_get_solr_data_array($pid, $fields = '', $filter = NULL) {
   }
   return array();
 }
+
+
+/**
+ * Implements hook_webform_submission_render_alter().
+ */
+function islandora_webform_webform_submission_render_alter(&$renderable) {
+  if (!empty($renderable['islandora_object_pid']['#value'])) {
+    $renderable['islandora_object_pid']['#value'] = l($renderable['islandora_object_pid']['#value'], '/islandora/object/' . $renderable['islandora_object_pid']['#value']);
+    $renderable['islandora_object_pid']['#theme'] = 'webform_display_markup';
+  }
+}
