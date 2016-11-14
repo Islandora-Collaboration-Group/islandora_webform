@@ -12,11 +12,18 @@
  * @param object $webform
  *   webform object
  *
+ * @param string $ajax
+ *   Indicates if the link is to be "ajaxified"
+ *
+ * @param mixed $submission
+ *   A submission object to pass to the webform_client_form callback. If present,
+ *   the form will display the values from that submission, and submitting will
+ *   update that submission rather than create a new one.
+ *
  * @return array
  *   ajax commands
  */
-function _iw_inline_webform($webform, $ajax) {
-  $submission = FALSE;
+function _iw_inline_webform($webform, $ajax, $submission = FALSE) {
   $enabled = TRUE;
   $preview = FALSE;
   $form = drupal_get_form('webform_client_form_' . $webform->nid, $webform, $submission, $enabled);
