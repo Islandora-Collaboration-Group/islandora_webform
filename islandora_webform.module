@@ -166,9 +166,36 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
         $form['submitted']['islandora_object_pid']['#type'] = 'hidden';
         $form['submitted']['islandora_object_pid']['#title_display'] = 'invisible';
       }
+
+      // Re-submitting webforms wants to redirect to the submittal view page.
+      // We want islandora object webforms to redirect back to the object page.
+      if(drupal_valid_path($form['#node']->webform['redirect_url'])) {
+        $redirect_url = $form['#node']->webform['redirect_url'];
+      }
+      else {
+        $destination = drupal_get_destination();
+        $redirect_url = $destination['destination'];
+      }
+      $form_state['webform_redirect']  = $redirect_url;
+      $form['#submit'][] = 'iw_webform_resubmit_redirect';
+
     }
   }
 }
+
+/**
+ * Direct webform resubmission back to the object page.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function iw_webform_resubmit_redirect($form, &$form_state) {
+  if (!empty($form_state['webform_completed'])) {
+    unset($_GET['destination']);
+    $form_state['redirect'] = $form_state['webform_redirect'];
+  }
+}
+
 /**
  * Implements hook_module_implements_alter().
  *
