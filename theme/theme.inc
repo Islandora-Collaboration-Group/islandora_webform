@@ -223,9 +223,9 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
         array(
           '!type' => $submission->completed ? 'submission' : 'draft',
         ));
+      $webform_link_options['attributes']['class'][] = $submission->completed ? 'submission' : 'draft';
     }
     $webform_link_options['attributes']['title'] = $islandora_webform_record->link_help;
-    $webform_link_options['attributes']['class'][] = $submission->completed ? 'submission' : 'draft';
     $webform_link = l($link_text, $link_path, $webform_link_options);
   }
   return $webform_link;
