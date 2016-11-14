@@ -25,9 +25,9 @@ function theme_islandora_webform_links(array $vars) {
   $destination = drupal_get_destination();
 
   $webform_link_options = array(
-    'html'       => TRUE,
-    'query'      => array(
-      'pid'         => $pid,
+    'html' => TRUE,
+    'query' => array(
+      'pid' => $pid,
       $destination,
     ),
   );
@@ -39,8 +39,8 @@ function theme_islandora_webform_links(array $vars) {
         'use-ajax',
       ),
     ),
-    'html'       => TRUE,
-    'query'      => array(
+    'html' => TRUE,
+    'query' => array(
       $destination,
 
     ),
@@ -52,8 +52,8 @@ function theme_islandora_webform_links(array $vars) {
         'use-ajax',
       ),
     ),
-    'html'       => TRUE,
-    'query'      => array(
+    'html' => TRUE,
+    'query' => array(
       $destination,
     ),
   );
@@ -63,11 +63,16 @@ function theme_islandora_webform_links(array $vars) {
     $jqid = 'iw_iwebform_links_' . $webform->entity_id;
     $output .= '<div id="' . $jqid . '" class="webform-links-wrapper"><div class="webform-links">';
     // Lets load the node.
-    $webform_node_data = node_load($webform->entity_id)->webform;
+    $swebform_node = node_load($webform->entity_id);
+    $webform_node_data = $swebform_node->webform;
+
     $inline = module_exists('webform_ajax') && isset($webform_node_data['webform_ajax']) ? $webform_node_data['webform_ajax'] != WEBFORM_AJAX_NO_AJAX : FALSE;
     if ($inline) {
       $link_mode = 'inline';
-      $webform_link_options['attributes']['class'] = array('webform-link', 'use-ajax');
+      $webform_link_options['attributes']['class'] = array(
+        'webform-link',
+        'use-ajax'
+      );
       unset($webform_link_options['query']['destination']);
     }
     else {
@@ -77,6 +82,59 @@ function theme_islandora_webform_links(array $vars) {
       }
     }
 
+    // Show previous submissions by this user if they can be edited.
+    global $user;
+    module_load_include('inc', 'webform', 'includes/webform.submissions');
+    if (!webform_submission_user_limit_check($swebform_node)
+      && !webform_submission_total_limit_check($swebform_node)
+    ) {
+
+      // Get a list of submission ids that this user has created for this object
+      // and this webform.
+      $query = db_select('webform_submissions', 's')
+        ->condition('s.nid', $swebform_node->nid)
+        ->fields('s', array('sid'));
+      if ($user->uid) {
+        $query->condition('uid', $user->uid);
+      }
+      else {
+        $query->condition('remote_addr', ip_address());
+      }
+      // Join the submitted data table to look for the PID of this object.
+      $query->join('webform_submitted_data', 'd', "d.sid = s.sid");
+      $query->condition('d.data', $pid);
+      $sids = $query->execute()->fetchCol();
+
+      $submissions = webform_get_submissions(array(
+        'nid' => $swebform_node->nid,
+        'sid' => $sids
+      ));
+
+      // Check if this user has edit access to this submission. If not, remove it.
+      if (!empty($submissions)) {
+        module_load_include('inc', 'islandora_webform', 'includes/inline_webform');
+        foreach ($submissions as $key => $submission) {
+          if (!webform_submission_access($swebform_node, $submission, 'edit', $user)) {
+            unset($submissions[$key]);
+          }
+        }
+      }
+
+      // If the number of previous submissions is more than one, display links to
+      // edit the submissions.
+      if (count($submissions) > 1) {
+        foreach ($submissions as $editable_submission) {
+          $output .= islandora_webform_theme_webform_link($webform, $webform_link_options, $link_mode, $editable_submission->sid);
+        }
+      }
+      // If instead the number of editable submissions is exactly one, don't show links.
+      // Rather, display the form inline.
+      elseif(!empty($submissions)) {
+        $output = _iw_inline_webform($swebform_node, 'nojs', reset($submissions));
+      }
+    }
+
+    // If this object is not tagged for this webform but can be, show a link for that.
     if ($webform->scope != 'tagged') {
       $output .= islandora_webform_theme_webform_link($webform, $webform_link_options, $link_mode);
     }
@@ -133,23 +191,42 @@ function theme_islandora_webform_links(array $vars) {
  *
  * @param object $islandora_webform_record
  *   one complete row from the islandora_webform_webforms table
- * @param array $webform_link_options
+ * @param array  $webform_link_options
  *   an options array for the l() function. We expect it to have the "pid" query parameter
  *   included to make this a valid call to a islandora-enabled webform.
  * @param string $link_mode
  *   If value is 'inline', then an ajax link is created.
+ * @param string $sid
+ *   If the link is to edit a previous submission, this is that submission's sid
  *
  * @return string
  *   The themed link, or empty if no access
  */
-function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $link_mode = 'inline') {
+function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $link_mode = 'inline', $sid = NULL) {
   $webform_link = '';
   $node = node_load($islandora_webform_record->entity_id);
   module_load_include('inc', 'islandora_webform', 'includes/webform_access');
   if ($node->status && islandora_webform_user_can_submit_webform($node)) {
     $link_path = $link_mode == 'inline' ? 'islandora_webform/retrieve_form/' . $islandora_webform_record->entity_id . '/nojs' : drupal_get_path_alias('node/' . $islandora_webform_record->entity_id);
+    $link_text = $islandora_webform_record->link_text;
+    if ($sid) {
+      $submission = webform_get_submission($node->nid, $sid);
+
+      $link_path .= '/submission/' . $sid . '/edit';
+      $when = max($submission->submitted, $submission->completed, $submission->modified);
+      $link_text = t('!type, last worked on !when by !who', array(
+        '!type' => $submission->completed ? 'Submission' : 'Draft',
+        '!when' => format_date($when),
+        '!who' => $submission->name,
+      ));
+      $islandora_webform_record->link_help = t('Click to modify or add to this previous !type.',
+        array(
+          '!type' => $submission->completed ? 'submission' : 'draft',
+        ));
+    }
     $webform_link_options['attributes']['title'] = $islandora_webform_record->link_help;
-    $webform_link = l($islandora_webform_record->link_text, $link_path, $webform_link_options);
+    $webform_link_options['attributes']['class'][] = $submission->completed ? 'submission' : 'draft';
+    $webform_link = l($link_text, $link_path, $webform_link_options);
   }
   return $webform_link;
 }

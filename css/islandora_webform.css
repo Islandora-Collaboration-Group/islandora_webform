@@ -13,3 +13,11 @@
   margin:10px 0px;
   border:1px solid darkgray;
 }
+
+#islandora_webform_object_tag_links .webform-links-wrapper a.webform-link {
+  display:block;
+}
+#islandora_webform_object_tag_links .webform-links-wrapper.opened a.webform-link.ajax-processed {
+  display:none;
+  visibility:hidden;
+}
