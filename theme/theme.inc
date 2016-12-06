@@ -78,7 +78,7 @@ function theme_islandora_webform_links(array $vars) {
     }
 
     if ($webform->scope != 'tagged') {
-      $output .= islandora_webform_theme_webform_link($webform, $webform_link_options, $link_mode);
+      $output .= islandora_webform_theme_webform_link($webform, $webform_link_options, $link_mode, $pid);
     }
     else {
       // Determine if this webform is tagged to this object.
@@ -88,7 +88,7 @@ function theme_islandora_webform_links(array $vars) {
       // If so, add the webform link and the remove-tag link for content
       // managers.
       if ($tagged) {
-        $output .= islandora_webform_theme_webform_link($webform, $webform_link_options, $link_mode);
+        $output .= islandora_webform_theme_webform_link($webform, $webform_link_options, $link_mode, $pid);
 
         $path = 'islandora_webform/' . $webform->entity_id . '/untag_object/' . $pid . '/nojs';
 
@@ -142,11 +142,11 @@ function theme_islandora_webform_links(array $vars) {
  * @return string
  *   The themed link, or empty if no access
  */
-function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $link_mode = 'inline') {
+function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $link_mode = 'inline', $pid) {
   $webform_link = '';
   $node = node_load($islandora_webform_record->entity_id);
   module_load_include('inc', 'islandora_webform', 'includes/webform_access');
-  if ($node->status && islandora_webform_user_can_submit_webform($node)) {
+  if ($node->status && islandora_webform_user_can_submit_webform($node, NULL, $pid)) {
     $link_path = $link_mode == 'inline' ? 'islandora_webform/retrieve_form/' . $islandora_webform_record->entity_id . '/nojs' : drupal_get_path_alias('node/' . $islandora_webform_record->entity_id);
     $webform_link_options['attributes']['title'] = $islandora_webform_record->link_help;
     $webform_link = l($islandora_webform_record->link_text, $link_path, $webform_link_options);

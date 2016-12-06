@@ -9,6 +9,8 @@
 */
 define('ISLANDORA_WEBFORM_ISIW_PREDICATE', 'isIWContributed');
 define('ISLANDORA_WEBFORM_HASIW_PREDICATE', 'hasIW');
+define('ISLANDORA_WEBFORM_SUBMIT_EVER_LIMIT_ID', -910);
+define('ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID', -911);
 
 /**
  * Hook implementations...
@@ -135,15 +137,36 @@ function islandora_webform_theme() {
 }
 
 /**
+ * Implements hook_node_load().
+ *
+ * Add islandora object to $node->webform where
+ */
+function islandora_webform_node_load($nodes, $types) {
+  $args = drupal_get_query_parameters();
+  if (!empty($args['pid'])) {
+    $object = islandora_object_load($args['pid']);
+    if($object) {
+      foreach($nodes as &$node) {
+        if (!empty($node->webform)) {
+          $node->webform['islandora_object'] = $object;
+        }
+      }
+    }
+    else {
+      drupal_set_message(t('Islandora object :pid not found!', array(':pid' => $args['pid'])), 'warning', FALSE);
+    }
+  }
+}
+
+/**
  * Implements hook_form_alter().
  */
 function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
-  if (isset($form['#node']->type) && $form['#node']->type == 'webform' && !empty($form['submitted']['islandora_object_pid'])) {
-    $args = drupal_get_query_parameters();
-    if (!empty($args['pid'])) {
-      $object = islandora_object_load($args['pid']);
+  if (isset($form['#node']->type) && !empty($form['#node']->webform) && !empty($form['submitted']['islandora_object_pid'])) {
+    if (!empty($form['#node']->webform['islandora_object'])) {
+      $object = $form['#node']->webform['islandora_object'];
       $form['submitted']['#prefix'] = '<h2 class="object-label">In regards to: <em>' . $object->label . '</em></h2>';
-      $form['submitted']['islandora_object_pid']['#default_value'] = $args['pid'];
+      $form['submitted']['islandora_object_pid']['#default_value'] = $object->id;
       if (!user_access('manage islandora webform')) {
         $form['submitted']['islandora_object_pid']['#type'] = 'hidden';
         $form['submitted']['islandora_object_pid']['#title_display'] = 'invisible';
@@ -179,8 +202,16 @@ function islandora_webform_form_webform_configure_form_alter(&$form, &$form_stat
     $form['webform_ajax_fieldset']['webform_ajax']['#title'] =  t('Inline AJAX mode');
     $form['webform_ajax_fieldset']['webform_ajax']['#description'] = t('When set, all page changes (from pagebreak component), and Islandora webform submissions will be achieved inline using AJAX.');
   }
-}
 
+  // Per object limits.
+  $form['submission']['total_submit_limit']['total_submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_EVER_LIMIT_ID] = t('ever, per Islandora object');
+  $form['submission']['submit_limit']['submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_EVER_LIMIT_ID] = t('ever, per Islandora object');
+  // Only include "at a time" options if islandora_webform_ingest is enabled.
+  if(module_exists('islandora_webform_ingest')) {
+    $form['submission']['total_submit_limit']['total_submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID] = t('at a time, per Islandora object');
+    $form['submission']['submit_limit']['submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID] = t('at a time, per Islandora object');
+  }
+}
 
 
 /**
@@ -380,4 +411,16 @@ function iw_get_solr_data_array($pid, $fields = '', $filter = NULL) {
     }
   }
   return array();
+}
+
+
+/**
+ * Implements hook_islandora_webform_object_submission_query_count_alter().
+ */
+function islandora_webform_islandora_webform_object_submission_query_count_alter(&$query, $params) {
+  // Don't count submissions that have been ingested.
+  if($params['interval'] == ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID) {
+    $query->leftJoin('islandora_webform_ingestions', 'iwi', 'iwi.sid = s.sid AND iwi.nid = s.nid');
+    $query->isNull('iwi.sid');
+  }
 }
