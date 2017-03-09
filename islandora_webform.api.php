@@ -22,6 +22,39 @@ function hook_iw_results_object_submissions_page_element_alter(&$element) {
 }
 
 /**
+ * Modify islandora inline webform ajax commands.
+ *
+ * This hook permits modules to modify the ajax commands that set behavior
+ * when an inline webform link is clicked when webform_ajax is enabled.
+ * The $commands array variable is passed by reference and may be modified by
+ * this hook.
+ *
+ * @param &$commands
+ *   An array of ajax commands. Provided commands have the following keys:
+ *     'remove-container',
+ *     'remove-wrapper-class'
+ *     'add-wrapper-class'
+ *     'jquery-selector'
+ *   Look at the _iw_inline_webform() function for details.
+ *
+ * @param array $vars
+ *   An array of useful data, indexed as follows:
+ *   'webform' object
+ *     The webform node
+ *   'form' array
+ *     The render array for the webform
+ *   'html' string
+ *     The rendered html of that webform
+ *
+ */
+function hook_iw_inline_webform_ajax_commands_alter(&$commands, $vars) {
+
+  // We're going to have the webform appear in a different place on the page.
+  $jquery_selector = '#my_inline_webform_ajax_target_' . $vars['webform']->nid;
+  $commands['jquery-selector'] = ajax_command_after($jquery_selector, $vars['html']);
+}
+
+/**
  * Modify islandora webform link markup.
  *
  * @param $webform_link
