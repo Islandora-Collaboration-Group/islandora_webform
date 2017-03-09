@@ -20,3 +20,18 @@
 function hook_iw_results_object_submissions_page_element_alter(&$element) {
   $element['table']['#prefix'] = '<h2>Blah blah</h2>';
 }
+
+/**
+ * Modify islandora webform link markup.
+ *
+ * @param $webform_link
+ *   Html for the webform link.
+ *
+ * @param $islandora_webform_record
+ */
+function hook_islandora_webform_theme_webform_link_alter(&$webform_link, $islandora_webform_record) {
+  // Example: Display the help text above the link.
+  if(!empty($islandora_webform_record->link_help)) {
+    $webform_link = '<div class="webform-link-label">'. $islandora_webform_record->link_help . '</div><div class="webform-link">' . $webform_link . '</div>';
+  }
+}
