@@ -256,19 +256,20 @@ function islandora_webform_node_access($node, $op, $account) {
  */
 function islandora_webform_islandora_view_object_alter(&$object, &$rendered) {
 
-  module_load_include('inc', 'islandora_webform', 'includes/utilities');
-  $webforms = islandora_webform_object_get_webforms($object);
+  if (variable_get('islandora_webform_link_object_view_alter', 1)) {
+    module_load_include('inc', 'islandora_webform', 'includes/utilities');
+    $webforms = islandora_webform_object_get_webforms($object);
 
-  if (!empty($webforms)) {
-    $rendered += array(
-      'webform_links' => theme('islandora_webform_links', array(
-        'webform_data' => $webforms,
-        'islandora_object' => $object,
-        )
-      ),
-    );
+    if (!empty($webforms)) {
+      $rendered += array(
+        'webform_links' => theme('islandora_webform_links', array(
+            'webform_data' => $webforms,
+            'islandora_object' => $object,
+          )
+        ),
+      );
+    }
   }
-
 }
 
 /**
