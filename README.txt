@@ -47,7 +47,7 @@ Configuration is found at Islandora > Configuration > Islandora Webform (/admin/
    controls whether clicking on a webform link opens a new page/tab or replaces
    the current window.
 2. "Append webform links to bottom of object view?": Uncheck this if you want to
-   override the normal positioning of the webform links (below the object display).
+   override the normal positioning of the webform links below the object display.
 
 
 Permissions
