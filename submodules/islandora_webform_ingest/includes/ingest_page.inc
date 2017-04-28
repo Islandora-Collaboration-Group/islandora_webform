@@ -239,6 +239,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   $form['#submission'] = $submission;
   $form['#iwi_settings'] = $iwi_settings;
   $form['#ingest_cmodel'] = $ingest_content_model;
+
   return $form;
 
 }
@@ -318,7 +319,13 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
         // Handle other datastream mimetypes.
         else {
-          $value_type = gettype($form_state['values'][$dsid]);
+          $value = $form_state['values'][$dsid];
+          // Rendered webform components put the value inside an array with the
+          // structure `array('component' => [value]);`
+          if(is_array($value)) {
+            $value = reset($value);
+          }
+          $value_type = gettype($value);
           // Handle text datastreams.
           $text_value_types = array('integer', 'double', 'string');
           if ($association['mime'] == 'text/plain' && in_array($value_type, $text_value_types)) {
@@ -331,7 +338,7 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
             else {
               $datastream = $object[$dsid];
             }
-            $datastream->content = $form_state['values'][$dsid];
+            $datastream->content = $value;
             $datastream_count++;
           }
           // Handle file ingestion.
