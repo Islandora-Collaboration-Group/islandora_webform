@@ -229,5 +229,6 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
     $webform_link_options['attributes']['title'] = $islandora_webform_record->link_help;
     $webform_link = l($link_text, $link_path, $webform_link_options);
   }
+  drupal_alter('islandora_webform_theme_webform_link', $webform_link, $islandora_webform_record);
   return $webform_link;
 }
