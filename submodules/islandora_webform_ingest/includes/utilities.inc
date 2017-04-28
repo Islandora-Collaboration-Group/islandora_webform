@@ -86,6 +86,9 @@ function iwi_ingestible_datastreams(FedoraObject $object, $mimetypes = array('te
       }
     }
 
+    // Support altering the ingestible datastreams list.
+    drupal_alter('iwi_ingestible_datastreams', $results, $object, $mimetypes);
+
     return $results;
   }
 }

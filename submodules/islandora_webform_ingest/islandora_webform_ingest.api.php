@@ -120,3 +120,14 @@ function hook_iwi_set_form_alter(&$form, $form_state, $submission) {
   }
 }
 
+/**
+ * Include TRANSCRIPT in IWI target datastreams.
+ *
+ * return an array with a minimum of 'dsid' and 'mime' values.
+ */
+function hook_iwi_ingestible_datastreams_alter(&$datastreams, $object, $mimetypes) {
+  $datastreams['TRANSCRIPT (text/plain)'] = array(
+    'dsid' => 'TRANSCRIPT',
+    'mime' => 'text/plain',
+  );
+}
