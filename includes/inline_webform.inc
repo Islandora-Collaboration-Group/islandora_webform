@@ -26,7 +26,7 @@
 function _iw_inline_webform($webform, $ajax, $submission = FALSE) {
   $enabled = TRUE;
   $preview = FALSE;
-  $form = drupal_get_form('webform_client_form_' . $webform->nid, $webform, $submission, $enabled);
+  $form = drupal_get_form('webform_client_form_' . $webform->nid, $webform, $submission, $submission->is_draft);
   if ($ajax == 'ajax') {
     // We remove the container of the form.
     $commands[] = ajax_command_remove('.webform-links-wrapper.opened > div:not(.webform-links)');
