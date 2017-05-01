@@ -607,3 +607,50 @@ function iw_submission_states_form_submit(&$form, &$form_state) {
   }
   drupal_goto($url['path'], $url);
 }
+
+function _islandora_webform_schema_alter(&$schema) {
+  // Define our additional fields.
+  if (isset($schema['webform'])) {
+    // Declare columns for workflow state submission permissions. We add these
+    // whether or not the webform_workflow module is present, since it may be
+    $schema['webform']['fields']['user_ws_limits'] = array(
+      'description' => 'Per user webform workflow state limits as a serialized array',
+      'type' => 'text',
+    );
+    $schema['webform']['fields']['total_ws_limits'] = array(
+      'description' => 'Total webform workflow state limits as a serialized array',
+      'type' => 'text',
+    );
+  }
+}
+
+/**
+ * Implements hook_modules_enabled().
+ */
+function islandora_webform_modules_enabled($modules) {
+  if(in_array('webform_workflow', $modules)) {
+    $schema = array('webform' => array());
+    _islandora_webform_schema_alter($schema);
+    foreach ($schema as $table => $table_def) {
+      foreach ($table_def['fields'] as $field => $spec) {
+        db_add_field($table, $field, $spec);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_modules_disabled().
+ */
+function islandora_webform_modules_disabled($modules) {
+  if(in_array('webform_workflow', $modules)) {
+    $schema = array('webform' => array());
+    _islandora_webform_schema_alter($schema);
+    foreach ($schema as $table => $table_def) {
+      foreach ($table_def['fields'] as $field => $spec) {
+        db_drop_field($table, $field);
+      }
+    }
+  }
+
+}

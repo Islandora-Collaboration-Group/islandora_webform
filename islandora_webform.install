@@ -102,3 +102,45 @@ function islandora_webform_requirements($phase) {
   }
   return $requirements;
 }
+
+/**
+ * Implements hook_schema_alter().
+ */
+function islandora_webform_schema_alter(&$schema) {
+  _islandora_webform_schema_alter($schema);
+}
+
+/**
+ * Implements hook_install().
+ */
+function islandora_webform_install() {
+  // Update schema. Add our additional fields.
+  $schema = array('webform' => array());
+  islandora_webform_schema_alter($schema);
+  foreach ($schema as $table => $table_def) {
+    foreach ($table_def['fields'] as $field => $spec) {
+      db_add_field($table, $field, $spec);
+    }
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function islandora_webform_uninstall() {
+  // Update schema. Drop our additional fields.
+  $schema = array('webform' => array());
+  islandora_webform_schema_alter($schema);
+  foreach ($schema as $table => $table_def) {
+    foreach ($table_def['fields'] as $field => $spec) {
+      db_drop_field($table, $field);
+    }
+  }
+}
+
+/**
+ * Add webform_workflow state permissions schema to webform table.
+ */
+function islandora_webform_update_7001() {
+  islandora_webform_install();
+}
