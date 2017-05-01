@@ -479,3 +479,131 @@ function islandora_webform_islandora_webform_object_submission_query_count_alter
     $query->isNull('iwi.sid');
   }
 }
+
+/**
+ * Implements hook_iw_results_object_submissions_page_element_alter().
+ *
+ * If webform workflow module is enabled, we want to do two things:
+ * - Provide a select list to filter the results by workflow state
+ * - Display the workflow states in the table.
+ *
+ * @param $element
+ */
+function islandora_webform_iw_results_object_submissions_page_element_alter(&$element) {
+  if(module_exists('webform_workflow')) {
+
+    // Add the workflow state selector form.
+    $element['selector'] = drupal_get_form('iw_submissions_states_form', $element['#object']);
+    $element['selector']['#weight'] = -1;
+
+    // Find the index key ($hkey) for the 'Operations' column in the table.
+    $map = array_keys($element['#submissions']);
+    foreach ($element['table']['#header'] as $hkey => $header) {
+      if (isset($header['data']) && $header['data'] == 'Operations') {
+        break;
+      }
+    }
+
+    // Splice in the 'State' label in the table header.
+    $element['table']['#header'] =
+      array_slice($element['table']['#header'], 0, $hkey, true) +
+      array('data' => t('State')) +
+      array_slice($element['table']['#header'], $hkey, count($element['table']['#header'])-$hkey, true);
+
+    // Splice in the workflow states for each row in the table.
+    foreach($map as $row_index => $sid) {
+      $workflow_state = webform_workflow_state_load_by_submission($element['#submissions'][$sid]);
+      $element['table']['#rows'][$row_index] =
+        array_slice($element['table']['#rows'][$row_index], 0, $hkey, TRUE) +
+        array($hkey => '<span class="webform-workflow-state-label webform-workflow-state-color-' . $workflow_state->color . '">' . $workflow_state->label . '</span>') +
+        array_slice($element['table']['#rows'][$row_index], $hkey, count($element['table']['#rows'][$row_index]) - $hkey, TRUE);
+    }
+  }
+}
+
+/**
+ * Webform workflow state filter form for object submissions page.
+ *
+ * @param $form
+ * @param $form_state
+ * @param $object
+ *
+ * @return array
+ *   a Drupal form render array.
+ */
+function iw_submissions_states_form($form, &$form_state, $object) {
+  if (module_load_include('inc', 'islandora_webform', 'includes/utilities')) {
+
+    $webforms = islandora_webform_object_get_webforms($object);
+    if (!empty($webforms)) {
+      $map = array();
+      $params = drupal_get_query_parameters();
+      $map['wfid'] = !empty($params['wfid']) ? $params['wfid'] : NULL;
+      $map['wsid'] = !empty($params['wsid']) ? $params['wsid'] : NULL;
+      $default_value = implode('-', $map);
+      $options = array('' => t('All'));
+      foreach ($webforms as $webform) {
+        $node = node_load($webform->entity_id);
+        $available_states = webform_workflow_get_available_states($node);
+        foreach ($available_states as $available_state) {
+          if(count($webforms) > 1) {
+            $label = $node->title . ' - ' . $available_state->label;
+          }
+          else {
+            $label = $available_state->label;
+          }
+          $options[$webform->entity_id . '-' . $available_state->wsid] = $label;
+        }
+      }
+
+      $form['wws_select'] = array(
+        '#type' => 'select',
+        '#options' => $options,
+        '#default_value' => $default_value,
+        '#attributes' => array(
+          // We want to auto-submit.
+          'onChange' => 'this.form.submit();',
+        ),
+      );
+
+      $form['#submit'][] = 'iw_submission_states_form_submit';
+
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Apply'),
+        // the submit button is necessary, but it can be hidden
+        '#attributes' => array(
+          'style' => array('display: none;'),
+        ),
+      );
+
+      return $form;
+    }
+  }
+  return array();
+}
+
+/**
+ * Submit handler for iw_submissions_states_form().
+ *
+ * Detects if filtering by webform workflow state, and if so, loads the
+ * page with that filter applied.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function iw_submission_states_form_submit(&$form, &$form_state) {
+  $destination = drupal_get_destination();
+  $url = drupal_parse_url($destination['destination']);
+  $filter = explode('-', $form_state['input']['wws_select']);
+
+  if(count($filter) > 1) {
+    $url['query']['wfid'] = array_shift($filter);
+    $url['query']['wsid'] = array_shift($filter);
+  }
+  else {
+    unset($url['query']['wfid']);
+    unset($url['query']['wsid']);
+  }
+  drupal_goto($url['path'], $url);
+}
