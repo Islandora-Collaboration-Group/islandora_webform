@@ -256,6 +256,48 @@ function islandora_webform_form_webform_configure_form_alter(&$form, &$form_stat
     $form['submission']['total_submit_limit']['total_submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID] = t('at a time, per Islandora object');
     $form['submission']['submit_limit']['submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID] = t('at a time, per Islandora object');
   }
+  $workflow_state_options = array('-1' => t('In Draft (core webform submission state)'));
+  if(module_exists('webform_workflow')) {
+    $available_states = webform_workflow_get_available_states($node);
+    if(count($available_states)) {
+      foreach ($available_states as $available_state) {
+        $workflow_state_options[$available_state->wsid] = $available_state->label;
+      }
+    }
+
+
+    $form['submission']['total_submit_limit']['total_workflow_states'] = array(
+      '#title' => t('Workflow states'),
+      '#type' => 'checkboxes',
+      '#description' => t('Prohibit new submissions while existing submissions <em>from any user</em> are present with any of the selected workflow states.'),
+      '#options' => $workflow_state_options,
+    );
+    if(!empty($node->webform['total_ws_limits'])) {
+      $form['submission']['total_submit_limit']['total_workflow_states']['#default_value'] = unserialize($node->webform['total_ws_limits']);
+    }
+
+    $form['submission']['submit_limit']['user_workflow_states'] = array(
+      '#title' => t('Workflow states'),
+      '#type' => 'checkboxes',
+      '#description' => t('Prohibit new submissions while existing submissions <em>from this user</em> are present with any of the selected workflow states.'),
+      '#options' => $workflow_state_options,
+    );
+    if(!empty($node->webform['user_ws_limits'])) {
+      $form['submission']['submit_limit']['user_workflow_states']['#default_value'] = unserialize($node->webform['user_ws_limits']);
+    }
+    $form['#submit'][] = 'islandora_webform_webform_config_submit';
+  }
+}
+
+function islandora_webform_webform_config_submit(&$form, &$form_state) {
+  if(module_exists('webform_workflow')) {
+    $total_ws_limits = !empty($form_state['input']['total_workflow_states']) ? serialize(array_filter($form_state['input']['total_workflow_states'])) : NULL;
+    $user_ws_limits = !empty($form_state['input']['user_workflow_states']) ? serialize(array_filter($form_state['input']['user_workflow_states'])) : NULL;
+    $node = node_load($form['#node']->nid);
+    $node->webform['total_ws_limits'] = $total_ws_limits;
+    $node->webform['user_ws_limits'] = $user_ws_limits;
+    node_save($node);
+  }
 }
 
 
