@@ -71,7 +71,7 @@ function islandora_webform_user_can_submit_webform($node, $user = NULL, $pid = N
 
   // Check if the user can add another submission if there is a limit on total
   // submissions.
-  if (!$draft_user_submissions_count && $node->webform['total_submit_limit'] != -1) { // -1: Submissions are never throttled.
+  if (empty($draft_user_submissions_count) && $node->webform['total_submit_limit'] != -1) { // -1: Submissions are never throttled.
     module_load_include('inc', 'webform', 'includes/webform.submissions');
 
 
