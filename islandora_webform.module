@@ -9,8 +9,8 @@
 */
 define('ISLANDORA_WEBFORM_ISIW_PREDICATE', 'isIWContributed');
 define('ISLANDORA_WEBFORM_HASIW_PREDICATE', 'hasIW');
-define('ISLANDORA_WEBFORM_SUBMIT_EVER_LIMIT_ID', -910);
-define('ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID', -911);
+define('ISLANDORA_WEBFORM_SUBMIT_PER_OBJECT_LIMIT_ID', -910);
+//define('ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID', -911);
 
 /**
  * Hook implementations...
@@ -248,45 +248,47 @@ function islandora_webform_form_webform_configure_form_alter(&$form, &$form_stat
     $form['webform_ajax_fieldset']['webform_ajax']['#description'] = t('When set, all page changes (from pagebreak component), and Islandora webform submissions will be achieved inline using AJAX.');
   }
 
+  $workflow_state_options = array(
+    'draft' => t('In Draft (core webform submission state)'),
+    'completed' => t('Completed (core webform submission state)'),
+    'ingested' => t('Ingested (islandora webform submission state)'),
+    'not-ingested' => t('Not ingested (islandora webform submission state)'),
+  );
+
   // Per object limits.
-  $form['submission']['total_submit_limit']['total_submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_EVER_LIMIT_ID] = t('ever, per Islandora object');
-  $form['submission']['submit_limit']['submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_EVER_LIMIT_ID] = t('ever, per Islandora object');
-  // Only include "at a time" options if islandora_webform_ingest is enabled.
-  if(module_exists('islandora_webform_ingest')) {
-    $form['submission']['total_submit_limit']['total_submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID] = t('at a time, per Islandora object');
-    $form['submission']['submit_limit']['submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID] = t('at a time, per Islandora object');
-  }
-  $workflow_state_options = array('-1' => t('In Draft (core webform submission state)'));
-  if(module_exists('webform_workflow')) {
+  $form['submission']['total_submit_limit']['total_submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_PER_OBJECT_LIMIT_ID] = t('per Islandora object');
+  $form['submission']['submit_limit']['submit_interval']['#options'][ISLANDORA_WEBFORM_SUBMIT_PER_OBJECT_LIMIT_ID] = t('per Islandora object');
+
+  // Add in webform_workflow states
+  if (module_exists('webform_workflow')) {
     $available_states = webform_workflow_get_available_states($node);
-    if(count($available_states)) {
+    if (count($available_states)) {
       foreach ($available_states as $available_state) {
         $workflow_state_options[$available_state->wsid] = $available_state->label;
       }
     }
-
-
-    $form['submission']['total_submit_limit']['total_workflow_states'] = array(
-      '#title' => t('Workflow states'),
-      '#type' => 'checkboxes',
-      '#description' => t('Prohibit new submissions while existing submissions <em>from any user</em> are present with any of the selected workflow states.'),
-      '#options' => $workflow_state_options,
-    );
-    if(!empty($node->webform['total_ws_limits'])) {
-      $form['submission']['total_submit_limit']['total_workflow_states']['#default_value'] = unserialize($node->webform['total_ws_limits']);
-    }
-
-    $form['submission']['submit_limit']['user_workflow_states'] = array(
-      '#title' => t('Workflow states'),
-      '#type' => 'checkboxes',
-      '#description' => t('Prohibit new submissions while existing submissions <em>from this user</em> are present with any of the selected workflow states.'),
-      '#options' => $workflow_state_options,
-    );
-    if(!empty($node->webform['user_ws_limits'])) {
-      $form['submission']['submit_limit']['user_workflow_states']['#default_value'] = unserialize($node->webform['user_ws_limits']);
-    }
-    $form['#submit'][] = 'islandora_webform_webform_config_submit';
   }
+
+  $form['submission']['total_submit_limit']['total_workflow_states'] = array(
+    '#title' => t('Workflow states'),
+    '#type' => 'checkboxes',
+    '#description' => t('Prohibit new submissions while existing submissions <em>from any user</em> are present with any of the selected workflow states.'),
+    '#options' => $workflow_state_options,
+  );
+  if (!empty($node->webform['total_ws_limits'])) {
+    $form['submission']['total_submit_limit']['total_workflow_states']['#default_value'] = unserialize($node->webform['total_ws_limits']);
+  }
+
+  $form['submission']['submit_limit']['user_workflow_states'] = array(
+    '#title' => t('Workflow states'),
+    '#type' => 'checkboxes',
+    '#description' => t('Prohibit new submissions while existing submissions <em>from this user</em> are present with any of the selected workflow states.'),
+    '#options' => $workflow_state_options,
+  );
+  if (!empty($node->webform['user_ws_limits'])) {
+    $form['submission']['submit_limit']['user_workflow_states']['#default_value'] = unserialize($node->webform['user_ws_limits']);
+  }
+  $form['#submit'][] = 'islandora_webform_webform_config_submit';
 }
 
 function islandora_webform_webform_config_submit(&$form, &$form_state) {
@@ -357,7 +359,7 @@ function islandora_webform_node_access($node, $op, $account) {
     }
     if ($is_islandora_webform) {
       $args = drupal_get_query_parameters();
-      if (!isset($args['pid'])) {
+      if (!isset($args['pid']) && empty($node->webform['islandora_object'])) {
         drupal_set_message(t('No fedora object PID was defined'), 'error');
         return NODE_ACCESS_DENY;
       }
@@ -515,11 +517,11 @@ function islandora_webform_webform_submission_render_alter(&$renderable) {
  * Implements hook_islandora_webform_object_submission_query_count_alter().
  */
 function islandora_webform_islandora_webform_object_submission_query_count_alter(&$query, $params) {
-  // Don't count submissions that have been ingested.
-  if($params['interval'] == ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID) {
-    $query->leftJoin('islandora_webform_ingestions', 'iwi', 'iwi.sid = s.sid AND iwi.nid = s.nid');
-    $query->isNull('iwi.sid');
-  }
+//  // Don't count submissions that have been ingested.
+//  if($params['interval'] == ISLANDORA_WEBFORM_SUBMIT_ATATIME_LIMIT_ID) {
+//    $query->leftJoin('islandora_webform_ingestions', 'iwi', 'iwi.sid = s.sid AND iwi.nid = s.nid');
+//    $query->isNull('iwi.sid');
+//  }
 }
 
 /**
@@ -695,4 +697,23 @@ function islandora_webform_modules_disabled($modules) {
     }
   }
 
+}
+
+/**
+ * Implements hook_webform_submission_access().
+ *
+ * Webform_workflow denies submission edit access when there is no workflow
+ * state - which is not helpful.
+ * Here, we grant access if the submission state is in draft, deny if not.
+ */
+function islandora_webform_webform_submission_access($node, $submission, $op = 'view', $account) {
+  if (!$account) {
+    global $user;
+    $account = $user;
+  }
+  // Only handle cases where the workflow state is empty. Otherwise, we let
+  // the webform workflow state permissions handle it.
+  if (module_exists('webform_workflow') && $op == 'edit' && empty($submission->_webform_workflow_state->wsid) && $account->uid == $submission->uid) {
+    return $submission->is_draft && user_access('edit own webform submissions');
+  }
 }

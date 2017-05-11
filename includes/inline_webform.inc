@@ -26,6 +26,9 @@
 function _iw_inline_webform($webform, $ajax, $submission = FALSE) {
   $enabled = TRUE;
   $preview = FALSE;
+  if(!empty($submission->islandora_object)) {
+    $webform->webform['islandora_object'] = $submission->islandora_object;
+  }
   $form = drupal_get_form('webform_client_form_' . $webform->nid, $webform, $submission, $submission->is_draft);
   if ($ajax == 'ajax') {
     // We remove the container of the form.
@@ -43,6 +46,6 @@ function _iw_inline_webform($webform, $ajax, $submission = FALSE) {
     );
   }
   else {
-    return render($form);
+    return $form;
   }
 }
