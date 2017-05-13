@@ -33,6 +33,13 @@ function islandora_webform_admin(array $form, array &$form_state) {
             'same' => "Same window",
           ),
         ),
+        'islandora_webform_link_object_view_alter' => array(
+          '#type' => 'checkbox',
+          '#title' => t('Append webform links to bottom of object view?'),
+          '#default_value' => variable_get('islandora_webform_link_object_view_alter', 1),
+          '#description' => t('Unchecking this option will require that you customize the theming of  object pages in order for the webform links to appear. See islandora_webform_theme() and theme_islandora_webform_links()'),
+          '#return_value' => 1,
+        ),
       ),
     ),
   );

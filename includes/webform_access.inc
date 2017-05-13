@@ -41,6 +41,14 @@ function islandora_webform_user_can_submit_webform($node, $user = NULL, $pid = N
   }
 
 
+  // Get a count of previous submissions by this user. Note that the
+  // webform_submission_access() function may disable the page cache for
+  // anonymous users if they are allowed to edit their own submissions!
+  if ($page && webform_submission_access($node, NULL, 'list')) {
+    module_load_include('inc', 'webform', 'includes/webform.submissions');
+    $submission_count = webform_get_submission_count($node->nid, $user->uid);
+  }
+
   // Check if this page is cached or not.
   $cached = $user->uid == 0 && (variable_get('cache', 0) || drupal_page_is_cacheable() === FALSE);
 
@@ -58,7 +66,7 @@ function islandora_webform_user_can_submit_webform($node, $user = NULL, $pid = N
       $user_submissions = islandora_webform_object_submission_count($node->nid, $pid, $node->webform['submit_interval'], $user->uid, $ws_limits);
         $draft_user_submissions = array_filter($user_submissions['results'], function($r) {return $r->is_draft == 1;});
         $draft_user_submissions_count = count($draft_user_submissions);
-      if (!$draft_user_submissions_count && $node->webform['submit_limit'] <= $user_submissions['count']) {
+      if (empty($draft_user_submissions_count) && $node->webform['submit_limit'] <= $user_submissions['count']) {
         $enabled = FALSE;
       }
 

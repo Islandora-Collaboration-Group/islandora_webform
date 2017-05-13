@@ -46,10 +46,7 @@ function theme_islandora_webform_links(array $vars) {
       ),
     ),
     'html' => TRUE,
-    'query' => array(
-      $destination,
-
-    ),
+    'query' => $destination,
   );
   $untag_link_options = array(
     'attributes' => array(
@@ -59,9 +56,7 @@ function theme_islandora_webform_links(array $vars) {
       ),
     ),
     'html' => TRUE,
-    'query' => array(
-      $destination,
-    ),
+    'query' => $destination,
   );
 
   $link_mode = variable_get('islandora_webform_link_target', 'new');
@@ -71,7 +66,7 @@ function theme_islandora_webform_links(array $vars) {
     $swebform_node = node_load($webform->entity_id);
     $webform_node_data = $swebform_node->webform;
 
-    $jqid = 'iw_iwebform_links_' . $webform->entity_id;
+    $jqid = 'iw_webform_links_' . $webform->entity_id;
 
     $render[$jqid] = array(
       '#type' => 'container',
@@ -197,6 +192,7 @@ function theme_islandora_webform_links(array $vars) {
       // If so, add the webform link and the remove-tag link for content
       // managers.
       if ($tagged) {
+
         $render[$jqid]['webform-links'][$pid] = islandora_webform_theme_webform_link($webform, $webform_link_options, $pid, $link_mode);
 
         $path = 'islandora_webform/' . $webform->entity_id . '/untag_object/' . $pid . '/nojs';
@@ -230,7 +226,7 @@ function theme_islandora_webform_links(array $vars) {
         if (drupal_valid_path($path, TRUE)) {
           $tag_link_render = array(
             '#theme' => 'link',
-            '#text' => $webform->link_text,
+            '#text' => t('add "!text" form link', array('!text' => $webform->link_text)),
             '#path' => $path,
             '#options' => $tag_link_options,
           );
@@ -271,6 +267,7 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
   $webform_link = array(
     '#type' => 'container',
     '#attributes' => array(
+      'class' => array('webform-link'),
     ),
   );
   $islandora_webform_record->link_mode = $link_mode;
