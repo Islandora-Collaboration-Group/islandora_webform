@@ -116,6 +116,11 @@ function theme_islandora_webform_links(array $vars) {
 //      && !webform_submission_total_limit_check($swebform_node))
 //    ) {
 
+    $tracking_mode = webform_variable_get('webform_tracking_mode');
+    $cookie_name = 'webform-' . $swebform_node->nid;
+    if (!empty($pid)) {
+      $cookie_name .= '-' . $pid;
+    }
       // Get a list of submission ids that this user has created for this object
       // and this webform.
       $query = db_select('webform_submissions', 's')
@@ -124,10 +129,22 @@ function theme_islandora_webform_links(array $vars) {
       if ($user->uid) {
         $query->condition('uid', $user->uid);
       }
+    // Handle if user provided is anonymous but has a cookie that matches. We search against
+    // the submission.modified time, if so.
+    elseif ($user->uid === 0
+      && ($tracking_mode === 'cookie' || $tracking_mode === 'strict')
+      && isset($_COOKIE[$cookie_name])
+      && is_array($_COOKIE[$cookie_name])
+    ) {
+      $query->condition('s.modified', end($_COOKIE[$cookie_name]));
+      $query->condition('s.uid', $user->uid);
+
+    }
       else {
         $query->condition('remote_addr', ip_address());
-        $query->condition('uid', '0');
+      $query->condition('uid', $user->uid);
       }
+
       // Join the submitted data table to look for the PID of this object.
       $query->join('webform_submitted_data', 'd', "d.sid = s.sid");
       $query->condition('d.data', $pid);
@@ -252,6 +269,7 @@ function theme_islandora_webform_links(array $vars) {
  *   The themed link, or empty if no access
  */
 function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $pid, $link_mode = 'inline', $sid = NULL) {
+  global $user;
   $webform_link = array(
     '#type' => 'container',
     '#attributes' => array(
