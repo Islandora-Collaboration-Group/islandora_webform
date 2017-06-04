@@ -71,10 +71,10 @@ function theme_islandora_webform_links(array $vars) {
     $render[$jqid] = array(
       '#type' => 'container',
       '#attributes' => array(
+        'id' => $jqid,
         'class' => array(
           'webform-links-wrapper'
         ),
-        'id' => $jqid,
       ),
       '#entity_id' => $webform->entity_id,
       '#entity' => $swebform_node,
@@ -121,14 +121,14 @@ function theme_islandora_webform_links(array $vars) {
     if (!empty($pid)) {
       $cookie_name .= '-' . $pid;
     }
-      // Get a list of submission ids that this user has created for this object
+    // Get a list of submission ids that this user has created for this object
       // and this webform.
       $query = db_select('webform_submissions', 's')
         ->condition('s.nid', $swebform_node->nid)
         ->fields('s', array('sid'));
-      if ($user->uid) {
-        $query->condition('uid', $user->uid);
-      }
+    if ($user->uid) {
+      $query->condition('uid', $user->uid);
+    }
     // Handle if user provided is anonymous but has a cookie that matches. We search against
     // the submission.modified time, if so.
     elseif ($user->uid === 0
@@ -140,12 +140,12 @@ function theme_islandora_webform_links(array $vars) {
       $query->condition('s.uid', $user->uid);
 
     }
-      else {
-        $query->condition('remote_addr', ip_address());
+    else {
+      $query->condition('remote_addr', ip_address());
       $query->condition('uid', $user->uid);
-      }
+    }
 
-      // Join the submitted data table to look for the PID of this object.
+    // Join the submitted data table to look for the PID of this object.
       $query->join('webform_submitted_data', 'd', "d.sid = s.sid");
       $query->condition('d.data', $pid);
       $sids = $query->execute()->fetchCol();
@@ -241,6 +241,13 @@ function theme_islandora_webform_links(array $vars) {
     }
     $webform->user_submissions = $submissions;
   }
+  $render['inline-webform-target'] = array(
+    '#type' => 'container',
+    '#attributes' => array(
+      'id' => 'iw_inline_webform_target',
+    ),
+  );
+
   $alter_data = array(
     'islandora_object' => $object,
     'webforms' => $webforms,
@@ -287,10 +294,10 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
         $link_path = $link_mode == 'inline' ? 'islandora_webform/retrieve_form/' . $islandora_webform_record->entity_id . '/nojs' : drupal_get_path_alias('node/' . $islandora_webform_record->entity_id);
         $link_path .= '/submission/' . $draft_submission->sid . '/edit';
         $when = max($submission->submitted, $submission->completed, $submission->modified);
-        $link_text = t('!type, last worked on !when by !who', array(
+        $link_text = t('!type, last worked on !when by !who (click to edit)', array(
           '!type' => $submission->completed ? 'Submission' : 'Draft',
           '!when' => format_date($when),
-          '!who' => $submission->name,
+          '!who' => $user->uid === $submission->uid ? 'you' :  $submission->name,
         ));
         $class = array('webform-link');
         if($link_mode == 'inline') {
