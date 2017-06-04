@@ -288,6 +288,16 @@ function islandora_webform_form_webform_configure_form_alter(&$form, &$form_stat
   if (!empty($node->webform['user_ws_limits'])) {
     $form['submission']['submit_limit']['user_workflow_states']['#default_value'] = unserialize($node->webform['user_ws_limits']);
   }
+
+  $draft_access = array (
+    '#type' => 'checkbox',
+    '#title' => 'Allow draft editing/saving when new submission is denied.',
+    '#default_value' => !empty($node->webform['draft_access']) ? $node->webform['draft_access'] : 0,
+    '#description' => 'Allow users who are not permitted to create a new submission to edit and save a previously allowed submission that was saved as a draft.',
+  );
+  module_load_include('inc', 'islandora_webform', 'includes/utilities');
+  $form['advanced'] = _iw_array_insert_after('allow_draft', $form['advanced'], 'draft_access', $draft_access);
+
   $form['#submit'][] = 'islandora_webform_webform_config_submit';
 }
 
@@ -295,9 +305,11 @@ function islandora_webform_webform_config_submit(&$form, &$form_state) {
   if(module_exists('webform_workflow')) {
     $total_ws_limits = !empty($form_state['input']['total_workflow_states']) ? serialize(array_filter($form_state['input']['total_workflow_states'])) : NULL;
     $user_ws_limits = !empty($form_state['input']['user_workflow_states']) ? serialize(array_filter($form_state['input']['user_workflow_states'])) : NULL;
+    $draft_access = !empty($form_state['input']['draft_access']) ? $form_state['input']['draft_access'] : 0;
     $node = node_load($form['#node']->nid);
     $node->webform['total_ws_limits'] = $total_ws_limits;
     $node->webform['user_ws_limits'] = $user_ws_limits;
+    $node->webform['draft_access'] = $draft_access;
     node_save($node);
   }
 }
@@ -685,6 +697,14 @@ function _islandora_webform_schema_alter(&$schema) {
     $schema['webform']['fields']['total_ws_limits'] = array(
       'description' => 'Total webform workflow state limits as a serialized array',
       'type' => 'text',
+    );
+    $schema['webform']['fields']['draft_access'] = array(
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE,
+      'default' => 1,
+      'size' => 'tiny',
+      'description' => 'Can a draft submission be edited and submitted when new submissions are not permitted? (0 = No, 1 = Yes)',
     );
   }
 }

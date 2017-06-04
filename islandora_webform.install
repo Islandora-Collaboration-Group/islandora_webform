@@ -119,7 +119,9 @@ function islandora_webform_install() {
   islandora_webform_schema_alter($schema);
   foreach ($schema as $table => $table_def) {
     foreach ($table_def['fields'] as $field => $spec) {
-      db_add_field($table, $field, $spec);
+      if(!db_field_exists($table, $field)) {
+        db_add_field($table, $field, $spec);
+      }
     }
   }
 }
@@ -142,5 +144,12 @@ function islandora_webform_uninstall() {
  * Add webform_workflow state permissions schema to webform table.
  */
 function islandora_webform_update_7001() {
+  islandora_webform_install();
+}
+
+/**
+ * Add draft_access field to webform table.
+ */
+function islandora_webform_update_7002() {
   islandora_webform_install();
 }
