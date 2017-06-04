@@ -152,7 +152,7 @@ function theme_islandora_webform_links(array $vars) {
 
       // If the number of previous submissions is more than one, display links to
       // edit the submissions.
-      if (count($submissions) > 1) {
+      if (count($submissions)) {
         foreach ($submissions as $editable_submission) {
           if($editable_submission->access) {
             $render[$jqid]['webform-links'][$editable_submission->sid] = islandora_webform_theme_webform_link($webform, $webform_link_options, $pid, $link_mode, $editable_submission->sid);
@@ -162,18 +162,6 @@ function theme_islandora_webform_links(array $vars) {
           }
         }
       }
-      // If instead the number of editable submissions is exactly one, don't show links.
-      // Rather, display the form inline.
-      elseif(!empty($submissions)) {
-        $submission = reset($submissions);
-        if($submission->access) {
-          $render[$jqid]['webform-links'][$submission->sid] = _iw_inline_webform($swebform_node, 'nojs', $submission);
-          $render[$jqid]['webform-links'][$submission->sid]['#status'] = 'editable submission';
-          $render[$jqid]['webform-links'][$submission->sid]['#submission'] = $submission;
-          $render[$jqid]['webform-links'][$submission->sid]['#link_mode'] = 'display_form_on_load';
-        }
-      }
-
     // If the webform's scope does not require it to be tagged, check to see if
     // the user is permitted to create a new submission. If so, add a link to do that.
     if ($webform->scope != 'tagged') {
