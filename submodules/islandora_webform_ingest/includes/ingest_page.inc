@@ -276,6 +276,15 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
     foreach ($form_state['datastreams'] as $association) {
       $dsid = $association['dsid'];
+
+      // Get values for non-editable components.
+      if(empty($form_state['values'][$dsid]) && !empty($form[$dsid]['component']['#value'])) {
+        $form_state['values'][$dsid] = $form[$dsid]['component']['#value'];
+        if(is_object($form_state['values'][$dsid])) {
+          $form_state['values'][$dsid] = (array) $form_state['values'][$dsid];
+        }
+      }
+
       if (isset($form_state['values'][$dsid]) && isset($form[$dsid])) {
 
         // Importing via xml form?
@@ -333,12 +342,13 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
             // Create it if not preexisting.
             if (empty($object[$dsid])) {
               $datastream = $object->constructDatastream($dsid, 'M');
+              $datastream->mimeType = $association['mime'];
               $object->ingestDatastream($datastream);
             }
             else {
               $datastream = $object[$dsid];
             }
-            $datastream->content = $value;
+            $datastream->setContentFromString($value);
             $datastream_count++;
           }
           // Handle file ingestion.
@@ -365,12 +375,15 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
                 // Assuming for now everything wen't fine.
                 $datastream_count++;
               }
+              else {
+                drupal_set_message(t('%type is not a supported file type for ingest to %dsid', array(
+                  '%type' => $ext,
+                  '%dsid' => $dsid,
+                ), 'error'));
+              }
             }
             else {
-              drupal_set_message(t('%type is not a supported file type for ingest to %dsid', array(
-                '%type' => $ext,
-                '%dsid' => $dsid,
-              ), 'error'));
+              drupal_set_message(t('File could not be found', array(), 'error'));
             }
           }
           // Respond to invalid types.
