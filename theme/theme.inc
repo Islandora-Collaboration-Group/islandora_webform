@@ -354,9 +354,9 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
       );
     }
 
-    // Let other modules modify the webform link.
-    drupal_alter('islandora_webform_theme_webform_link', $webform_link, $islandora_webform_record);
   }
+  // Let other modules modify the webform link.
+  drupal_alter('islandora_webform_theme_webform_link', $webform_link, $islandora_webform_record, $pid);
 
   return $webform_link;
 }
