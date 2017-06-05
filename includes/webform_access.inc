@@ -330,6 +330,7 @@ function islandora_webform_submission_total_limit_check($node, $pid = NULL) {
       $query->addMetaData('islandora_object', $object);
       $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
       $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
+      $query->condition('d.data', $pid);
     }
   }
 

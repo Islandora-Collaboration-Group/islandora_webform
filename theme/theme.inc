@@ -78,7 +78,6 @@ function theme_islandora_webform_links(array $vars) {
       ),
       '#entity_id' => $webform->entity_id,
       '#entity' => $swebform_node,
-      '#submissions'=> webform_get_submissions($swebform_node->nid),
       'webform-links' => array(
         '#type' => 'container',
         '#attributes' => array(
@@ -88,6 +87,20 @@ function theme_islandora_webform_links(array $vars) {
         ),
       ),
     );
+
+    // Add submissions for this webform and this object.
+    $sids_query = db_select('webform_submissions', 'ws')->fields('ws', array('sid'));
+    $sids_query->distinct();
+    $sids_query->join('webform_submitted_data', 'wd', "wd.sid = ws.sid");
+    $sids_query->join('webform_component', 'wc', "wc.cid = wd.cid AND wc.nid = ws.nid AND wc.form_key = 'islandora_object_pid'");
+    $sids_query->condition('ws.nid', $webform->entity_id);
+    $sids_query->condition('wd.data', $pid);
+    $wosids = $sids_query->execute()->fetchCol();
+    $render[$jqid]['#submissions'] = empty($wosids) ? array() : webform_get_submissions(array(
+      'nid' => $swebform_node->nid,
+      'sid' => $wosids
+    ));
+
     if(module_exists('webform_workflow')) {
       foreach ($render[$jqid]['#submissions'] as &$workflow_state_submission) {
         webform_workflow_state_load_by_submission($workflow_state_submission);
@@ -112,10 +125,6 @@ function theme_islandora_webform_links(array $vars) {
 
     // Show previous submissions by this user if they can be edited.
     global $user;
-//    if (1 || (!webform_submission_user_limit_check($swebform_node)
-//      && !webform_submission_total_limit_check($swebform_node))
-//    ) {
-
     $tracking_mode = webform_variable_get('webform_tracking_mode');
     $cookie_name = 'webform-' . $swebform_node->nid;
     if (!empty($pid)) {
@@ -123,9 +132,11 @@ function theme_islandora_webform_links(array $vars) {
     }
     // Get a list of submission ids that this user has created for this object
       // and this webform.
-      $query = db_select('webform_submissions', 's')
-        ->condition('s.nid', $swebform_node->nid)
-        ->fields('s', array('sid'));
+    $query = $sids_query;
+
+    // Handle different kinds of users.
+    ///////////////////////////////////////
+    // If uid is greater than zero, use it.
     if ($user->uid) {
       $query->condition('uid', $user->uid);
     }
@@ -138,19 +149,16 @@ function theme_islandora_webform_links(array $vars) {
     ) {
       $query->condition('s.modified', end($_COOKIE[$cookie_name]));
       $query->condition('s.uid', $user->uid);
-
     }
+    // If user is anonymous and has no cookie, filter by their ip address.
     else {
       $query->condition('remote_addr', ip_address());
       $query->condition('uid', $user->uid);
     }
 
-    // Join the submitted data table to look for the PID of this object.
-      $query->join('webform_submitted_data', 'd', "d.sid = s.sid");
-      $query->condition('d.data', $pid);
       $sids = $query->execute()->fetchCol();
 
-      $submissions = webform_get_submissions(array(
+      $submissions = empty($sids) ? array() : webform_get_submissions(array(
         'nid' => $swebform_node->nid,
         'sid' => $sids
       ));
@@ -251,6 +259,8 @@ function theme_islandora_webform_links(array $vars) {
   $alter_data = array(
     'islandora_object' => $object,
     'webforms' => $webforms,
+    'submissions' => $submissions,
+    'user-submissions' => $webform->user_submissions,
   );
   // Let other modules modify the complete webform links render array.
   drupal_alter('islandora_theme_webform_links', $render, $alter_data);
