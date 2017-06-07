@@ -883,7 +883,15 @@ function iwi_preview_ingest_submission_form_callback($js, $sid) {
   }
   else {
     module_load_include('inc', 'islandora_webform_ingest', 'includes/ingest_page');
-    return drupal_get_form('iwi_preview_ingest_submission_form', $sid);
+    $form = drupal_get_form('iwi_preview_ingest_submission_form', $sid);
+    $output = array(
+    );
+    if(!empty($form['#submission_info'])) {
+      $output['submission_info'] = $form['#submission_info'];
+      unset($form['#submission_info']);
+    }
+    $output['ingest_form'] = $form;
+    return $output;
   }
 }
 

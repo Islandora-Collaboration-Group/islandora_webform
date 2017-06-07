@@ -94,11 +94,23 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
     t('Submitted on'),
     t('Submitted by'),
   );
-  $form['submission_info'] = array(
+  // Put the submission info into non-renderable storage. We can't render it
+  // inside this form since it may itself contain a form. The calling function
+  // should pull it out and render it separately.
+  $form['#submission_info'] = array(
     '#type' => 'fieldset',
     '#title' => t('Submission info'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#attributes' => array (
+      'class' => array(
+        'collapsible',
+        'collapsed',
+      )
+    ),
+    '#attached' => array(
+      'library' => array(
+        0 => array('system', 'drupal.collapse'),
+      ),
+    ),
     '#weight' => -1,
     'description' => array(
       '#markup' => theme('table', array(
