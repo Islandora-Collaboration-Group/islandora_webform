@@ -757,3 +757,18 @@ function islandora_webform_webform_submission_access($node, $submission, $op = '
       return $submission->is_draft && user_access('edit own webform submissions');
     }
 }
+
+
+/**
+ * Implements template_preprocess_webform_submission.
+ *
+ * The display of submission components gets all munged together into a single
+ * long line of html text. Here we wrap each component in a div so that they
+ * split into separate lines.
+ */
+function islandora_webform_preprocess_webform_submission(&$vars) {
+  foreach(element_children($vars['renderable']) as $child_key) {
+    $vars['renderable'][$child_key]['#prefix'] = '<div class="component">';
+    $vars['renderable'][$child_key]['#suffix'] = '</div>';
+  }
+}
