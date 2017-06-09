@@ -147,13 +147,13 @@ function theme_islandora_webform_links(array $vars) {
       && isset($_COOKIE[$cookie_name])
       && is_array($_COOKIE[$cookie_name])
     ) {
-      $query->condition('s.modified', end($_COOKIE[$cookie_name]));
-      $query->condition('s.uid', $user->uid);
+      $query->condition('ws.modified', end($_COOKIE[$cookie_name]));
+      $query->condition('ws.uid', $user->uid);
     }
     // If user is anonymous and has no cookie, filter by their ip address.
     else {
-      $query->condition('remote_addr', ip_address());
-      $query->condition('uid', $user->uid);
+      $query->condition('ws.remote_addr', ip_address());
+      $query->condition('ws.uid', $user->uid);
     }
 
       $sids = $query->execute()->fetchCol();
