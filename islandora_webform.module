@@ -496,7 +496,17 @@ function islandora_webform_object_results_access(AbstractObject $object) {
     $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
     $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
     $query->condition('d.data', $object->id);
-    return $query->countQuery()->execute()->fetchField() > 0 ? TRUE : FALSE;
+    if ($query->countQuery()->execute()->fetchField() > 0) {
+      return TRUE;
+    }
+    else {
+      if (!empty(arg(3))) {
+        drupal_goto('islandora/object/' . $object->id);
+      }
+      else {
+        return FALSE;
+      }
+    }
   }
   return FALSE;
 }
