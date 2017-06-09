@@ -196,12 +196,14 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
         $redirect_url = $form['#node']->webform['redirect_url'];
       }
       else {
-        $destination = drupal_get_destination();
-        $redirect_url = $destination['destination'];
+        if(!empty($form_state['build_info']['args'][0]->webform['islandora_object'])) {
+          $redirect_url = 'islandora/object/' . $form_state['build_info']['args'][0]->webform['islandora_object']->id;
+        }
       }
-      $form_state['webform_redirect']  = $redirect_url;
-      $form['#submit'][] = 'iw_webform_resubmit_redirect';
-
+      if(!empty($redirect_url)) {
+        $form_state['webform_redirect']  = $redirect_url;
+        $form['#submit'][] = 'iw_webform_resubmit_redirect';
+      }
     }
   }
 }
