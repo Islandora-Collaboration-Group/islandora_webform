@@ -120,17 +120,19 @@ function islandora_webform_user_can_submit_webform($node, $user = NULL, $pid = N
  *   'count' => the number of submissions
  *   'results' =>
  */
-function islandora_webform_object_submission_count($nid, $pid, $interval = NULL, $uid = NULL, $ws_filter = array()) {
+function islandora_webform_object_submission_count($nid, $pid = NULL, $interval = NULL, $uid = NULL, $ws_filter = array()) {
 
   $tracking_mode = webform_variable_get('webform_tracking_mode');
 
   $query = db_select('webform_submissions', 's');
   $query->fields('s', array('sid', 'is_draft'));
-  $query->distinct();
-  $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
-  $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
   $query->condition('s.nid', $nid);
-  $query->condition('d.data', $pid);
+  $query->distinct();
+  if($pid) {
+    $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
+    $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
+    $query->condition('d.data', $pid);
+  }
 
   if ($uid) {
     $query->condition('s.uid', $uid);
@@ -222,10 +224,9 @@ function islandora_webform_object_submission_count($nid, $pid, $interval = NULL,
  *   Boolean TRUE if the user has exceeded their limit. FALSE otherwise.
  */
 function islandora_webform_submission_user_limit_check($node, $pid = NULL, $account = NULL) {
-  global $user;
-  $tracking_mode = webform_variable_get('webform_tracking_mode');
 
   if (!isset($account)) {
+    global $user;
     $account = $user;
   }
   // We can only check access for anonymous users through their cookies.
@@ -238,61 +239,10 @@ function islandora_webform_submission_user_limit_check($node, $pid = NULL, $acco
     return FALSE; // No check enabled.
   }
 
-  // Fetch all the entries from the database within the submit interval with
-  // this username and IP.
-  $num_submissions_database = 0;
-  if (!$node->webform['confidential'] &&
-    ($account->uid !== 0 || $tracking_mode === 'ip_address' || $tracking_mode === 'strict')) {
-    $query = db_select('webform_submissions', 's')
-      ->addTag('webform_submission_user_limit_check')
-      ->condition('s.nid', $node->nid)
-      ->condition('s.is_draft', 0);
+  $qualified_count = islandora_webform_object_submission_count($node->nid, $pid, $node->webform['submit_interval'], $account->uid, unserialize($node->webform['user_ws_limits']));
+  $num_submissions_database = $qualified_count['count'];
 
-    // Deal with per-object limit
-    if(!empty($pid)) {
-      $object = islandora_object_load($pid);
-      if(!empty($object)) {
-        $query->addTag('islandora_webform_submission_user_object_limit_check');
-        $query->addMetaData('islandora_object', $object);
-        $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
-        $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
-      }
-    }
-    // Only deal with submit interval if not using per-object limit.
-    elseif ($node->webform['submit_interval'] > -1) {
-      $query->condition('submitted', REQUEST_TIME - $node->webform['submit_interval'], '>');
-    }
-
-    if ($account->uid) {
-      $query->condition('uid', $account->uid);
-    }
-    else {
-      $query->condition('remote_addr', ip_address());
-    }
-    $num_submissions_database = $query->countQuery()->execute()->fetchField();
-  }
-  // Double check the submission history from the users machine using cookies.
-  $num_submissions_cookie = 0;
-  if ($account->uid === 0 && ($tracking_mode === 'cookie' || $tracking_mode === 'strict')) {
-    $cookie_name = 'webform-' . $node->nid;
-    if(!empty($pid)) {
-      $cookie_name .= '-' . $pid;
-    }
-
-    if (isset($_COOKIE[$cookie_name]) && is_array($_COOKIE[$cookie_name])) {
-      foreach ($_COOKIE[$cookie_name] as $key => $timestamp) {
-        if ($node->webform['submit_interval'] != -1 && $timestamp <= REQUEST_TIME - $node->webform['submit_interval']) {
-          // Remove the cookie if past the required time interval.
-          $params = session_get_cookie_params();
-          setcookie($cookie_name . '[' . $key . ']', '', 0, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
-        }
-      }
-      // Count the number of submissions recorded in cookies.
-      $num_submissions_cookie = count($_COOKIE[$cookie_name]);
-    }
-  }
-
-  if ($num_submissions_database >= $node->webform['submit_limit'] || $num_submissions_cookie >= $node->webform['submit_limit']) {
+  if ($num_submissions_database >= $node->webform['submit_limit']) {
     // Limit exceeded.
     return TRUE;
   }
@@ -316,30 +266,8 @@ function islandora_webform_submission_total_limit_check($node, $pid = NULL) {
     return FALSE; // No check enabled.
   }
 
-  // Retrieve submission data from the database.
-  $query = db_select('webform_submissions', 's')
-    ->addTag('webform_submission_total_limit_check')
-    ->condition('s.nid', $node->nid)
-    ->condition('s.is_draft', 0);
-
-  // Deal with per-object limit.
-  if(!empty($pid)) {
-    $object = islandora_object_load($pid);
-    if(!empty($object)) {
-      $query->addTag('islandora_webform_submission_total_object_limit_check');
-      $query->addMetaData('islandora_object', $object);
-      $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
-      $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
-      $query->condition('d.data', $pid);
-    }
-  }
-
-  if ($node->webform['total_submit_interval'] > -1) {
-    $query->condition('submitted', REQUEST_TIME - $node->webform['total_submit_interval'], '>');
-  }
-
-  // Fetch all the entries from the database within the submit interval.
-  $num_submissions_database = $query->countQuery()->execute()->fetchField();
+    $qualified_count = islandora_webform_object_submission_count($node->nid, $pid, $node->webform['total_submit_interval'], NULL, unserialize($node->webform['total_ws_limits']));
+    $num_submissions_database = $qualified_count['count'];
 
   if ($num_submissions_database >= $node->webform['total_submit_limit']) {
     // Limit exceeded.
