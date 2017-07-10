@@ -190,12 +190,10 @@ function theme_islandora_webform_links(array $vars) {
     // If the webform's scope does not require it to be tagged, check to see if
     // the user is permitted to create a new submission. If so, add a link to do that.
     if ($webform->scope != 'tagged') {
-      if(empty($submissions)) {
         $render[$jqid]['webform-links'][$pid] = islandora_webform_theme_webform_link($webform, $webform_link_options, $pid, $link_mode);
         $render[$jqid]['webform-links'][$pid]['#status'] = 'new submission';
         $render[$jqid]['webform-links'][$pid]['#submission'] = NULL;
         $render[$jqid]['webform-links'][$pid]['#link_mode'] = $link_mode;
-      }
     }
     else {
       // Determine if this webform is tagged to this object.
