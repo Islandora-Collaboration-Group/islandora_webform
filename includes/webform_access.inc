@@ -122,92 +122,98 @@ function islandora_webform_user_can_submit_webform($node, $user = NULL, $pid = N
  */
 function islandora_webform_object_submission_count($nid, $pid = NULL, $interval = NULL, $uid = NULL, $ws_filter = array()) {
 
-  $tracking_mode = webform_variable_get('webform_tracking_mode');
+  // Only do this once for a given set of function args.
+  $results = &drupal_static(__FUNCTION__ . md5(serialize(array($nid, $pid, $interval, $uid, $ws_filter))));
 
-  $query = db_select('webform_submissions', 's');
-  $query->fields('s', array('sid', 'is_draft'));
-  $query->condition('s.nid', $nid);
-  $query->distinct();
-  if($pid) {
-    $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
-    $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
-    $query->condition('d.data', $pid);
-  }
+  if (!isset($results)) {
 
-  if ($uid) {
-    $query->condition('s.uid', $uid);
-  }
-  // Handle if user provided is anonymous but has a cookie that matches. We search against
-  // the submission.modified time, if so.
-  elseif ($uid === 0 && ($tracking_mode === 'cookie' || $tracking_mode === 'strict')) {
-    $cookie_name = 'webform-' . $nid . '-' . $pid;
-    if (isset($_COOKIE[$cookie_name]) && is_array($_COOKIE[$cookie_name])) {
-      $query->condition('s.modified', end($_COOKIE[$cookie_name]));
+    $tracking_mode = webform_variable_get('webform_tracking_mode');
+
+    $query = db_select('webform_submissions', 's');
+    $query->fields('s', array('sid', 'is_draft'));
+    $query->condition('s.nid', $nid);
+    $query->distinct();
+    if ($pid) {
+      $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
+      $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
+      $query->condition('d.data', $pid);
+    }
+
+    if ($uid) {
       $query->condition('s.uid', $uid);
     }
-    else {
-      // Anonymous user has no cookies that match. No need to continue. Just
-      // return empty result.
-      return array('count' => 0, 'results' => array());
-    }
-  }
-
-  if (!empty($ws_filter)) {
-    $ws_conditions = db_or();
-    // Separate out draft, completed and ingested from webform workflow states filter.
-    $core_states = array();
-    $core_states['draft'] = array_search('draft', $ws_filter);
-    $core_states['completed'] = array_search('completed', $ws_filter);
-    $core_states['ingested'] = array_search('ingested', $ws_filter);
-    $core_states['not-ingested'] = array_search('not-ingested', $ws_filter);
-    $core_states = array_filter($core_states);
-    foreach($core_states as $id => $core_state) {
-      switch($id) {
-        case 'draft':
-          $ws_conditions->condition('s.is_draft', 1);
-          break;
-        case 'completed':
-          $ws_conditions->condition('s.is_draft', 0);
-          break;
-        case 'ingested':
-          $query->leftJoin('islandora_webform_ingestions', 'iwi', 'iwi.sid = s.sid AND iwi.nid = s.nid');
-          $ws_conditions->isNotNull('iwi.sid');
-          $iwi_table_joined = TRUE;
-          break;
-        case 'not-ingested':
-          $current_tables = $query->getTables();
-          if(empty($current_tables['iwi'])) {
-            $query->leftJoin('islandora_webform_ingestions', 'iwi', 'iwi.sid = s.sid AND iwi.nid = s.nid');
-          }
-          $ws_conditions->isNotNull('iwi.sid');
-          break;
+    // Handle if user provided is anonymous but has a cookie that matches. We search against
+    // the submission.modified time, if so.
+    elseif ($uid === 0 && ($tracking_mode === 'cookie' || $tracking_mode === 'strict')) {
+      $cookie_name = 'webform-' . $nid . '-' . $pid;
+      if (isset($_COOKIE[$cookie_name]) && is_array($_COOKIE[$cookie_name])) {
+        $query->condition('s.modified', end($_COOKIE[$cookie_name]));
+        $query->condition('s.uid', $uid);
       }
-      unset($ws_filter[$id]);
+      else {
+        // Anonymous user has no cookies that match. No need to continue. Just
+        // return empty result.
+        return array('count' => 0, 'results' => array());
+      }
     }
 
-    // Handle rwemaining webform workflow state filters.
     if (!empty($ws_filter)) {
-      $query->leftJoin('webform_workflow_submissions', 'ws', "ws.sid = s.sid");
-      $ws_conditions->condition('ws.wsid', $ws_filter);
+      $ws_conditions = db_or();
+      // Separate out draft, completed and ingested from webform workflow states filter.
+      $core_states = array();
+      $core_states['draft'] = array_search('draft', $ws_filter);
+      $core_states['completed'] = array_search('completed', $ws_filter);
+      $core_states['ingested'] = array_search('ingested', $ws_filter);
+      $core_states['not-ingested'] = array_search('not-ingested', $ws_filter);
+      $core_states = array_filter($core_states);
+      foreach ($core_states as $id => $core_state) {
+        switch ($id) {
+          case 'draft':
+            $ws_conditions->condition('s.is_draft', 1);
+            break;
+          case 'completed':
+            $ws_conditions->condition('s.is_draft', 0);
+            break;
+          case 'ingested':
+            $query->leftJoin('islandora_webform_ingestions', 'iwi', 'iwi.sid = s.sid AND iwi.nid = s.nid');
+            $ws_conditions->isNotNull('iwi.sid');
+            $iwi_table_joined = TRUE;
+            break;
+          case 'not-ingested':
+            $current_tables = $query->getTables();
+            if (empty($current_tables['iwi'])) {
+              $query->leftJoin('islandora_webform_ingestions', 'iwi', 'iwi.sid = s.sid AND iwi.nid = s.nid');
+            }
+            $ws_conditions->isNotNull('iwi.sid');
+            break;
+        }
+        unset($ws_filter[$id]);
+      }
+
+      // Handle rwemaining webform workflow state filters.
+      if (!empty($ws_filter)) {
+        $query->leftJoin('webform_workflow_submissions', 'ws', "ws.sid = s.sid");
+        $ws_conditions->condition('ws.wsid', $ws_filter);
+      }
+      $query->condition($ws_conditions);
     }
-    $query->condition($ws_conditions);
+
+    // Permit modules to add additional logic to the submissions count query.
+    $params = array(
+      'nid' => $nid,
+      'pid' => $pid,
+      'interval' => $interval,
+      'uid' => $uid,
+    );
+
+    // Enable to be altered by hook_query_alter.
+    $query->addTag('islandora_webform_object_submission_count');
+    $query->addMetaData('islandora_webform_object_submission_count_query_params', $params);
+
+    drupal_alter('islandora_webform_object_submission_query_count', $query, $params);
+
+    $results = $query->execute()->fetchAll();
   }
-
-  // Permit modules to add additional logic to the submissions count query.
-  $params = array(
-    'nid' => $nid,
-    'pid' => $pid,
-    'interval' => $interval,
-    'uid' => $uid,
-  );
-
-  // Enable to be altered by hook_query_alter.
-  $query->addTag('islandora_webform_object_submission_count');
-  $query->addMetaData('islandora_webform_object_submission_count_query_params', $params);
-
-  drupal_alter('islandora_webform_object_submission_query_count', $query, $params);
-
-  $results = $query->execute()->fetchAll();
   return array('count' => count($results), 'results' => $results);
 }
 
