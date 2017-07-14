@@ -131,3 +131,24 @@ function hook_iwi_ingestible_datastreams_alter(&$datastreams, $object, $mimetype
     'mime' => 'text/plain',
   );
 }
+
+/**
+ * Allow modules to respond to ingesting a webform submission.
+ *
+ * @param $submission
+ * @param $object
+ */
+function apwa_iw_islandora_webform_submission_ingested($submission, $object) {
+
+  // Set webform_workflow state to "ingested", if possible.
+  if (module_exists('webform_workflow')) {
+    $node = node_load($submission->nid);
+    $states = webform_workflow_get_available_states($node);
+    foreach($states as $state) {
+      if (trim(strtolower($state->label)) == 'ingested') {
+        webform_workflow_transition($submission, $state);
+        break;
+      }
+    }
+  }
+}

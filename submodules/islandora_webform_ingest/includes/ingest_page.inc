@@ -430,6 +430,9 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
     // Save a record of this ingestion.
     iwi_record_ingested($form['#submission'], $object);
+
+    // Let other modules respond to the ingestion event.
+    module_invoke_all('islandora_webform_submission_ingested', $form['#submission'], $object);
   }
 }
 
