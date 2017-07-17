@@ -257,8 +257,8 @@ function theme_islandora_webform_links(array $vars) {
   $alter_data = array(
     'islandora_object' => $object,
     'webforms' => $webforms,
-    'submissions' => $submissions,
-    'user-submissions' => $webform->user_submissions,
+    'submissions' => !empty($submissions) ? $submissions : array(),
+    'user-submissions' => !empty($webform->user_submissions) ? $webform->user_submissions : array(),
   );
   // Let other modules modify the complete webform links render array.
   drupal_alter('islandora_theme_webform_links', $render, $alter_data);
