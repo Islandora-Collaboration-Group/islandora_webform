@@ -83,21 +83,11 @@ function islandora_webform_user_can_submit_webform($node, $user = NULL, $pid = N
     }
   }
 
-  if(!empty($draft_user_submissions)) {
-    if(empty($node->webform['draft_access'])) {
-      // Empty `draft_access` means having a submission in draft does not
-      // automatically grant you access to edit it. Permission is the same as
-      // for new submission access.
-      return $enabled;
-    }
-    // Draft access is always permitted, so allow the user to edit his submissions,
-    // regardless of new submission permission.
-    else return $draft_user_submissions;
+  if (!empty($draft_user_submissions) && !empty($node->webform['draft_access'])) {
+    $enabled = $draft_user_submissions;
   }
-  // No draft submissions, just return the new submission permission.
-  else {
-    return $enabled;
-  }
+  return $enabled;
+
 }
 
 /**
