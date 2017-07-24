@@ -284,11 +284,19 @@ function theme_islandora_webform_links(array $vars) {
  *   If value is 'inline', then an ajax link is created.
  * @param string $sid
  *   If the link is to edit a previous submission, this is that submission's sid
+ * @param boolean $alter
+ *   If TRUE, other modules can override the output of this function. If a module wishes
+ *   to call this function from within their hook_islandora_webform_theme_webform_link_alter(),
+ *   they should set $alter to FALSE to avoid infinite recursion.
+ * @param boolean $force
+ *   If TRUE, render the link whether or not the user is permitted a new submission. This can
+ *   be used to display an edit link to an existing submission when a new submission is not
+ *   allowed, or any other content in this place.
  *
  * @return string
  *   The themed link, or empty if no access
  */
-function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $pid, $link_mode = 'inline', $sid = NULL) {
+function islandora_webform_theme_webform_link($islandora_webform_record, $webform_link_options = array(), $pid, $link_mode = 'inline', $sid = NULL, $alter = TRUE, $force = FALSE) {
   global $user;
   $webform_link = array(
     '#type' => 'container',
@@ -299,7 +307,7 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
   $islandora_webform_record->link_mode = $link_mode;
   $node = node_load($islandora_webform_record->entity_id);
   module_load_include('inc', 'islandora_webform', 'includes/webform_access');
-  if ($node->status && islandora_webform_user_can_submit_webform($node, NULL, $pid)) {
+  if ($node->status) {
     $can_submit = islandora_webform_user_can_submit_webform($node, NULL, $pid);
     if (is_array($can_submit) && !empty($can_submit)) {
       foreach ($can_submit as $draft_submission) {
@@ -328,7 +336,7 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
         );
       }
     }
-    elseif ($can_submit) {
+    elseif ($can_submit || $force) {
       $link_path = $link_mode == 'inline' ? 'islandora_webform/retrieve_form/' . $islandora_webform_record->entity_id . '/nojs' : drupal_get_path_alias('node/' . $islandora_webform_record->entity_id);
       $link_text = $islandora_webform_record->link_text;
       if ($sid) {
@@ -361,7 +369,8 @@ function islandora_webform_theme_webform_link($islandora_webform_record, $webfor
 
   }
   // Let other modules modify the webform link.
-  drupal_alter('islandora_webform_theme_webform_link', $webform_link, $islandora_webform_record, $pid);
-
+  if ($alter) {
+    drupal_alter('islandora_webform_theme_webform_link', $webform_link, $islandora_webform_record, $pid, $sid);
+  }
   return $webform_link;
 }
