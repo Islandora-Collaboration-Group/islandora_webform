@@ -33,6 +33,17 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
   $query->join('webform_component', 'c', "c.nid = s.nid and c.form_key = 'islandora_object_pid'");
   $query->join('webform_submitted_data', 'd', "d.sid = s.sid and d.cid = c.cid");
   $query->condition('d.data', $object->id);
+
+  if(module_exists('webform_workflow')) {
+    $params = drupal_get_query_parameters();
+    $wsid = !empty($params['wsid']) ? $params['wsid'] : NULL;
+    if($wsid) {
+      $query->join('webform_workflow_submissions', 'wws', 'wws.sid = s.sid');
+      $query->condition('wws.wsid', $wsid);
+    }
+  }
+
+
   if ($pager_count) {
     // Extending the query instantiates a new query object.
     $query = $query->extend('PagerDefault');
@@ -42,7 +53,7 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
   $submissions = $query->execute()->fetchAllAssoc('sid');
 
 
-  if (isset($_GET['results']) && is_numeric($_GET['results'])) {
+    if (isset($_GET['results']) && is_numeric($_GET['results'])) {
     $pager_count = $_GET['results'];
   }
 
@@ -89,9 +100,8 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
     $rows[] = $row;
   }
 
-  $element['#theme'] = 'webform_results_submissions';
   // No harm in using whatever webform node came last as the $node here.
-  $element['#node'] = $node;
+  $element['#node'] = !empty($node) ? $node : NULL;
   $element['#object'] = $object;
   $element['#submissions'] = $submissions;
   $element['#total_count'] = $count;

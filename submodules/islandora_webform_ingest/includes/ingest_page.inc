@@ -94,11 +94,23 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
     t('Submitted on'),
     t('Submitted by'),
   );
-  $form['submission_info'] = array(
+  // Put the submission info into non-renderable storage. We can't render it
+  // inside this form since it may itself contain a form. The calling function
+  // should pull it out and render it separately.
+  $form['#submission_info'] = array(
     '#type' => 'fieldset',
     '#title' => t('Submission info'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#attributes' => array (
+      'class' => array(
+        'collapsible',
+        'collapsed',
+      )
+    ),
+    '#attached' => array(
+      'library' => array(
+        0 => array('system', 'drupal.collapse'),
+      ),
+    ),
     '#weight' => -1,
     'description' => array(
       '#markup' => theme('table', array(
@@ -239,6 +251,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   $form['#submission'] = $submission;
   $form['#iwi_settings'] = $iwi_settings;
   $form['#ingest_cmodel'] = $ingest_content_model;
+
   return $form;
 
 }
@@ -275,6 +288,15 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
     foreach ($form_state['datastreams'] as $association) {
       $dsid = $association['dsid'];
+
+      // Get values for non-editable components.
+      if(empty($form_state['values'][$dsid]) && !empty($form[$dsid]['component']['#value'])) {
+        $form_state['values'][$dsid] = $form[$dsid]['component']['#value'];
+        if(is_object($form_state['values'][$dsid])) {
+          $form_state['values'][$dsid] = (array) $form_state['values'][$dsid];
+        }
+      }
+
       if (isset($form_state['values'][$dsid]) && isset($form[$dsid])) {
 
         // Importing via xml form?
@@ -318,7 +340,13 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
         // Handle other datastream mimetypes.
         else {
-          $value_type = gettype($form_state['values'][$dsid]);
+          $value = $form_state['values'][$dsid];
+          // Rendered webform components put the value inside an array with the
+          // structure `array('component' => [value]);`
+          if(is_array($value)) {
+            $value = reset($value);
+          }
+          $value_type = gettype($value);
           // Handle text datastreams.
           $text_value_types = array('integer', 'double', 'string');
           if ($association['mime'] == 'text/plain' && in_array($value_type, $text_value_types)) {
@@ -326,12 +354,13 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
             // Create it if not preexisting.
             if (empty($object[$dsid])) {
               $datastream = $object->constructDatastream($dsid, 'M');
+              $datastream->mimeType = $association['mime'];
               $object->ingestDatastream($datastream);
             }
             else {
               $datastream = $object[$dsid];
             }
-            $datastream->content = $form_state['values'][$dsid];
+            $datastream->setContentFromString($value);
             $datastream_count++;
           }
           // Handle file ingestion.
@@ -358,12 +387,15 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
                 // Assuming for now everything wen't fine.
                 $datastream_count++;
               }
+              else {
+                drupal_set_message(t('%type is not a supported file type for ingest to %dsid', array(
+                  '%type' => $ext,
+                  '%dsid' => $dsid,
+                ), 'error'));
+              }
             }
             else {
-              drupal_set_message(t('%type is not a supported file type for ingest to %dsid', array(
-                '%type' => $ext,
-                '%dsid' => $dsid,
-              ), 'error'));
+              drupal_set_message(t('File could not be found', array(), 'error'));
             }
           }
           // Respond to invalid types.
@@ -398,6 +430,9 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
 
     // Save a record of this ingestion.
     iwi_record_ingested($form['#submission'], $object);
+
+    // Let other modules respond to the ingestion event.
+    module_invoke_all('islandora_webform_submission_ingested', $form['#submission'], $object);
   }
 }
 

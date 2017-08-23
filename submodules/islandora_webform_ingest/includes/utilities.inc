@@ -86,6 +86,9 @@ function iwi_ingestible_datastreams(FedoraObject $object, $mimetypes = array('te
       }
     }
 
+    // Support altering the ingestible datastreams list.
+    drupal_alter('iwi_ingestible_datastreams', $results, $object, $mimetypes);
+
     return $results;
   }
 }
@@ -631,7 +634,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
   $cmodel = !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['cmodel'] : '';
   // Makes no sense to store a relation if we are not creating new objects with this form anymore.
   $relation = !empty($form_state['values']['islandora_ingest']['relation']) && !empty($form_state['values']['islandora_ingest']['cmodel']) ? $form_state['values']['islandora_ingest']['relation'] : '';
-  $namespace = !empty($form_state['values']['islandora_ingest']['namespace']) ? $form_state['values']['islandora_ingest']['namespace'] : 'islandora';
+  $namespace = !empty($form_state['values']['islandora_ingest']['namespace']) ? $form_state['values']['islandora_ingest']['namespace'] : islandora_get_namespace(variable_get('islandora_repository_pid', 'islandora') );
   if ($old_settings = db_select('islandora_webform_ingest_webforms', 'm')
     ->fields('m')
     ->condition('m.nid', $nid)
@@ -642,7 +645,7 @@ function iwi_save_webform_configuration($form, &$form_state) {
     // not being aware of the change anymore.
     if (empty($cmodel)) { 
       $relation = $old_settings->relation;
-      $namespace = $old_settings->$namespace;
+      $namespace = !empty($old_settings->{$namespace}) ? $old_settings->{$namespace} : 'islandora';
     }
     // If content model is changing, wipe out ingest mappings.
     if ($old_settings->cmodel != $cmodel) {

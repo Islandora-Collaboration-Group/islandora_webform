@@ -39,6 +39,17 @@ Installation
    to a webform, and click the link to add it.
 
 
+Configuration
+-------------
+Configuration is found at Islandora > Configuration > Islandora Webform (/admin/islandora/configure/iw).
+
+1. "Webform link behavior": If not using inline webforms with webform_ajax, this
+   controls whether clicking on a webform link opens a new page/tab or replaces
+   the current window.
+2. "Append webform links to bottom of object view?": Uncheck this if you want to
+   override the normal positioning of the webform links below the object display.
+
+
 Permissions
 -----------------------------
 This module defines the following permissions:
