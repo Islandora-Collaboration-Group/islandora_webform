@@ -13,7 +13,7 @@ ingest webform submissions into a datastream of the associated object.
 Online documentation
 ----------------------
 For more complete documentation of how to use islandora_webform and islandora_webform_ingest modules;
-see https://sites.google.com/site/islandoraconsortiagroup/home/iw-module
+see: [Islandora Webform Documentation](https://github.com/Islandora-Collaboration-Group/icg_information/blob/master/how_to_documentation/help_with_icg_webform__index.md)
 
 Requirements
 ------------
