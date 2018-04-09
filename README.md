@@ -4,11 +4,9 @@ This module permits a site manager to create webforms that are associated with i
 
 The Islandora Webform Ingest module, which is provided with this module and can be enabled separately, provides digital repository curators the ability to directly ingest webform submissions into a datastream of the associated object.
 
-## Online documentation
+## Documentation
 
-For more complete documentation of how to use islandora_webform and islandora_webform_ingest modules;
-
-see: [Islandora Webform Documentation](https://github.com/Islandora-Collaboration-Group/icg_information/blob/master/how_to_documentation/help_with_icg_webform__index.md)
+For more complete documentation of how to use islandora_webform and islandora_webform_ingest modules see the [Islandora Webform Documentation](https://github.com/Islandora-Collaboration-Group/icg_information/blob/master/how_to_documentation/help_with_icg_webform__index.md).
 
 ## Requirements
 
@@ -48,7 +46,7 @@ This module defines the following permissions:
 
 ## SOLR/GSearch Configuration
 
-When a Fedora object is manually linked to a webform, enabling the link to appear on the object page, a new datastream "WF" is created on the object, containing a list of the node ids of all associated webforms. In order for a site builder to make a view of all objects that are associated with a given webform, SOLR and GSearch need to be configured to index the contents of that datastream. 
+When a Fedora object is manually linked to a webform, enabling the link to appear on the object page, a new datastream "WF" is created on the object, containing a list of the node ids of all associated webforms. In order for a site builder to make a view of all objects that are associated with a given webform, SOLR and GSearch need to be configured to index the contents of that datastream.
 **TODO -** Instructions for how to do this are needed!
 
 ## Enabling and configuring Islandora Webform Ingest
