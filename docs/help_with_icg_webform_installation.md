@@ -17,9 +17,9 @@ Guide for use: If you are an Islandora administrator with previous experience se
     8. Create Drupal User Accounts and assign Roles for users of the Islandora Webform module
     9. Enable the Drupal block for Islandora Webform submissions
     10. APPENDIX  
-      10.1. SOLR/GSearch Configuration  
-      10.2. Enabling and configuring Islandora Webform Ingest  
-      10.3. Upgrading from an earlier version of the Islandora Webform module  
+      * SOLR/GSearch Configuration  
+      * Enabling and configuring Islandora Webform Ingest  
+      * Upgrading from an earlier version of the Islandora Webform module  
 3. [Summary of Steps for Creating an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_steps.md)
 4. [How to Create a Webform using the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_creation.md)
 5. [For End Users: How to Use an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)
@@ -295,20 +295,20 @@ Figure 3: Configuring Drupal Roles for the Islandora Webform module users
 
 ## 10. APPENDIX
 
-### 10.1 SOLR/GSearch Configuration
+### SOLR/GSearch Configuration
 
 When a Fedora object is manually linked to a webform, enabling the link to appear on the object page, a new datastream "WF" is created on the object, containing a list of the node ids of all associated webforms. In order for a site builder to make a view of all objects that are associated with a given webform, SOLR and GSearch need to be configured to index the contents of that datastream.
 **TODO -** Instructions for how to do this are needed!
 
 ***
 
-### 10.2 Enabling and configuring Islandora Webform Ingest
+### Enabling and configuring Islandora Webform Ingest
 
 See the README.txt inside the submodules/islandora_webform_ingest folder for installation and usage instructions for the Islandora Webform Ingest module.
 
 ***
 
-### 10.3 Upgrading from an earlier version of the Islandora Webform module.
+### Upgrading from an earlier version of the Islandora Webform module.
 
 1. MAKE A DATABASE BACKUP. Upgrading this module may entail a number of database changes. If you encounter an error and need to downgrade, you must restore the previous database. You can make a database backup with your hosting provider, using the Backup and Migrate module, or from the command line.
 2. Copy the entire islandora_webform directory the Drupal modules directory, replacing the old copy. DO NOT KEEP THE OLD COPY in the same directory or anywhere Drupal could possibily find it. Delete it from the server.

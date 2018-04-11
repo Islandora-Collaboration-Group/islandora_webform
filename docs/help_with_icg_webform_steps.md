@@ -7,15 +7,17 @@ This Summary of Steps skips giving you the actual values to put in the settings 
 
 1. [Overview: Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/README.md)
 2. [How to Install the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_installation.md)
-3. **[Summary of Steps for Creating an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_steps.md)**
-  1. Create the New Webform  
-  2. Add Components  
-  3. Configure Islandora Settings  
-  4. Configure Ingest Mapping for each Component  
-  5. Configure Confirmation Page  
+3. **[Summary of Steps for Creating an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_steps.md)**  
+    1. Create the New Webform  
+    2. Add Components  
+    3. Configure Islandora Settings  
+    4. Configure Ingest Mapping for each Component  
+    5. Configure Confirmation Page  
 4. [How to Create a Webform using the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_creation.md)
 5. [For End Users: How to Use an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)
 6. [Use Case: Islandora Webform for Transcriptions (DHi@Hamilton College)](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_transcriptions.md)
+
+***
 
 ## 1. Create the New Webform
   * Content > Add content > Webform

@@ -10,21 +10,21 @@ The following is a general overview of what the IW module is capable of and how 
 3. [Summary of Steps for Creating an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_steps.md)
 4. [How to Create a Webform using the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_creation.md)
 5. [For End Users: How to Use an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)
-6. **[Use Case: Islandora Webform for Transcriptions (DHi@Hamilton College)](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_transcriptions.md)**
-  1. What is the ICG Webform module?  
-  2. Generality  
-  3. Extensibility  
-  4. Ease of Use  
-  5. Hamilton's Use Case: Transcriptions  
-  5.1. The "Transcription Tool" (TT)  
-  5.2. TT User Accounts  
-  6. Privacy  
-  6.1. TT Access  
-  6.2. TT Workflow  
-  7. Webform Features not yet implemented  
-  8. Sustainability  
-  9. Documentation  
-  10. NOTES  
+6. **[Use Case: Islandora Webform for Transcriptions (DHi@Hamilton College)](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_transcriptions.md)**  
+    1. What is the ICG Webform module?  
+    2. Generality  
+    3. Extensibility  
+    4. Ease of Use  
+    5. Hamilton's Use Case: Transcriptions  
+      * The "Transcription Tool" (TT)  
+      * TT User Accounts  
+    6. Privacy  
+      * TT Access  
+      * TT Workflow  
+    7. Webform Features not yet implemented  
+    8. Sustainability  
+    9. Documentation  
+    10. NOTES  
 
 ***
 
@@ -54,7 +54,7 @@ The following is a general overview of what the IW module is capable of and how 
 
 * The IW module is installed on Hamilton's Islandora server and a webform has been configured for DHi's American Prison Writers Archive (APWA) site to help gather transcriptions of essays from visitors to the site.
 
-### 5.1 The "Transcription Tool" (TT)
+### The "Transcription Tool" (TT)
 
   * DHi used the IW module to create a webform we call the "Transcription Tool".
   * The TT consists of five fields:
@@ -66,7 +66,7 @@ The following is a general overview of what the IW module is capable of and how 
     * __Islandora object PID__ - A system-generated field holding the PID (Fedora ID) of the object being transcribed.
   * The webform can be modified by only Drupal Administrators (can be changed locally).
 
-### 5.2 TT User Accounts
+### TT User Accounts
 
   * Doran submits names with email addresses to Peter (an administrator), who then creates Drupal accounts for them and associates that account with the "Submitters" role.
   * The TT uses three user roles:
@@ -78,14 +78,14 @@ The following is a general overview of what the IW module is capable of and how 
 
   * Submitters are instructed in the webform to add their name at the end of the transcription if they want public recognition of their efforts. Otherwise, we do not permanently associate their name or user account with the transcription.
 
-### 6.1 TT Access
+### TT Access
 
   * We have configured the Transcription Tool to show a link under the essay when that essay is one that is elligible to be transcribed.
   * That link will be displayed only to users who are logged in with an account associated with one of the IW role authorized to submit transcriptions.
   * Anonymous visitors to the APWA website cannot actually submit a transcription without first contacting Doran, but they can experiment with a "demo" Transcription Tool.
   * Anonymous users can submit a transcription by sending the transcription and the Essay Identifier directly to Doran, who may approve it and forward it Peter for ingest into Islandora.
 
-### 6.2 TT Workflow
+### TT Workflow
 
   * Any visitor to the APWA website can search for essays that need transcribing.
   * If the user is authorized to submit webforms and is logged in, s/he will see a link below the essay that will launch the TT webform when clicked.

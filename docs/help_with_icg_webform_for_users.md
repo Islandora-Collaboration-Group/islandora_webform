@@ -1,4 +1,4 @@
-# How to Use an Islandora Webform - For End Users
+# For End Users: How to Use an Islandora Webform
 (last updated: May 23, 2017, Peter MacDonald)
 
 ## Table of Contents
@@ -7,10 +7,10 @@
 2. [How to Install the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_installation.md)
 3. [Summary of Steps for Creating an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_steps.md)
 4. [How to Create a Webform using the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_creation.md)
-5. **[How to Use an Islandora Webform - For End Users](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)**
-  1. How to submit data using an Islandora Webform
-  2. How to update date previously submitted using an Islandora Webform
-  3. How to uploading a file using an Islandora Webform
+5. **[For End Users: How to Use an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)**  
+    1. How to submit data using an Islandora Webform
+    2. How to update date previously submitted using an Islandora Webform
+    3. How to uploading a file using an Islandora Webform
 6. [Use Case: Islandora Webform for Transcriptions (DHi@Hamilton College)](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_transcriptions.md)
 
 ***

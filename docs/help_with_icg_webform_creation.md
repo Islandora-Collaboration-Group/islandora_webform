@@ -6,21 +6,21 @@
 1. [Overview: Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/README.md)
 2. [How to Install the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_installation.md)
 3. [Summary of Steps for Creating an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_steps.md)
-4. **[How to Create a Webform using the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_creation.md)**
-  1. The "Islandora Webform Module"  
-  1.1. Basic capabilities  
-  1.2. Limitations  
-  2. Creating a Drupal Webform  
-  2.1. Add components to the webform  
-  2.2. Configure the confirmation message  
-  2.3. Configure AJAX and submission access
-  3. Configuring the Islandora Settings for a webform  
-  3.1. Specify which Islandora objects a webform targets  
-  3.2. Specify how the webform values will be stored in Islandora  
-  3.3. Specify the field mapping of webform values in the metadata  
-  3.4. Configuring the "Simple Text Related Item MODS form" (XML form)
-  4. APPENDIX: The "Islandora Simple Text Content Model"
-5. [How to Use an Islandora Webform - For End Users](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)
+4. **[How to Create a Webform using the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_creation.md)**  
+    1. The "Islandora Webform Module"  
+    1.1. Basic capabilities  
+    1.2. Limitations  
+    2. Creating a Drupal Webform  
+    2.1. Add components to the webform  
+    2.2. Configure the confirmation message  
+    2.3. Configure AJAX and submission access
+    3. Configuring the Islandora Settings for a webform  
+    3.1. Specify which Islandora objects a webform targets  
+    3.2. Specify how the webform values will be stored in Islandora  
+    3.3. Specify the field mapping of webform values in the metadata  
+    3.4. Configuring the "Simple Text Related Item MODS form" (XML form)
+    4. APPENDIX: The "Islandora Simple Text Content Model"
+5. [For End Users: How to Use an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)
 6. [Use Case: Islandora Webform for Transcriptions (DHi@Hamilton College)](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_transcriptions.md)
 
 ***
