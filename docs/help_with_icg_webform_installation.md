@@ -29,7 +29,6 @@ Guide for use: If you are an Islandora administrator with previous experience se
 
 ## 1. Installation preliminaries
 
-**Test Environment**
 * DHi last tested the IW module in February of 2017 using the following versions of each of these modules and libraries:
 
 | Module Name                | Version       |
