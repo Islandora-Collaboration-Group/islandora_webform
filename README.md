@@ -10,6 +10,8 @@
 5. [For End Users: How to Use an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)
 6. [Use Case: Islandora Webform for Transcriptions (DHi@Hamilton College)](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_transcriptions.md)
 
+***
+
 ## Description
 
 * The Islandora Webform (IW) module uses the capabilities of the standard Drupal Webform module to enable users to submit comments (captions, tags, transcriptions, etc.) on digital objects in an Islandora repository.
@@ -17,6 +19,28 @@
 * When the submission is approved, the form values are ingested either 1) into the MODS (or another specific datastream) of the Fedora object being commented on, or 2) into a completely new Fedora object. If 2) is used, a relationship statement is placed in the RELS-EXT datastream connecting the submission Fedora object to the original Fedora object.
 * All the submissions for a specific object can then be displayed along with the original object using a dedicated Drupal block.
 * The Islandora Webform Ingest module, which is provided with this module and can be enabled separately, provides digital repository curators the ability to directly ingest webform submissions into a datastream of the associated object.
+
+***
+
+## Screenshots
+
+**An Islandora objectpage showing a link to the Islandora webform at the bottom of the window:**
+
+![webform_12.png](/docs/images/webform_12.png)
+
+***
+
+**View of a webform as seen by an end user:**
+
+![webform_13.png](/docs/images/webform_13.png)
+
+***
+
+**View of what users can see if they want to view, edit or delete their submission:**
+
+![webform_14.png](/docs/images/webform_14.png)
+
+***
 
 ## Requirements
 
