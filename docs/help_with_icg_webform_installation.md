@@ -6,20 +6,20 @@ Guide for use: If you are an Islandora administrator with previous experience se
 ## Table of Contents
 
 1. [Overview: Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/README.md)
-2. **[How to Install the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_installation.md)**
-  1. Installation preliminaries
-  2. Installation summary
-  3. Install the Drupal "Webform" module
-  4. Configuration
-  5. Install the "Webform AJAX" module
-  6. Install the "Islandora Webform" module
-  7. Create Drupal Roles and set permissions for users of the Islandora Webform module
-  8. Create Drupal User Accounts and assign Roles for users of the Islandora Webform module
-  9. Enable the Drupal block for Islandora Webform submissions
-  10. APPENDIX  
-    10.1. SOLR/GSearch Configuration  
-    10.2. Enabling and configuring Islandora Webform Ingest  
-    10.3. Upgrading from an earlier version of the Islandora Webform module  
+2. **[How to Install the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_installation.md)**  
+    1. Installation preliminaries
+    2. Installation summary
+    3. Install the Drupal "Webform" module
+    4. Configuration
+    5. Install the "Webform AJAX" module
+    6. Install the "Islandora Webform" module
+    7. Create Drupal Roles and set permissions for users of the Islandora Webform module
+    8. Create Drupal User Accounts and assign Roles for users of the Islandora Webform module
+    9. Enable the Drupal block for Islandora Webform submissions
+    10. APPENDIX  
+      10.1. SOLR/GSearch Configuration  
+      10.2. Enabling and configuring Islandora Webform Ingest  
+      10.3. Upgrading from an earlier version of the Islandora Webform module  
 3. [Summary of Steps for Creating an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_steps.md)
 4. [How to Create a Webform using the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_creation.md)
 5. [For End Users: How to Use an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)
