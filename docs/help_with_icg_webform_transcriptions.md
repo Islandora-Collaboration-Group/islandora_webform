@@ -16,11 +16,11 @@ The following is a general overview of what the IW module is capable of and how 
     3. Extensibility  
     4. Ease of Use  
     5. Hamilton's Use Case: Transcriptions  
-      * The "Transcription Tool" (TT)  
-      * TT User Accounts  
+        * The "Transcription Tool" (TT)  
+        * TT User Accounts  
     6. Privacy  
-      * TT Access  
-      * TT Workflow  
+        * TT Access  
+        * TT Workflow  
     7. Webform Features not yet implemented  
     8. Sustainability  
     9. Documentation  
