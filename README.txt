@@ -1,3 +1,9 @@
+THERE IS A NEWER FORK OF THIS PROJECT!
+PLEASE VISIT: https://github.com/Islandora-Collaboration-Group/islandora_webform
+
+
+-------OLD BELOW-------
+
 Description
 -----------
 This module permits a site manager to create webforms that are associated with
