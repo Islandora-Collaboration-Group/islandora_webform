@@ -101,7 +101,7 @@ function islandora_webform_object_get_webforms(IslandoraFedoraObject $object) {
       return FALSE;
     }
     $sql = "SELECT w.*, n.title as title FROM {islandora_webform_webforms} w JOIN {node} n ON (n.nid = w.entity_id)
-            WHERE w.enabled = :enabled AND ( :pid REGEXP w.pid_filter OR w.pid_filter = '' )
+            WHERE w.enabled = :enabled AND ( (:pid REGEXP w.pid_filter) OR w.pid_filter = '' )
             AND ( w.cmodel_filter = '' OR w.cmodel_filter IN (:cmodels) )
             ";
     $query_args = array(
