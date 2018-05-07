@@ -135,10 +135,13 @@ function hook_iwi_ingestible_datastreams_alter(&$datastreams, $object, $mimetype
 /**
  * Allow modules to respond to ingesting a webform submission.
  *
- * @param $submission
- * @param $object
+ * @param array $submission
+ *
+ * @param object $object
+ *
+ * @throws Exception
  */
-function apwa_iw_islandora_webform_submission_ingested($submission, $object) {
+function hook_islandora_webform_submission_ingested($submission, $object) {
 
   // Set webform_workflow state to "ingested", if possible.
   if (module_exists('webform_workflow')) {

@@ -188,6 +188,17 @@ function theme_islandora_webform_links(array $vars) {
           }
         }
       }
+      // If instead the number of editable submissions is exactly one, don't show links.
+      // Rather, display the form inline.
+      elseif(!empty($submissions)) {
+        $submission = reset($submissions);
+        if($submission->access) {
+          $render[$jqid]['webform-links'][$submission->sid] = _iw_inline_webform($swebform_node, 'nojs', $submission);
+          $render[$jqid]['webform-links'][$submission->sid]['#status'] = 'editable submission';
+          $render[$jqid]['webform-links'][$submission->sid]['#submission'] = $submission;
+          $render[$jqid]['webform-links'][$submission->sid]['#link_mode'] = 'display_form_on_load';
+        }
+      }
     // If the webform's scope does not require it to be tagged, check to see if
     // the user is permitted to create a new submission. If so, add a link to do that.
     if ($webform->scope != 'tagged') {

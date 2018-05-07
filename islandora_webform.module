@@ -190,17 +190,19 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
         $form['submitted']['islandora_object_pid']['#title_display'] = 'invisible';
       }
 
-      // Re-submitting webforms wants to redirect to the submittal view page.
-      // We want islandora object webforms to redirect back to the object page.
-      if(drupal_valid_path($form['#node']->webform['redirect_url'])) {
-        $redirect_url = $form['#node']->webform['redirect_url'];
-      }
-      else {
-        if(!empty($form_state['build_info']['args'][0]->webform['islandora_object'])) {
-          $redirect_url = 'islandora/object/' . $form_state['build_info']['args'][0]->webform['islandora_object']->id;
+      if($form['#node']->webform['redirect_url'] == '<none>') {
+        // Re-submitting webforms wants to redirect to the submittal view page.
+        // We want islandora object webforms to redirect back to the object page.
+        if(drupal_valid_path($form['#node']->webform['redirect_url'])) {
+          $redirect_url = $form['#node']->webform['redirect_url'];
         }
-      }
-      if(!empty($redirect_url)) {
+        else {
+          $destination = drupal_get_destination();
+          // See https://api.drupal.org/api/drupal/includes%21form.inc/function/drupal_redirect_form/7.x
+          $destination = drupal_parse_url($destination['destination']);
+          $redirect_url = array(array_shift($destination));
+          $redirect_url[] = $destination;
+        }
         $form_state['webform_redirect']  = $redirect_url;
         $form['#submit'][] = 'iw_webform_resubmit_redirect';
       }
@@ -391,14 +393,22 @@ function islandora_webform_node_access($node, $op, $account) {
       }
     }
     if ($is_islandora_webform) {
-      $args = drupal_get_query_parameters();
-      if (!isset($args['pid']) && empty($node->webform['islandora_object'])) {
-        drupal_set_message(t('No fedora object PID was defined'), 'error');
-        return NODE_ACCESS_DENY;
+      // Check to make sure we're not viewing submissions, or editing, or whatever.
+      // For some reason, menu_get_item is crashing in this context. So we do it by
+      // brute force.
+      $path = explode('/', $_GET['q']);
+      if (count($path) == 2 || end($path) == 'view') {
+        $access = NODE_ACCESS_IGNORE;
+        $args = drupal_get_query_parameters();
+        if (!isset($args['pid']) && empty($node->webform['islandora_object'])) {
+          drupal_set_message(t('No fedora object PID was defined'), 'error');
+          $access = NODE_ACCESS_DENY;
+        }
       }
     }
   }
-  return NODE_ACCESS_IGNORE;
+  $access = isset($access) ? $access : NODE_ACCESS_IGNORE;
+  return $access;
 }
 
 
@@ -594,17 +604,17 @@ function islandora_webform_iw_results_object_submissions_page_element_alter(&$el
 
     // Splice in the 'State' label in the table header.
     $element['table']['#header'] =
-      array_slice($element['table']['#header'], 0, $hkey, true) +
-      array('data' => t('State')) +
-      array_slice($element['table']['#header'], $hkey, count($element['table']['#header'])-$hkey, true);
+      array_merge(array_slice($element['table']['#header'], 0, $hkey, true),
+        array($hkey => array('data' => t('State'))),
+        array_slice($element['table']['#header'], $hkey, count($element['table']['#header'])-$hkey, true));
 
     // Splice in the workflow states for each row in the table.
     foreach($map as $row_index => $sid) {
       $workflow_state = webform_workflow_state_load_by_submission($element['#submissions'][$sid]);
       $element['table']['#rows'][$row_index] =
-        array_slice($element['table']['#rows'][$row_index], 0, $hkey, TRUE) +
-        array($hkey => '<span class="webform-workflow-state-label webform-workflow-state-color-' . $workflow_state->color . '">' . $workflow_state->label . '</span>') +
-        array_slice($element['table']['#rows'][$row_index], $hkey, count($element['table']['#rows'][$row_index]) - $hkey, TRUE);
+        array_merge(array_slice($element['table']['#rows'][$row_index], 0, $hkey, TRUE),
+          array($hkey => '<span class="webform-workflow-state-label webform-workflow-state-color-' . $workflow_state->color . '">' . $workflow_state->label . '</span>'),
+          array_slice($element['table']['#rows'][$row_index], $hkey, count($element['table']['#rows'][$row_index]) - $hkey, TRUE));
     }
   }
 }
