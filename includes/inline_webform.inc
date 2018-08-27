@@ -36,7 +36,7 @@ function _iw_inline_webform($webform, $ajax, $submission = FALSE) {
     $commands['remove-container'] = ajax_command_remove('.webform-links-wrapper.opened > div:not(.webform-links)');
     // Set css on webform links wrapper.
     $commands['remove-wrapper-class'] = ajax_command_invoke('.webform-links-wrapper', 'removeClass', array('opened'));
-    $commands['add-wrapper-class'] = ajax_command_invoke('#iw_iwebform_links_' . $webform->nid . '.webform-links-wrapper', 'addClass', array('opened'));
+    $commands['add-wrapper-class'] = ajax_command_invoke('#iw_webform_links_' . $webform->nid . '.webform-links-wrapper', 'addClass', array('opened'));
     // Get the html of the new form.
     $html = render($form);
     $jquery_selector = '#iw_webform_links_' . $webform->nid . ' .webform-links';
