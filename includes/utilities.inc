@@ -41,14 +41,15 @@ function iw_get_collections_or_content_models($type) {
   $type_for_query = '<info:fedora/' . $types[$type] . '>';
   // Query the rindex to get all collections.
   $tuque = islandora_get_tuque_connection();
-  $ri_query = "select \$object \$label from <#ri>
-     where \$object <fedora-model:hasModel> $type_for_query
-      and \$object <fedora-model:label> \$label";
-  $results = $tuque->repository->ri->itqlQuery($ri_query, 'unlimited');
+  $sparql_query = "SELECT * WHERE {
+  ?s <info:fedora/fedora-system:def/model#label> ?o.
+  ?s <info:fedora/fedora-system:def/model#hasModel> $type_for_query
+}";
+  $results = $tuque->repository->ri->sparqlQuery($sparql_query, 'unlimited');
   $ret = array();
   foreach ($results as $member) {
-    $pid = preg_replace('/info:fedora\//', '', $member['object']['value']);
-    $label = $member['label']['value'];
+    $pid = $member['s']['value'];
+    $label = $member['o']['value'];
     // We don't want the root collection.
     if ($pid == 'islandora:root') {
       $label = 'Islandora Root Collection';
