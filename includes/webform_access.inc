@@ -32,28 +32,45 @@ function islandora_webform_user_can_submit_webform($node, $user = NULL, $pid = N
       $allowed_roles[$rid] = isset($user->roles[$rid]) ? TRUE : FALSE;
     }
 
-    if (count(array_filter($allowed_roles)) == 0 && $user->uid != 1) {
+    if (array_search(TRUE, $allowed_roles) === FALSE && $user->uid != 1) {
       $enabled = FALSE;
     }
+  }
+  else {
+    // If not using Webform submission access control, allow for all roles.
+    $allowed_roles = array_keys(user_roles());
+  }
+
+
+  // Get a count of previous submissions by this user. Note that the
+  // webform_submission_access() function may disable the page cache for
+  // anonymous users if they are allowed to edit their own submissions!
+  if ($page && webform_submission_access($node, NULL, 'list')) {
+    module_load_include('inc', 'webform', 'includes/webform.submissions');
+    $submission_count = webform_get_submission_count($node->nid, $user->uid);
   }
 
   // Check if this page is cached or not.
   $cached = $user->uid == 0 && (variable_get('cache', 0) || drupal_page_is_cacheable() === FALSE);
+
+  if($node->webform['allow_draft']) {
+
+  }
 
   // Check if the user can add another submission.
   if ($enabled && $node->webform['submit_limit'] > -1) { // -1: Submissions are never throttled.
     $user_limit_exceeded = islandora_webform_submission_user_limit_check($node, $pid);
     module_load_include('inc', 'webform', 'includes/webform.submissions');
       if($pid && $node->webform['submit_interval'] == ISLANDORA_WEBFORM_SUBMIT_PER_OBJECT_LIMIT_ID) {
-        // Per user and object limit is in place.
-        // See how many submissions for this user and compare to limit.
-        $ws_limits = @unserialize($node->webform['user_ws_limits']);
-        $user_submissions = islandora_webform_object_submission_count($node->nid, $pid, $node->webform['submit_interval'], $user->uid, $ws_limits);
+      // Per user and object limit is in place.
+      // See how many submissions for this user and compare to limit.
+      $ws_limits = @unserialize($node->webform['user_ws_limits']);
+      $user_submissions = islandora_webform_object_submission_count($node->nid, $pid, $node->webform['submit_interval'], $user->uid, $ws_limits);
         $draft_user_submissions = array_filter($user_submissions['results'], function($r) {return $r->is_draft == 1;});
         $draft_user_submissions_count = count($draft_user_submissions);
-        if (empty($draft_user_submissions_count) && $node->webform['submit_limit'] <= $user_submissions['count']) {
-          $enabled = FALSE;
-        }
+      if (empty($draft_user_submissions_count) && $node->webform['submit_limit'] <= $user_submissions['count']) {
+        $enabled = FALSE;
+      }
 
 
     }
