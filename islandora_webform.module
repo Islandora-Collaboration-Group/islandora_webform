@@ -190,7 +190,7 @@ function islandora_webform_form_alter(&$form, &$form_state, $form_id) {
         $form['submitted']['islandora_object_pid']['#title_display'] = 'invisible';
       }
 
-      if($form['#node']->webform['redirect_url'] == '<none>') {
+      if($form['#node']->webform['redirect_url'] == '<none>' && empty($form_state['rebuild'])) {
         // Re-submitting webforms wants to redirect to the submittal view page.
         // We want islandora object webforms to redirect back to the object page.
         if(drupal_valid_path($form['#node']->webform['redirect_url'])) {

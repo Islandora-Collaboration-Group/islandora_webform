@@ -39,7 +39,7 @@ function _iw_inline_webform($webform, $ajax, $submission = FALSE) {
     $commands['add-wrapper-class'] = ajax_command_invoke('#iw_iwebform_links_' . $webform->nid . '.webform-links-wrapper', 'addClass', array('opened'));
     // Get the html of the new form.
     $html = render($form);
-    $jquery_selector = '#iw_iwebform_links_' . $webform->nid . ' .webform-links';
+    $jquery_selector = '#iw_webform_links_' . $webform->nid . ' .webform-links';
     $commands['jquery-selector'] = ajax_command_after($jquery_selector, $html);
     $vars = array('webform' => $webform, 'form' => $form, 'html' => $html);
     drupal_alter('iw_inline_webform_ajax_commands', $commands, $vars);
