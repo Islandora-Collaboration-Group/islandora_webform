@@ -1,0 +1,31 @@
+<?php
+
+/**
+ * Implements hook_webform_component_info
+ *
+ * @return array
+ */
+function islandora_webform_doi_populator_webform_component_info() {
+  $components = array();
+  $components['doi'] = array(
+    'label' => t('DOI'),
+    'description' => t('Create a DOI field.'),
+    'features' => array(
+      'csv' => TRUE,
+      'email' => TRUE,
+      'email_address' => FALSE,
+      'email_name' => FALSE,
+      'required' => FALSE,
+      'title_display' => FALSE,
+      'title_inline' => FALSE,
+      'conditional' => FALSE,
+      'group' => FALSE,
+      'spam_analysis' => FALSE,
+      'attachment' => FALSE,
+      'private' => FALSE
+    ),
+    'file' => 'components/doi.inc',
+  );
+  return $components;
+}
+
