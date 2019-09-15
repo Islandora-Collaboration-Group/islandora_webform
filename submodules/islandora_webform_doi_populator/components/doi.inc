@@ -145,18 +145,47 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
       } else {
         // MODS is valid parse and return
         $mods_data = new DOMXPath($mods);
-        $concatenate_values = function ($elements) {
-          $carry = '';
-          foreach ($elements as $item) {
-            $carry = string_conca
-          }
 
+        /**
+         * @param $related_items
+         * @param string $glue
+         *
+         * @return string
+         */
+        $getMultiple = function ($related_items, $glue = ', ') use (&$getMultiple) {
+          $carry = [];
+          foreach ($related_items as $index => $elements) {
+            if (!($elements instanceof DOMText) && $elements->hasChildNodes()) {
+              $carry[] = $getMultiple($elements->childNodes, $glue);
+            }
+            else {
+              $carry[] = $elements->nodeValue;
+            }
+          }
+          // return contacted list of values
+          return (!empty($carry)) ? implode($glue, $carry) : '';
         };
 
-        $form['genre']['#value'] = $mods_data->query('genre')[0]->nodeValue;
-        $form['titleInfo.title']['#value'] = $mods_data->query('relatedItem/titleInfo/title')[0]->nodeValue;
-        $form['identifier-uri']['#value'] = $mods_data->query('identifier[@type="uri"]')[0]->nodeValue;
-        $form['identifier-issn']['#value'] = array_reduce( $mods_data->query('relatedItem[@type="host"]//identifier[@type="issn"]'), 'concatenate_values');
+        $getRawValue = function ($query, $position = 0) use ($mods_data) {
+          $res = $mods_data->query($query);
+          if ($res) {
+            return $res[$position]->nodeValue;
+          }
+          else {
+            return NULL;
+          }
+        };
+
+        $form['genre']['#value'] = $getRawValue('genre');
+        $form['titleInfo.title']['#value'] = $getRawValue('relatedItem/titleInfo/title');
+        $form['identifier-uri']['#value'] = $getRawValue('identifier[@type="uri"]');
+        $form['identifier-issn']['#value'] = $getMultiple($mods_data->query('relatedItem[@type="host"]//identifier[@type="issn"]'));
+        $form['dateIssued']['#value'] = $getRawValue('originInfo/dateIssued');
+        $form['page']['#value'] = $getMultiple($mods_data->query('part/extent[@unit="page"]'), '-');
+        $form['volume']['#value'] = $getRawValue('part/detail[@type="volume"]/number');
+        $form['issue']['#value'] = $getRawValue('part/detail[@type="issue"]/number');
+        $form['authors']['#value'] = $getMultiple($mods_data->query('name[@type="personal"][descendant::text()[contains(.,"author")]]/namePart'), ' ');
+
       }
 
     }
