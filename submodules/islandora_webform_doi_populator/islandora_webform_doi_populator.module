@@ -1,4 +1,10 @@
 <?php
+/**
+ * Implements hook_components_types_alter().
+ */
+function islandora_webform_doi_populator_components_types_alter(&$eligible_component_types) {
+  $eligible_component_types = array_merge(['doi' =>  array('text/plain')], $eligible_component_types);
+}
 
 /**
  * Implements hook_webform_component_info

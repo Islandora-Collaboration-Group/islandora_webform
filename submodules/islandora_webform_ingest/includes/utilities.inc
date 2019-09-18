@@ -124,6 +124,10 @@ function iwi_datastream_mime_from_component($component) {
     'time' => array('text/plain'),
     'tag' => array('text/plain'),
   );
+
+  // Augment with custom mime types.
+  drupal_alter('components_types', $map);
+
   return isset($map[$component['type']]) ? $map[$component['type']] : array('application/octet-stream');
 }
 

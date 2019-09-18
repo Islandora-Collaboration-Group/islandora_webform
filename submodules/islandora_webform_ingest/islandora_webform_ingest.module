@@ -376,6 +376,8 @@ function islandora_webform_ingest_webform_component_delete($component) {
  *   The webform_component_edit_form form array
  * @param array $form_state
  *   The webform_component_edit_form form_state array
+ *
+ * @throws \Exception
  */
 function iwi_webform_component_edit_form_submit($form, &$form_state) {
   form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
@@ -689,7 +691,10 @@ function islandora_webform_ingest_get_component_types() {
     'multifile',
   );
 
-  return array_intersect($eligible_component_types, array_keys(webform_components()));
+  // Allow other modules to define custom components to be mapped
+  drupal_alter('components_types', $eligible_component_types);
+
+  return array_intersect(array_keys($eligible_component_types), array_keys(webform_components()));
 
 }
 
@@ -764,7 +769,6 @@ function iwi_ds_field_options($association, $mimefilter = array()) {
  * TODO If bulk ingest is implemented, we would add that here as well
  */
 function islandora_webform_ingest_iw_results_object_submissions_page_element_alter(&$element) {
-
   if (user_access('ingest islandora webform submissions')) {
 
     // Failed to get ctools modal popup form to work.

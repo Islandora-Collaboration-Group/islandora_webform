@@ -58,6 +58,12 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
     '#description' => t('Enter a valid DOI and click on search, example: 10.1038/nphys1170'),
     '#prefix' => '<div id="doi_textfields">',
     '#default_value' => $filter ? webform_replace_tokens($value['doi']) : $value['doi'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'indetifiers:doi'
+    )
   );
   $form['doi_submit'] = array(
     '#type' => 'button',
@@ -75,7 +81,13 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
     '#attributes' => $isReadOnly,
     '#prefix' => '<fieldset class="collapsible form-wrapper collapse-processed" id="doi-metadata"><legend><span class="fieldset-legend">DOI: Metadata</span></legend><div class="fieldset-wrapper"><div class="fieldset-description">Please Review the data below before submitting your form. Data in this section gets pulled automatically from internet.</div>',
     '#default_value' => $filter ? webform_replace_tokens($value['titleInfo.title']) : $value['titleInfo.title'],
-    '#description' => t('The title of this publication')
+    '#description' => t('The title of this publication'),
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'titleInfo.title'
+    )
   );
     $form['identifier-uri'] = array(
     '#type' => 'textfield',
@@ -83,6 +95,12 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
     '#attributes' => $isReadOnly,
     '#description' => t('A URI for the item, potentially an HTTP URL'),
     '#default_value' => $filter ? webform_replace_tokens($value['identifier-uri']) : $value['identifier-uri'],
+      '#mapping' => array(
+        'mode' => 'replace',
+        'datastream' => 'MODS (Citation MODS form)',
+        'data_stream_id' => 'MODS',
+        'field' => 'indetifiers:uri'
+      )
   );
 
   $form['identifier-issn'] = array(
@@ -91,6 +109,12 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
     '#attributes' => $isReadOnly,
     '#description' => t('International Standard Serial Number, multiple will be separated by commas'),
     '#default_value' => $filter ? webform_replace_tokens($value['identifier-issn']) : $value['identifier-issn'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'indetifiers:issn'
+    )
   );
 
   $form['dateIssued'] = array(
@@ -98,25 +122,64 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
     '#title' => t('Date Issued'),
     '#attributes' => $isReadOnly,
     '#default_value' => $filter ? webform_replace_tokens($value['dateIssued']) : $value['dateIssued'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'originInfo:dateSet:dateIssued'
+    )
   );
 
-  $form['page'] = array(
+  $form['pages.start'] = array(
     '#type' => 'textfield',
-    '#title' => t('Pages'),
+    '#title' => t('Pages - Start'),
     '#attributes' => $isReadOnly,
-    '#default_value' => $filter ? webform_replace_tokens($value['page']) : $value['page'],
+    '#default_value' => $filter ? webform_replace_tokens($value['page.start']) : $value['page.start'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'part:pages:start',
+    )
   );
+
+
+  $form['pages.end'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Pages - End'),
+    '#attributes' => $isReadOnly,
+    '#default_value' => $filter ? webform_replace_tokens($value['page.end']) : $value['page.end'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'part:pages:end',
+    )
+  );
+
   $form['volume'] = array(
     '#type' => 'textfield',
     '#title' => t('Volume Number'),
     '#attributes' => $isReadOnly,
     '#default_value' => $filter ? webform_replace_tokens($value['volume']) : $value['volume'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'part:volume'
+    )
   );
   $form['genre'] = array(
     '#type' => 'textfield',
     '#title' => t('Publication Type'),
     '#attributes' => $isReadOnly,
     '#default_value' => $filter ? webform_replace_tokens($value['genre']) : $value['genre'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'publication_type'
+    )
   );
 
   $form['issue'] = array(
@@ -124,6 +187,12 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
     '#title' => t('Issue Number'),
     '#attributes' => $isReadOnly,
     '#default_value' => $filter ? webform_replace_tokens($value['issue']) : $value['issue'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'part:issue'
+    )
   );
   $form['authors'] = array(
     '#type' => 'textfield',
@@ -131,7 +200,14 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
     '#description' => t('Authors of the item; Full author names are entered when they appear in the author position of an article, usually on the title page of an article, several authors will be separated by commas.'),
     '#attributes' => $isReadOnly,
     '#default_value' => $filter ? webform_replace_tokens($value['authors']) : $value['authors'],
-    '#suffix' => '</div></fieldset></div>'
+    '#suffix' => '</div></fieldset></div>',
+    '#mapping' => array(
+      'mode' => 'append',
+      'datastream' => 'MODS',
+      'data_stream_id' => 'MODS',
+      'field' => 'authors:0:qualified_name',
+      'split_by' => ', '
+    )
   );
   //get cid
   if (isset($_POST['submitted']) && isset($_POST['submitted'][$component['form_key']])) {
@@ -181,11 +257,11 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
         $form['identifier-uri']['#value'] = $getRawValue('identifier[@type="uri"]');
         $form['identifier-issn']['#value'] = $getMultiple($mods_data->query('relatedItem[@type="host"]//identifier[@type="issn"]'));
         $form['dateIssued']['#value'] = $getRawValue('originInfo/dateIssued');
-        $form['page']['#value'] = $getMultiple($mods_data->query('part/extent[@unit="page"]'), '-');
+        $form['pages.start']['#value'] = $getRawValue($mods_data->query('part/extent[@unit="page"]/start'));
+        $form['pages.end']['#value'] = $getRawValue($mods_data->query('part/extent[@unit="page"]/end'));
         $form['volume']['#value'] = $getRawValue('part/detail[@type="volume"]/number');
         $form['issue']['#value'] = $getRawValue('part/detail[@type="issue"]/number');
         $form['authors']['#value'] = $getMultiple($mods_data->query('name[@type="personal"][descendant::text()[contains(.,"author")]]/namePart'), ' ');
-
       }
 
     }
