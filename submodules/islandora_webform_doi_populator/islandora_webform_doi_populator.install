@@ -1,0 +1,12 @@
+<?php
+
+/**
+ * executes hook _install
+ */
+function islandora_webform_doi_populator_install() {
+  // Find out the weight of the other module
+  $weight = db_query("SELECT weight FROM {system} WHERE name = 'islandora_webform_ingest'")->fetchObject()->weight;
+
+  // Set our module to a weight 1 heavier, so it moves lower in execution order
+  db_query("UPDATE {system} SET weight = :weight WHERE name = 'islandora_webform_doi_populator'", array(':weight' => $weight + 1));
+}
