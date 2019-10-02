@@ -266,6 +266,8 @@ function _webform_display_doi($component, $value, $format = 'html') {
     '#post_render' => array('webform_element_wrapper'),
     '#component' => $component,
     '#format' => $format,
+    '#field_prefix' => '',
+    '#field_suffix' => '',
     '#value' => isset($value[0]) ? $value[0] : '',
   );
 }

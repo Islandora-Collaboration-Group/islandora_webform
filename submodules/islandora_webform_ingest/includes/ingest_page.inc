@@ -162,11 +162,11 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         }
       } else {
         $submitted_value = $submission->data[$mapping->cid][0];
-        $dsid = $mapping->data['datastream_id'];
-        $dsindex = $mapping->data['datastream'];
+        $dsid = $mapping->data[0]['datastream_id'];
+        $dsindex = $mapping->data[0]['datastream'];
 
         $islandora_webform_values[$dsid]['data_values'][] = array(
-          'path' => $mapping->data['field'],
+          'path' => $mapping->data[0]['field'],
           'input_value' => array(
             '#default_value' => $submitted_value,
             '#attributes' => array(
@@ -175,17 +175,19 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
               ),
             ),
           ),
-          'mode' => $mapping->data['mode'],
+          'mode' => $mapping->data[0]['mode'],
         );
       }
 
-      $association = $datastreams[$dsindex];
-      //Only store datastream associations for fields we actually have
-      $used_associations[$dsindex]=$association;
-      // Store all our submited values.
-      $islandora_webform_values[$dsid]['association'] = $association;
-
-      $islandora_webform_values[$dsid]['component'] = $webform->webform['components'][$mapping->cid];
+      //if dsindex is empty we want to ignore this non mapped field.
+      if (!empty($dsindex)) {
+        $association = $datastreams[$dsindex];
+        //Only store datastream associations for fields we actually have
+        $used_associations[$dsindex]=$association;
+        // Store all our submited values.
+        $islandora_webform_values[$dsid]['association'] = $association;
+        $islandora_webform_values[$dsid]['component'] = $webform->webform['components'][$mapping->cid];
+      }
     }
   }
   //set our mapped dsid and associations
@@ -259,18 +261,21 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       );
 
       // Display the component using webform defaults.
-      $data = $submission->data[$dsid_values['component']['cid']];
-      $new_form['component'] = webform_component_invoke($dsid_values['component']['type'], 'display', $dsid_values['component'], $data);
+      if (isset($dsid_values['component'])) {
+        $data = $submission->data[$dsid_values['component']['cid']];
+        $new_form['component'] = webform_component_invoke($dsid_values['component']['type'], 'display', $dsid_values['component'], $data);
 
-      if (!empty($new_form['component']['#value']->fid)) {
-        // Include the file id in a hidden field.
-        $new_form['fid'] = array(
-          '#type' => 'hidden',
-          '#value' => $new_form['component']['#value']->fid,
-        );
+        if (!empty($new_form['component']['#value']->fid)) {
+          // Include the file id in a hidden field.
+          $new_form['fid'] = array(
+            '#type' => 'hidden',
+            '#value' => $new_form['component']['#value']->fid,
+          );
+        }
+
+        $form[$dsid] = $new_form;
       }
 
-      $form[$dsid] = $new_form;
     }
   }
 
