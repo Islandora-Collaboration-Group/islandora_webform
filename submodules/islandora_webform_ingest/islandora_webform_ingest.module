@@ -694,7 +694,7 @@ function islandora_webform_ingest_get_component_types() {
   // Allow other modules to define custom components to be mapped
   drupal_alter('components_types', $eligible_component_types);
 
-  return array_intersect(array_keys($eligible_component_types), array_keys(webform_components()));
+  return $eligible_component_types;
 
 }
 

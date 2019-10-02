@@ -10,37 +10,12 @@ function _webform_defaults_doi() {
     'value' => '',
     'mandatory' => 1,
     'extra' => array(
-      'field_prefix' => '',
-      'field_suffix' => '',
     ),
   );
 }
 
 function _webform_edit_doi($component) {
-  $form = array();
-  $form['field_prefix'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Left'),
-    '#default_value' => $component['extra']['field_prefix'],
-    '#size' => 60,
-    '#required' => TRUE,
-    '#maxlength' => 255,
-    '#weight' => 1.1,
-    '#parents' => array('extra', 'field_prefix'),
-    '#description' => t('Text placed to the left of the slider'),
-  );
-  $form['field_suffix'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Right'),
-    '#default_value' => $component['extra']['field_suffix'],
-    '#size' => 60,
-    '#required' => TRUE,
-    '#maxlength' => 255,
-    '#weight' => 1.2,
-    '#parents' => array('extra', 'field_suffix'),
-    '#description' => t('Text placed to the right of the slider'),
-  );
-  return $form;
+  return array();
 }
 
 function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
@@ -62,7 +37,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
       'mode' => 'replace',
       'datastream' => 'MODS (Citation MODS form)',
       'data_stream_id' => 'MODS',
-      'field' => 'indetifiers:doi'
+      'field' => 'identifiers:doi'
     )
   );
   $form['doi_submit'] = array(
@@ -86,7 +61,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
       'mode' => 'replace',
       'datastream' => 'MODS (Citation MODS form)',
       'data_stream_id' => 'MODS',
-      'field' => 'titleInfo.title'
+      'field' => 'titleInfo:title'
     )
   );
     $form['identifier-uri'] = array(
@@ -99,7 +74,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
         'mode' => 'replace',
         'datastream' => 'MODS (Citation MODS form)',
         'data_stream_id' => 'MODS',
-        'field' => 'indetifiers:uri'
+        'field' => 'identifiers:uri'
       )
   );
 
@@ -113,7 +88,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
       'mode' => 'replace',
       'datastream' => 'MODS (Citation MODS form)',
       'data_stream_id' => 'MODS',
-      'field' => 'indetifiers:issn'
+      'field' => 'identifiers:issn'
     )
   );
 
@@ -253,12 +228,12 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
         };
 
         $form['genre']['#value'] = $getRawValue('genre');
-        $form['titleInfo.title']['#value'] = $getRawValue('relatedItem/titleInfo/title');
+        $form['titleInfo.title']['#value'] = $getRawValue('titleInfo/title');
         $form['identifier-uri']['#value'] = $getRawValue('identifier[@type="uri"]');
         $form['identifier-issn']['#value'] = $getMultiple($mods_data->query('relatedItem[@type="host"]//identifier[@type="issn"]'));
         $form['dateIssued']['#value'] = $getRawValue('originInfo/dateIssued');
-        $form['pages.start']['#value'] = $getRawValue($mods_data->query('part/extent[@unit="page"]/start'));
-        $form['pages.end']['#value'] = $getRawValue($mods_data->query('part/extent[@unit="page"]/end'));
+        $form['pages.start']['#value'] = $getRawValue('part/extent[@unit="page"]/start');
+        $form['pages.end']['#value'] = $getRawValue('part/extent[@unit="page"]/end');
         $form['volume']['#value'] = $getRawValue('part/detail[@type="volume"]/number');
         $form['issue']['#value'] = $getRawValue('part/detail[@type="issue"]/number');
         $form['authors']['#value'] = $getMultiple($mods_data->query('name[@type="personal"][descendant::text()[contains(.,"author")]]/namePart'), ' ');
@@ -289,8 +264,6 @@ function _webform_display_doi($component, $value, $format = 'html') {
     '#theme' => 'webform_display_textfield',
     '#theme_wrappers' => $format == 'html' ? array('webform_element') : array('webform_element_text'),
     '#post_render' => array('webform_element_wrapper'),
-    '#field_prefix' => $component['extra']['field_prefix'],
-    '#field_suffix' => $component['extra']['field_suffix'],
     '#component' => $component,
     '#format' => $format,
     '#value' => isset($value[0]) ? $value[0] : '',

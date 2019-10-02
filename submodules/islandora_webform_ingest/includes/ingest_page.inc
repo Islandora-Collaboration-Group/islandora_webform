@@ -128,27 +128,63 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   foreach ($mappings as $mapping) {
     // Check if we have submitted data for this component, if not, skip it
     // entirely.
-    if (isset($submission->data[$mapping->cid][0])) {
-      $submitted_value = $submission->data[$mapping->cid][0];
-      $dsid = $mapping->data['datastream_id'];
-      $dsindex = $mapping->data['datastream'];
+    $submission_data = $submission->data[$mapping->cid];
+    if (isset($submission_data) && count($submission_data) > 0) {
+      // if we have multiple values show them, if data is an array of values it means that we have submissions from multiple components
+      $reverse = array_reverse(array_keys($submission_data));
+      if (!is_numeric(end($reverse))) {
+        // Kind of a hack, if the first key of the array is not a number we;re dealing with an array with multiple values
+        $submitted_value = $submission->data[$mapping->cid];
+        // Grab metadata from first element as it is the same for all
+        $dsid = $mapping->data[0]['datastream_id'];
+        $dsindex = $mapping->data[0]['datastream'];
+        $matching_components = [];
+        foreach ($submitted_value as $item => $_submission) {
+          $matching_components = array_filter($mapping->data, function ($element) use ($item) {
+            return ($element['component_name'] == $item);
+          });
+          if (!empty($matching_components)) {
+            $default_value = $submitted_value[$item];
+            // if at least 1 item matches with the current component name, add it to the processing queue
+            $islandora_webform_values[$dsid]['data_values'][] = array(
+              'path' => $mapping->data[key($matching_components)]['field'],
+              'input_value' => array(
+                '#default_value' => $default_value,
+                '#attributes' => array(
+                  'class' => array(
+                    'submitted-value',
+                  ),
+                ),
+              ),
+              'mode' => $mapping->data[key($matching_components)]['mode'],
+            );
+          }
+        }
+      } else {
+        $submitted_value = $submission->data[$mapping->cid][0];
+        $dsid = $mapping->data['datastream_id'];
+        $dsindex = $mapping->data['datastream'];
+
+        $islandora_webform_values[$dsid]['data_values'][] = array(
+          'path' => $mapping->data['field'],
+          'input_value' => array(
+            '#default_value' => $submitted_value,
+            '#attributes' => array(
+              'class' => array(
+                'submitted-value',
+              ),
+            ),
+          ),
+          'mode' => $mapping->data['mode'],
+        );
+      }
+
       $association = $datastreams[$dsindex];
       //Only store datastream associations for fields we actually have
       $used_associations[$dsindex]=$association;
       // Store all our submited values.
       $islandora_webform_values[$dsid]['association'] = $association;
-      $islandora_webform_values[$dsid]['data_values'][] = array(
-        'path' => $mapping->data['field'],
-        'input_value' => array(
-          '#default_value' => $submitted_value,
-          '#attributes' => array(
-            'class' => array(
-              'submitted-value',
-            ),
-          ),
-        ),
-        'mode' => $mapping->data['mode'],
-      );
+
       $islandora_webform_values[$dsid]['component'] = $webform->webform['components'][$mapping->cid];
     }
   }

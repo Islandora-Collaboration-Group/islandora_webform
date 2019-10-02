@@ -126,7 +126,7 @@ function iwi_datastream_mime_from_component($component) {
   );
 
   // Augment with custom mime types.
-  drupal_alter('components_types', $map);
+  drupal_alter('components_mime', $map);
 
   return isset($map[$component['type']]) ? $map[$component['type']] : array('application/octet-stream');
 }
@@ -332,7 +332,6 @@ function iwi_save_component_mapping($form, $form_state) {
         )
       )->execute();
   }
-
 }
 
 /**
