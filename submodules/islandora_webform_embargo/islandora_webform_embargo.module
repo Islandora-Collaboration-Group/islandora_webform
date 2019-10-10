@@ -1,0 +1,132 @@
+<?php
+
+function _get_islandora_webform_embargo_settings($nid) {
+  // Get previously stored values for this webform
+  if ($nid) {
+    $defaults = db_select('islandora_webform_embargo', 'w')
+      ->fields('w')
+      ->condition('w.nid', $nid)
+      ->execute()->fetchAssoc();
+  }
+
+  return $defaults;
+}
+
+/**
+ * Adds quick embargo options to the ingest form
+ *
+ * Implements hook_form_alter().
+ */
+function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'islandora_webform_configure_stepped_form') {
+
+    module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
+
+    $date = new dateTime();
+    $date = $date->format('M d, Y ');
+    $defaults = false;
+
+    $defaults = _get_islandora_webform_embargo_settings((isset($form['nid']) && !empty($form['nid']['#value'])) ? $form['nid']['#value'] : false);
+
+    $form['islandora_embargo'] = [
+      '#type' => 'fieldset',
+      '#title' => 'Islandora Embargo Settings',
+      '#collapsible' => TRUE,
+      '#tree' => TRUE,
+      '#group' => 'additional_settings',
+      'embargo_type' => [
+        '#markup' => t('Embargo type: <strong>Object-level embargo</strong>'),
+      ],
+      'set_date_options' => [
+        '#type' => 'radios',
+        '#title' => check_plain(t('Embargo Options')),
+        '#options' => [
+          'set_embargo_date' => t('Set the embargo date'),
+          'indefinite_embargo' => t('Embargo indefinitely (Indefinite embargoes must be lifted manually).'),
+        ],
+        '#default_value' => ($defaults && $defaults['embargo_type'] == 1) ? 'indefinite_embargo' : 'set_embargo_date',
+      ],
+      'embargo_date' => [
+        '#type' => 'date',
+        '#title' => t('Embargo date'),
+        '#description' => t('A date until which this item should be embargoed.'),
+        '#default_value' =>($defaults && $defaults['embargo_type'] == 0) ? date_parse($defaults['embargo_date'] ?? "now") : NULL,
+        '#after_build' => ['_embargo_set_year_range'],
+        '#states' => [
+          'visible' => [
+            // Only show this item when the data has to be set by the user
+            ':input[name="islandora_embargo[set_date_options]"]' => ['value' => 'set_embargo_date'],
+          ],
+        ],
+      ],
+      'submit' => [
+        '#type' => 'submit',
+        '#value' => t('Save'),
+        '#submit' => ['islandora_webform_embargo_form_submit'],
+        '#prefix' => t('After <strong>creating</strong> or <strong>updating</strong> an object, the above settings will be applied. Embargo Settings can be changed later inside of the object management section, including all embargo options. <br /><br />'),
+        '#weight' => 102,
+      ],
+    ];
+  }
+}
+
+/**
+ * Save configurations
+ *
+ * @param $form
+ * @param $form_state
+ * @param bool $node
+ *
+ * @throws \InvalidMergeQueryException
+ */
+function islandora_webform_embargo_form_submit($form, &$form_state, $node = false) {
+  $time = $form_state['values']['islandora_embargo']['embargo_date'];
+  $date_string = $time['year'] . '-' . $time['month'] . '-' . $time['day'];
+
+  if (db_merge('islandora_webform_embargo')
+    ->key(array('nid' => $form_state['values']['nid']))
+    ->fields(array(
+      'embargo_type' => ($form_state['values']['islandora_embargo']['set_date_options'] == 'indefinite_embargo') ? 1 : 0,
+      'embargo_date' => $date_string,
+      'nid' => $form_state['values']['nid'],
+    ))
+    ->execute()
+  ) {
+    drupal_set_message(t('Islandora Embargo configuration saved.'));
+  }
+  else {
+    drupal_set_message(t('Islandora Embargo configuration could not be saved.'));
+  }
+}
+
+/**
+ * Implements hook islandora_webform_submission_ingested
+ *
+ * sets the embargo to the newly ingested object
+ *
+ * @param $submission
+ * @param $object
+ */
+function islandora_webform_embargo_islandora_webform_submission_ingested($submission, $object) {
+  $pid = $object->id;
+  // Get an object, sometimes if the ingest file $Object won't be real
+  $object = islandora_object_load($pid);
+  if ($object) {
+    if ($submission) {
+      // Get embargo settings for this particular submission's parent webform
+      $defaults = _get_islandora_webform_embargo_settings($submission->nid);
+      if ($defaults['set_date_options'] == 1) {
+        $end = 'indefinite';
+      }
+      else {
+        $time = $defaults['embargo_date'];
+        $end = gmdate("Y-m-d\TH:i:s\Z", strtotime($time));
+      }
+      // Set stream IDs to null to embargo the full object
+      $dsids = NULL;
+      // Save embargo settings for this object
+      islandora_scholar_embargo_set_embargo($pid, $dsids, $end);
+      islandora_scholar_embargo_set_display_message($pid, $dsids, $end);
+    }
+  }
+}

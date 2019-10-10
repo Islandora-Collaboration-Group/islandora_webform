@@ -1,0 +1,45 @@
+<?php
+
+
+/**
+ * Implements hook_schema().
+ */
+function islandora_webform_embargo_schema() {
+  $schema['islandora_webform_embargo'] = [
+    'description' => 'Tracks embargo information for soon to be ingested objects',
+    'indexes' => [
+      'nid' => ['nid'],
+    ],
+    'primary key' => ['id'],
+    'fields' => [
+      'id' => [
+        'description' => 'Unique row ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'nid' => [
+        'description' => 'Webform node id',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'embargo_type' => [
+        'description' => 'Type of embargo to apply',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0, //0 date, 1 until lifted
+      ],
+      'embargo_date' => [
+        'description' => 'date in which this embargo will be active',
+        'mysql_type' => 'datetime',
+        'type' => 'varchar',
+        'not null' => FALSE,
+      ],
+    ],
+  ];
+
+  return $schema;
+}

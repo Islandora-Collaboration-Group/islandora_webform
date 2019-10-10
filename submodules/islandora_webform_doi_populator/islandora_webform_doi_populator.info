@@ -1,5 +1,5 @@
 name = Islandora Webform DOI populator
-description = Adds a new compount field to fetch DOI data, and prepare it for ingestion.
+description = Adds a new component field to fetch DOI data, and prepare it for ingestion.
 core = 7.x
 package = Islandora
 dependencies[] = islandora_webform

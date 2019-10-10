@@ -451,14 +451,21 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
     $link = l($url, $url);
     if (($new_object) && ($datastream_count > 0)) {
       // Finally, add the Object to the repo.
-      islandora_add_object($object);
+      try {
+        islandora_add_object($object);
 
-      // Report new object created.
-      drupal_set_message(t('New @cmodel object with PID @pid was ingested: !link', array(
-        '@cmodel' => $form['#ingest_cmodel']->label,
-        '@pid' => $object->id,
-        '!link' => $link,
-      )));
+        // Report new object created.
+        drupal_set_message(t('New @cmodel object with PID @pid was ingested: !link', array(
+          '@cmodel' => $form['#ingest_cmodel']->label,
+          '@pid' => $object->id,
+          '!link' => $link,
+        )));
+
+      } catch (Exception $e) {
+        drupal_set_message(t('Error when trying to ingest @cmodel, please contact the administrator'), array(
+          '@cmodel' => $form['#ingest_cmodel']->label
+        ));
+      }
     }
     else {
       // Report original object modified.
