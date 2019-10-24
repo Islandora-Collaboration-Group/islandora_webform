@@ -1,4 +1,8 @@
 <?php
+// Constants
+define('DOI_AUTHOR_SEPARATOR', ", ");
+define('DOI_AUTHOR_NAMEPART_SEPARATOR', " ");
+
 /**
  * Implements hook_components_types_alter().
  */
@@ -65,7 +69,46 @@ function islandora_webform_doi_populator_form_alter(&$form, &$form_state, $form_
  * @param $submission
  */
 function islandora_webform_doi_populator_iwi_set_form_alter(&$form, $form_state, $submission) {
+  //find whether if this submission comes from a field with a DOI field
+  foreach ($submission->data as $component) {
+    if (array_key_exists('doi', $component)) {
+      // has a doi field, in this particular case doi adds the option to ingest multiple users at once
+      if (isset($form['authors'])) {
+        // Split current authors, and add them to different tabs
+        $all_authors = $form['authors'][0]['family']['#default_value'];
+        $all_authors = explode(DOI_AUTHOR_SEPARATOR, $all_authors);
+        $base_node = $form['authors'][0];
+        // Remove hash
+        $attributes = array(
+          'class' => array(
+            'submitted-value',
+          )
+        );
 
+        foreach ($all_authors as $id => $single_author) {
+          $author_name_parts = explode(DOI_AUTHOR_NAMEPART_SEPARATOR , $single_author);
+          // Generate a slightly different hash
+          $offset = md5(uniqid('offset', TRUE));
+          $mode = 'append';
+
+          $input_value = array(
+            '#attributes' => $attributes,
+          );
+          // Replace first element, and append the rest
+          if ($id == 0) {
+            $offset = $base_node['#hash'];
+          }
+          // use the mapping to populate this field here
+          $input_value['#default_value'] = $author_name_parts[1] ?? '';
+          iwi_set_form_element_byhash($form, $form_state, "authors:0:family", $input_value, $mode, $offset);
+          $input_value['#default_value'] = $author_name_parts[0] ?? '';
+          iwi_set_form_element_byhash($form, $form_state, "authors:0:qualified_name", $input_value, $mode, $offset);
+          $input_value['#default_value'] = $single_author ?? '';
+          iwi_set_form_element_byhash($form, $form_state, "authors:0:given", $input_value, $mode, $offset);
+        }
+      }
+    }
+  }
   // Use of this hook requires having a lot of specific understanding of both
   // the webform that is serving as the data source, and the MODS form, which
   // is the destination.
@@ -76,7 +119,7 @@ function islandora_webform_doi_populator_iwi_set_form_alter(&$form, $form_state,
   // in the MODS form.
 
   // Restrict to a particular webform
-
+  return $form;
 }
 
 /**
@@ -109,7 +152,8 @@ function islandora_webform_doi_populator_webform_component_edit_form_submit($for
           // Ignore fields that are not mapped
           if (isset($part_value['#mapping'])) {
             $data[] = [
-              'mode' => $mode,
+              // Use mode defined in the mapping
+              'mode' => $part_value['#mapping']['mode'],
               'datastream' => $datastream_label,
               'datastream_id' => $datastream_id,
               'field' => ($part_value['#mapping']['field']) ? $part_value['#mapping']['field'] : '',

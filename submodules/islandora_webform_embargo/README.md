@@ -53,8 +53,6 @@ Ingesting Webform Submissions
 3. After a submission has been ingested the embargo will be added automatically
 
 
-
-
 Upgrading from previous versions
 --------------------------------
 

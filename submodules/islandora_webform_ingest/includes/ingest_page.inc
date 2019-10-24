@@ -139,25 +139,27 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         $dsid = $mapping->data[0]['datastream_id'];
         $dsindex = $mapping->data[0]['datastream'];
         $matching_components = [];
-        foreach ($submitted_value as $item => $_submission) {
-          $matching_components = array_filter($mapping->data, function ($element) use ($item) {
-            return ($element['component_name'] == $item);
-          });
-          if (!empty($matching_components)) {
-            $default_value = $submitted_value[$item];
-            // if at least 1 item matches with the current component name, add it to the processing queue
-            $islandora_webform_values[$dsid]['data_values'][] = array(
-              'path' => $mapping->data[key($matching_components)]['field'],
-              'input_value' => array(
-                '#default_value' => $default_value,
-                '#attributes' => array(
-                  'class' => array(
-                    'submitted-value',
+        if (!empty($mapping->data)){
+          foreach ($submitted_value as $item => $_submission) {
+            $matching_components = array_filter($mapping->data, function ($element) use ($item) {
+              return ($element['component_name'] == $item);
+            });
+            if (!empty($matching_components)) {
+              $default_value = $submitted_value[$item];
+              // if at least 1 item matches with the current component name, add it to the processing queue
+              $islandora_webform_values[$dsid]['data_values'][] = array(
+                'path' => $mapping->data[key($matching_components)]['field'],
+                'input_value' => array(
+                  '#default_value' => $default_value,
+                  '#attributes' => array(
+                    'class' => array(
+                      'submitted-value',
+                    ),
                   ),
                 ),
-              ),
-              'mode' => $mapping->data[key($matching_components)]['mode'],
-            );
+                'mode' => $mapping->data[key($matching_components)]['mode'],
+              );
+            }
           }
         }
       } else {

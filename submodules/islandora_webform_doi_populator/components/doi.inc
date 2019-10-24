@@ -18,6 +18,15 @@ function _webform_edit_doi($component) {
   return array();
 }
 
+/**
+ * Render DOI field
+ *
+ * @param $component
+ * @param null $value
+ * @param bool $filter
+ *
+ * @return array
+ */
 function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
   $node = isset($component['nid']) ? node_load($component['nid']) : NULL;
   $form = array();
@@ -169,18 +178,19 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
       'field' => 'part:issue'
     )
   );
-  $form['authors'] = array(
+
+  $form['author_family_0'] = array(
     '#type' => 'textfield',
     '#title' => t('Authors'),
-    '#description' => t('Authors of the item; Full author names are entered when they appear in the author position of an article, usually on the title page of an article, several authors will be separated by commas.'),
+    '#description' => t('Author\'s family name of the item; Full author names are entered when they appear in the author position of an article, usually on the title page of an article, several authors will be separated by commas.'),
     '#attributes' => $isReadOnly,
-    '#default_value' => $filter ? webform_replace_tokens($value['authors']) : $value['authors'],
-    '#suffix' => '</div></fieldset></div>',
+    '#default_value' => $filter ? webform_replace_tokens($value['author_family_0']) : $value['author_family_0'],
+    '#suffix' =>  '</div></fieldset></div>',
     '#mapping' => array(
       'mode' => 'append',
       'datastream' => 'MODS',
       'data_stream_id' => 'MODS',
-      'field' => 'authors:0:qualified_name',
+      'field' => 'authors:0:family',
       'split_by' => ', '
     )
   );
@@ -201,7 +211,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
          * @param $related_items
          * @param string $glue
          *
-         * @return string
+         * @return string|array
          */
         $getMultiple = function ($related_items, $glue = ', ') use (&$getMultiple) {
           $carry = [];
@@ -214,7 +224,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
             }
           }
           // return contacted list of values
-          return (!empty($carry)) ? implode($glue, $carry) : '';
+          return (!empty($carry)) ? (($glue) ? implode($glue, $carry) : $carry) : '';
         };
 
         $getRawValue = function ($query, $position = 0) use ($mods_data) {
@@ -236,7 +246,22 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
         $form['pages.end']['#value'] = $getRawValue('part/extent[@unit="page"]/end');
         $form['volume']['#value'] = $getRawValue('part/detail[@type="volume"]/number');
         $form['issue']['#value'] = $getRawValue('part/detail[@type="issue"]/number');
-        $form['authors']['#value'] = $getMultiple($mods_data->query('name[@type="personal"][descendant::text()[contains(.,"author")]]/namePart'), ' ');
+        $authors = $getMultiple($mods_data->query('name[@type="personal"][descendant::text()[contains(.,"author")]]'), FALSE);
+
+        $all_authors = [];
+        $index = 0;
+
+        foreach ($authors as  $single_author) {
+          // Remove author key
+          $single_author = array_merge(...array_slice($single_author, 0, -1));
+          // Set new Xpath to save the data Family, given
+          $full_name = $single_author[1] . ' ' . $single_author[0];
+          $all_authors[] = $full_name;
+
+        }
+        $form["author_family_{$index}"]['#value'] = implode(", ", $all_authors);
+        // Close wrapper
+        $form["author_family_{$index}"]['#suffix'] = '</div></fieldset></div>';
       }
 
     }
@@ -253,7 +278,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
  */
 
 function islandora_webform_doi_populator_ajax_callback($form, $form_state) {
-  return $form['submitted']['doi2'];
+  return $form['submitted']['doi'];
 }
 
 
