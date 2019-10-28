@@ -41,6 +41,8 @@ function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
       unset($form['submitted']['islandora_embargo_form']['submit']);
       unset($form['submitted']['islandora_embargo_form']['remove_embargo']);
       // Set custom submit to save embargo settings
+      // Override Jquery
+      $form['submitted']['islandora_embargo_form']['embargo_date']['#states']['visible'] = [':input[name="submitted[islandora_embargo_form][set_date_options]"]' => ['value' => 'set_embargo_date']];
       $form['#submit'][] = 'islandora_webform_embargo_form_submit';
     }
   }
@@ -68,7 +70,7 @@ function _islandora_webform_embargo_form_array($defaults) {
         'set_embargo_date' => t('Set the embargo date'),
         'indefinite_embargo' => t('Embargo indefinitely (Indefinite embargoes must be lifted manually).'),
       ],
-      '#default_value' => ($defaults && $defaults['embargo_type'] == 1) ? 'indefinite_embargo' : ($defaults['embargo_type'] == 0) ? 'set_embargo_date' : 'no_embargo',
+      '#default_value' => ($defaults && $defaults['embargo_type'] == 1) ? 'indefinite_embargo' : ($defaults['embargo_type'] == 0) ? 'no_embargo' : 'set_embargo_date',
     ],
     'embargo_date' => [
       '#type' => 'date',
