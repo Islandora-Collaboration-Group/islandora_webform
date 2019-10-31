@@ -1,9 +1,9 @@
 <?php
 
-function _webform_defaults_u() {
+function _webform_defaults_u1() {
   return [
-    'name' => 'u',
-    'form_key' => 'u12',
+    'name' => 'u1',
+    'form_key' => 'u1',
     'pid' => 0,
     'weight' => 0,
     'value' => '',
@@ -13,40 +13,52 @@ function _webform_defaults_u() {
   ];
 }
 
-function _webform_edit_u($component) {
+function _webform_defaults_u2() {
+  return [
+    'name' => 'u2',
+    'form_key' => 'u2',
+    'pid' => 0,
+    'weight' => 0,
+    'value' => '',
+    'mandatory' => 1,
+    'extra' => [
+    ],
+  ];
+}
+
+function _webform_edit_u1($component) {
   return [];
 }
 
-function _webform_render_u($component, $value = NULL, $filter = TRUE) {
-  $form = [];
-  $node = isset($component['nid']) ? node_load($component['nid']) : NULL;
+function _webform_edit_u2($component) {
+  return _webform_edit_u1($component);
+}
 
+function _webform_render_u1($component, $value = NULL, $filter = TRUE) {
+  $form = [];
   $form['u1_identifier_tags'] = [
     '#title' => 'Faculty Identifier - U1',
     '#type' => 'textfield',
-    '#autocomplete_path' => 'islandora/entities/autocomplete/fp/disambiguated',
-    '#mapping' => [
-      'mode' => 'append',
-      'datastream' => 'MODS (Citation MODS form)',
-      'data_stream_id' => 'MODS',
-      'field' => 'identifiers:u1',
-    ]
-  ];
-  $form['u2_identifier_tags'] = [
-    '#title' => 'Departmental Identifier - U2',
-    '#type' => 'textfield',
-    '#autocomplete_path' => 'islandora/entities/autocomplete/fp/department',
-    '#mapping' => [
-      'mode' => 'append',
-      'datastream' => 'MODS (Citation MODS form)',
-      'data_stream_id' => 'MODS',
-      'field' => 'identifiers:u2',
-    ]
+    '#autocomplete_path' => 'islandora/entities/autocomplete/fp/disambiguated'
   ];
   return $form;
 }
 
-function _webform_display_u($component, $value, $format = 'html') {
+function _webform_render_u2($component, $value = NULL, $filter = TRUE) {
+  $form = [];
+  $form['u2_identifier_tags'] = [
+    '#title' => 'Departmental Identifier - U2',
+    '#type' => 'textfield',
+    '#autocomplete_path' => 'islandora/entities/autocomplete/fp/department'
+  ];
+  return $form;
+}
+
+function _webform_display_u2($component, $value, $format = 'html') {
+  return _webform_display_u1($component, $value, $format);
+}
+
+function _webform_display_u1($component, $value, $format = 'html') {
   return [
     '#title' => $component['name'],
     '#weight' => $component['weight'],
@@ -60,3 +72,5 @@ function _webform_display_u($component, $value, $format = 'html') {
     '#value' => isset($value[0]) ? $value[0] : '',
   ];
 }
+
+

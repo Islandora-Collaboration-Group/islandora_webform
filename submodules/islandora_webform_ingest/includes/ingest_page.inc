@@ -129,22 +129,22 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
     // Check if we have submitted data for this component, if not, skip it
     // entirely.
     $submission_data = $submission->data[$mapping->cid];
-    if (isset($submission_data) && count($submission_data) > 0) {
+    if (isset($submission_data)) {
       // if we have multiple values show them, if data is an array of values it means that we have submissions from multiple components
-      $reverse = array_reverse(array_keys($submission_data));
-      if (!is_numeric(end($reverse))) {
+      if (count($submission_data) >= 2) {
         // Kind of a hack, if the first key of the array is not a number we;re dealing with an array with multiple values
         $submitted_value = $submission->data[$mapping->cid];
         // Grab metadata from first element as it is the same for all
-        $dsid = $mapping->data[0]['datastream_id'];
-        $dsindex = $mapping->data[0]['datastream'];
         $matching_components = [];
         if (!empty($mapping->data)){
           foreach ($submitted_value as $item => $_submission) {
+
             $matching_components = array_filter($mapping->data, function ($element) use ($item) {
               return ($element['component_name'] == $item);
             });
             if (!empty($matching_components)) {
+              $dsid =  $mapping->data[key($matching_components)]['datastream_id'];
+              $dsindex =  $mapping->data[key($matching_components)]['datastream'];
               $default_value = $submitted_value[$item];
               // if at least 1 item matches with the current component name, add it to the processing queue
               $islandora_webform_values[$dsid]['data_values'][] = array(
@@ -163,12 +163,12 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
           }
         }
       } else {
-        $submitted_value = $submission->data[$mapping->cid][0];
-        $dsid = $mapping->data[0]['datastream_id'];
-        $dsindex = $mapping->data[0]['datastream'];
+        $submitted_value = $submission->data[$mapping->cid];
+        $dsid = $mapping->data['datastream_id'];
+        $dsindex = $mapping->data['datastream'];
 
         $islandora_webform_values[$dsid]['data_values'][] = array(
-          'path' => $mapping->data[0]['field'],
+          'path' => $mapping->data['field'],
           'input_value' => array(
             '#default_value' => $submitted_value,
             '#attributes' => array(
@@ -177,7 +177,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
               ),
             ),
           ),
-          'mode' => $mapping->data[0]['mode'],
+          'mode' => $mapping->data['mode'],
         );
       }
 
@@ -186,13 +186,14 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         $association = $datastreams[$dsindex];
         //Only store datastream associations for fields we actually have
         $used_associations[$dsindex]=$association;
-        // Store all our submited values.
+        // Store all our submitted values.
         $islandora_webform_values[$dsid]['association'] = $association;
         $islandora_webform_values[$dsid]['component'] = $webform->webform['components'][$mapping->cid];
       }
     }
   }
   //set our mapped dsid and associations
+  $form_state['islandora_webform'] = TRUE;
   $form_state['datastreams'] =  $used_associations;
   // We need to preserve the original $form_state to pass it to
   // xml_form_builder_get_form.
