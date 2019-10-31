@@ -166,7 +166,7 @@ function islandora_webform_doi_populator_webform_component_edit_form_submit($for
   } else {
     // Regular component
     $field = !empty($form_state['values']['ingest']['fields_wrapper']['fields']) ? $form_state['values']['ingest']['fields_wrapper']['fields'] : '';
-    $data[] = [
+    $data = [
       'mode' => $mode,
       'datastream' => $datastream_label,
       'datastream_id' => $datastream_id,

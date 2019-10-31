@@ -1,0 +1,67 @@
+<?php
+
+/**
+ * Implements hook_components_types_alter().
+ */
+function islandora_webform_profile_components_types_alter(&$eligible_component_types) {
+  $eligible_component_types[] = 'u1';
+  $eligible_component_types[] = 'u2';
+}
+
+/**
+ * Implements hook_components_mime_alter().
+ */
+function islandora_webform_profile_components_mime_alter(&$mime_types) {
+  $mime_types['u1'] = array('text/plain');
+  $mime_types['u2'] = array('text/plain');
+}
+
+/**
+ * Define components to be used in webforms
+ *
+ * @return array
+ */
+function islandora_webform_profile_webform_component_info() {
+  $components = [];
+  $components['u1'] = [
+    'label' => t('Faculty Identifier - U1'),
+    'description' => t('Fields to link content to profiles'),
+    'features' => [
+      'csv' => TRUE,
+      'email' => TRUE,
+      'email_address' => FALSE,
+      'email_name' => FALSE,
+      'required' => FALSE,
+      'title_display' => FALSE,
+      'title_inline' => FALSE,
+      'conditional' => FALSE,
+      'group' => FALSE,
+      'spam_analysis' => FALSE,
+      'attachment' => FALSE,
+      'private' => FALSE,
+    ],
+    'file' => 'components/u.inc',
+  ];
+
+  $components['u2'] = [
+    'label' => t('Departmental Identifier - U2'),
+    'description' => t('Fields to link content to profiles'),
+    'features' => [
+      'csv' => TRUE,
+      'email' => TRUE,
+      'email_address' => FALSE,
+      'email_name' => FALSE,
+      'required' => FALSE,
+      'title_display' => FALSE,
+      'title_inline' => FALSE,
+      'conditional' => FALSE,
+      'group' => FALSE,
+      'spam_analysis' => FALSE,
+      'attachment' => FALSE,
+      'private' => FALSE,
+    ],
+    'file' => 'components/u.inc',
+  ];
+
+  return $components;
+}

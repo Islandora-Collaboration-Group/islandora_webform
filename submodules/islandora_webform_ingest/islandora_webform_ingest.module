@@ -735,6 +735,8 @@ function iwi_ds_field_options($association, $mimefilter = array()) {
   $form = array();
 
   // Get the render array for the datastream's edit form.
+  // Add custom flag to our form_state to add custom fields
+  $form_state['islandora_webform'] = TRUE;
   $form = xml_form_builder_get_form($form, $form_state, $association['form_name']);
 
   $field_options = array();
