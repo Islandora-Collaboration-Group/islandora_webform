@@ -170,7 +170,7 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         $islandora_webform_values[$dsid]['data_values'][] = array(
           'path' => $mapping->data['field'],
           'input_value' => array(
-            '#default_value' => $submitted_value,
+            '#default_value' => $submitted_value[0],
             '#attributes' => array(
               'class' => array(
                 'submitted-value',
