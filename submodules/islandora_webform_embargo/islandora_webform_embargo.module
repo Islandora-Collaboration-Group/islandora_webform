@@ -36,7 +36,7 @@ function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
       module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
       unset($form['submitted']['islandora_embargo']);
       $form['submitted']['islandora_embargo_form'] = _islandora_webform_embargo_form_array(FALSE);
-      // Delte things we do not need
+      // Delete things we do not need
       unset($form['submitted']['islandora_embargo_form']['enable_component']);
       unset($form['submitted']['islandora_embargo_form']['submit']);
       unset($form['submitted']['islandora_embargo_form']['remove_embargo']);
@@ -141,12 +141,10 @@ function islandora_webform_embargo_form_submit($form, &$form_state, $node = fals
     $time = $form['submitted']['islandora_embargo_form']['embargo_date']['#value'];
     $nid = $form_state['values']['details']['nid'];
     $date_option = $form_state['submitted']['islandora_embargo_form']['set_date_options']['#value'];
-    $save_embargo = 'please do';
   } elseif (isset($form_state['values'])){
     $time = $form_state['values']['islandora_embargo']['embargo_date'];
     $nid = $form_state['values']['nid'];
     $date_option = $form_state['values']['islandora_embargo']['set_date_options'];
-    $save_embargo = $form_state['values']['islandora_embargo']['set_date_options'];
     //if the checkbox is set, add embargo field
     if ($form_state['values']['islandora_embargo']['enable_component']) {
       _islandora_webform_embargo_insert_embargo_component($form_state['values']['nid']);
@@ -155,7 +153,7 @@ function islandora_webform_embargo_form_submit($form, &$form_state, $node = fals
   }
 
   $date_string = $time['year'] . '-' . $time['month'] . '-' . $time['day'];
-  if ($save_embargo != 'no_embargo') {
+  if ($date_option != 'no_embargo') {
     if (db_merge('islandora_webform_embargo')
       ->key(array('nid' => $nid))
       ->fields(array(
