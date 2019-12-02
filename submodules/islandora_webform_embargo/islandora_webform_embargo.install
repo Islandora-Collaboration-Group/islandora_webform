@@ -43,3 +43,15 @@ function islandora_webform_embargo_schema() {
 
   return $schema;
 }
+
+/**
+ * Adds new column to store the SID for the form, to prevent old forms from triggering embargoes
+ */
+function islandora_webform_embargo_update_7100(&$sandbox) {
+  $spec = [
+    'type' => 'int',
+    'description' => "sid",
+    'not null' => TRUE
+  ];
+  db_add_field('islandora_webform_embargo', 'sid', $spec);
+}
