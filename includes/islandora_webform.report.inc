@@ -24,7 +24,7 @@ module_load_include('inc', 'webform', 'includes/webform.submissions');
  *
  * @throws Exception
  */
-function islandora_webform_results_object_submissions_page(AbstractObject $object, $pager_count = 10) {
+function islandora_webform_results_object_submissions_page(AbstractObject $object, $pager_count = FALSE) {
   global $user;
 
   $query = db_select('webform_submissions', 's')->fields('s');
@@ -43,6 +43,9 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
     }
   }
 
+  if (isset($_GET['results']) && is_numeric($_GET['results'])) {
+    $pager_count = $_GET['results'];
+  }
 
   if ($pager_count) {
     // Extending the query instantiates a new query object.
@@ -51,11 +54,6 @@ function islandora_webform_results_object_submissions_page(AbstractObject $objec
   }
 
   $submissions = $query->execute()->fetchAllAssoc('sid');
-
-
-    if (isset($_GET['results']) && is_numeric($_GET['results'])) {
-    $pager_count = $_GET['results'];
-  }
 
   $header = array(
     array('data' => t('Webform'), 'field' => 'node_title'),
