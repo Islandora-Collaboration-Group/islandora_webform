@@ -164,21 +164,23 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         }
       } else {
         $submitted_value = $submission->data[$mapping->cid];
-        $dsid = $mapping->data['datastream_id'];
-        $dsindex = $mapping->data['datastream'];
+        $dsid = $mapping->data['datastream_id'] ?? FALSE;
+        $dsindex = $mapping->data['datastream'] ?? FALSE;
 
-        $islandora_webform_values[$dsid]['data_values'][] = array(
-          'path' => $mapping->data['field'],
-          'input_value' => array(
-            '#default_value' => $submitted_value[0],
-            '#attributes' => array(
-              'class' => array(
-                'submitted-value',
+        if ($dsid) {
+          $islandora_webform_values[$dsid]['data_values'][] = array(
+            'path' => $mapping->data['field'],
+            'input_value' => array(
+              '#default_value' => $submitted_value[0],
+              '#attributes' => array(
+                'class' => array(
+                  'submitted-value',
+                ),
               ),
             ),
-          ),
-          'mode' => $mapping->data['mode'],
-        );
+            'mode' => $mapping->data['mode'],
+          );
+        }
       }
 
       //if dsindex is empty we want to ignore this non mapped field.

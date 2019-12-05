@@ -75,36 +75,38 @@ function islandora_webform_doi_populator_iwi_set_form_alter(&$form, $form_state,
       // has a doi field, in this particular case doi adds the option to ingest multiple users at once
       if (isset($form['authors'])) {
         // Split current authors, and add them to different tabs
-        $all_authors = $form['authors'][0]['family']['#default_value'];
-        $all_authors = explode(DOI_AUTHOR_SEPARATOR, $all_authors);
-        $base_node = $form['authors'][0];
-        // Remove hash
-        $attributes = array(
-          'class' => array(
-            'submitted-value',
-          )
-        );
-
-        foreach ($all_authors as $id => $single_author) {
-          $author_name_parts = explode(DOI_AUTHOR_NAMEPART_SEPARATOR , $single_author);
-          // Generate a slightly different hash
-          $offset = md5(uniqid('offset', TRUE));
-          $mode = 'append';
-
-          $input_value = array(
-            '#attributes' => $attributes,
+        $all_authors = (isset($form['authors'][0]['family']['#default_value']) ? $form['authors'][0]['family']['#default_value'] : FALSE);
+        if ($all_authors) {
+          $all_authors = explode(DOI_AUTHOR_SEPARATOR, $all_authors);
+          $base_node = $form['authors'][0];
+          // Remove hash
+          $attributes = array(
+            'class' => array(
+              'submitted-value',
+            )
           );
-          // Replace first element, and append the rest
-          if ($id == 0) {
-            $offset = $base_node['#hash'];
+
+          foreach ($all_authors as $id => $single_author) {
+            $author_name_parts = explode(DOI_AUTHOR_NAMEPART_SEPARATOR , $single_author);
+            // Generate a slightly different hash
+            $offset = md5(uniqid('offset', TRUE));
+            $mode = 'append';
+
+            $input_value = array(
+              '#attributes' => $attributes,
+            );
+            // Replace first element, and append the rest
+            if ($id == 0) {
+              $offset = $base_node['#hash'];
+            }
+            // use the mapping to populate this field here
+            $input_value['#default_value'] = $author_name_parts[1] ?? '';
+            iwi_set_form_element_byhash($form, $form_state, "authors:0:family", $input_value, $mode, $offset);
+            $input_value['#default_value'] = $author_name_parts[0] ?? '';
+            iwi_set_form_element_byhash($form, $form_state, "authors:0:qualified_name", $input_value, $mode, $offset);
+            $input_value['#default_value'] = $single_author ?? '';
+            iwi_set_form_element_byhash($form, $form_state, "authors:0:given", $input_value, $mode, $offset);
           }
-          // use the mapping to populate this field here
-          $input_value['#default_value'] = $author_name_parts[1] ?? '';
-          iwi_set_form_element_byhash($form, $form_state, "authors:0:family", $input_value, $mode, $offset);
-          $input_value['#default_value'] = $author_name_parts[0] ?? '';
-          iwi_set_form_element_byhash($form, $form_state, "authors:0:qualified_name", $input_value, $mode, $offset);
-          $input_value['#default_value'] = $single_author ?? '';
-          iwi_set_form_element_byhash($form, $form_state, "authors:0:given", $input_value, $mode, $offset);
         }
       }
     }
