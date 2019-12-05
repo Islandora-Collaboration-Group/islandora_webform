@@ -1,16 +1,35 @@
 <?php
 
-function _get_islandora_webform_embargo_settings($nid, $sid) {
+/**
+ * Returns stored settings for the islandora webemabrgo module
+ *
+ * @param $nid
+ * @param $sid
+ *
+ * @return bool
+ */
+function _get_islandora_webform_embargo_settings($nid, $sid = FALSE) {
   // Get previously stored values for this webform
   if ($nid) {
     $defaults = db_select('islandora_webform_embargo', 'w')
       ->fields('w')
       ->condition('w.nid', $nid)
-      ->condition('w.sid', $sid)
-      ->execute()->fetchAssoc();
+      ->execute()->fetchAllAssoc('id');
+  }
+  // check if the default has a sid stored, otherwise we apply globals
+  foreach ($defaults as $single_record) {
+    if ($sid) {
+      if ($single_record['sid'] && $single_record['sid'] ==  $sid) {
+        return $single_record;
+      } else {
+        continue;
+      }
+    }
+    // if ths particular record has no sid, just return it
+    return $single_record;
   }
 
-  return $defaults;
+  return $defaults ?? FALSE;
 }
 
 /**
@@ -33,7 +52,7 @@ function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
     $form['islandora_embargo'] = _islandora_webform_embargo_form_array($defaults);
   }
   if (isset($form_state['webform'])) {
-    //Update display on the embargo field
+    //Update display on the embargo fieldb
     if (isset($form['submitted']['islandora_embargo'])) {
       //Include helpers
       module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
@@ -52,7 +71,7 @@ function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
 }
 
 function _islandora_webform_embargo_form_array($defaults) {
-  return [
+  $arr = [
     '#type' => 'fieldset',
     '#title' => 'Islandora Embargo Settings',
     '#collapsible' => TRUE,
@@ -73,13 +92,13 @@ function _islandora_webform_embargo_form_array($defaults) {
         'set_embargo_date' => t('Set the embargo date'),
         'indefinite_embargo' => t('Embargo indefinitely (Indefinite embargoes must be lifted manually).'),
       ],
-      '#default_value' => ($defaults && $defaults['embargo_type'] == 1) ? 'indefinite_embargo' : ($defaults['embargo_type'] == 0) ? 'no_embargo' : 'set_embargo_date',
+      '#default_value' => ($defaults && $defaults->embargo_type == 1) ? 'indefinite_embargo' : ($defaults && $defaults->embargo_type == 0) ? 'no_embargo' : 'set_embargo_date',
     ],
     'embargo_date' => [
       '#type' => 'date',
       '#title' => t('Embargo date'),
       '#description' => t('A date until which this item should be embargoed.'),
-      '#default_value' => ($defaults && $defaults['embargo_type'] == 0) ? date_parse($defaults['embargo_date'] ?? "now") : NULL,
+      '#default_value' => ($defaults && $defaults->embargo_type == 0) ? date_parse($defaults->embargo_date ?? "now") : NULL,
       '#after_build' => ['_embargo_set_year_range'],
       '#states' => [
         'visible' => [
@@ -102,6 +121,8 @@ function _islandora_webform_embargo_form_array($defaults) {
       '#weight' => 103,
     ],
   ];
+
+  return $arr;
 }
 
 /**
@@ -156,15 +177,16 @@ function islandora_webform_embargo_form_submit($form, &$form_state, $node = FALS
     }
   }
 
-  $date_string = $time['year'] . '-' . $time['month'] . '-' . $time['day'];
   if ($date_option != 'no_embargo') {
+    $date_string = $time['year'] . '-' . $time['month'] . '-' . $time['day'];
     if (db_merge('islandora_webform_embargo')
       ->key(['nid' => $nid])
       ->fields([
         'embargo_type' => ($date_option == 'indefinite_embargo') ? 1 : 0,
         'embargo_date' => $date_string,
         'nid' => $nid,
-        'sid' => $form_state['values']['details']['sid'],
+        //if NO SID is given, this implies that we're updating the settings form and is a global change
+        'sid' => $form_state['values']['details']['sid'] ?? NULL,
       ])
       ->execute()
     ) {
