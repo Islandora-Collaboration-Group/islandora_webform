@@ -50,8 +50,7 @@ function islandora_webform_embargo_schema() {
 function islandora_webform_embargo_update_7100(&$sandbox) {
   $spec = [
     'type' => 'int',
-    'description' => "sid",
-    'not null' => TRUE
+    'description' => "sid"
   ];
   db_add_field('islandora_webform_embargo', 'sid', $spec);
 }

@@ -38,11 +38,10 @@ function _get_islandora_webform_embargo_settings($nid, $sid = FALSE) {
  * Implements hook_form_alter().
  */
 function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
+  module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
+  module_load_include('inc', 'islandora_webform_embargo', 'components/embargo');
+
   if ($form_id == 'islandora_webform_configure_stepped_form') {
-
-    module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
-    module_load_include('inc', 'islandora_webform_embargo', 'components/embargo');
-
     $date = new dateTime();
     $date = $date->format('M d, Y ');
 
