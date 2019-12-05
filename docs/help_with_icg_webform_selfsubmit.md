@@ -18,7 +18,7 @@ The following is a general overview of what the IW module is capable of and how 
 ### Islandora Settings
 Configure how the form interacts with your Islandora collections at webform/islandora. **You must configure these settings before you will be able to map your form components to MODS metadata fields.**
 
-* Select whether to allow the form to show up as a link on certain object pages. The typical self-deposit workflow will likely **not** use this option. 
+* Select whether to allow the form to show up as a link on certain object pages ("Check to permit this webform to be linked from Islandora objects"). This determines whether a link to your form will show up on object pages in your repository. The typical self-deposit workflow will likely **not** use this option. Rather, to make forms available to users, we recommend setting up a basic page with hyperlinks to each webform.
 * **Content Model Filter:** Select a content model for the objects this form will ingest. Each form can only support one content model, meaning a distinct form will be needed for each media type.
 * **Collection Filter:** Select the collection where submissions will be deposited. Each form can only support deposit to one collection.
 * **Islandora Embargo Settings:** Set global embargo settings for objects submitted via this form or select "Add embargo field to the form" to allow users to set their own embargo. 
@@ -45,6 +45,7 @@ The form component menu is where administrators set up form fields and mappings 
 
 #### Form Component Tips
 
+* Two form components are automatically created: Depositor Email Address and Islandora Object PID (which refers to the collection the form deposits into). These fields should be configured as above, except that they should not be mapped to MODS because they are not destined for the MODS record.
 * If you are using the Islandora Scholar Profiles and Islandora Matomo modules, make sure to configure mappings to the u1 and u2 fields that enable linking person and organization entities to Islandora objects.
 * The Islandora Object PID and Depositor Email fields will appear automatically after you configure the Islandora settings. These fields are required, but need not be displayed to end users. Tokens and default values are helpful here. For example, the Islandora Object PID default value should be the PID for the collection into which you are depositing. The Depositor Email field can be autopopulated for authenticated users.
 
