@@ -38,7 +38,7 @@ function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
     $defaults = _get_islandora_webform_embargo_settings((isset($form['nid']) && !empty($form['nid']['#value'])) ? $form['nid']['#value'] : FALSE);
     // Load helpers
 
-    $form['islandora_embargo'] = _islandora_webform_embargo_form_array([$defaults]);
+    $form['islandora_embargo'] = _islandora_webform_embargo_form_array($defaults);
   }
   if (isset($form_state['webform'])) {
     //Update display on the embargo fieldb
