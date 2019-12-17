@@ -34,29 +34,67 @@ function _iw_content_models($models) {
  *   A list of object pids and their labels
  */
 function iw_get_collections_or_content_models($type) {
-  $types = array(
-    'collections' => 'islandora:collectionCModel',
-    'cmodels' => 'fedora-system:ContentModel-3.0',
-  );
-  $type_for_query = '<info:fedora/' . $types[$type] . '>';
-  // Query the rindex to get all collections.
-  $tuque = islandora_get_tuque_connection();
-  $sparql_query = "SELECT * WHERE {
+
+
+  switch ($type) {
+    case 'cmodels':
+      $query = "SELECT * WHERE {
   ?s <info:fedora/fedora-system:def/model#label> ?o.
-  ?s <info:fedora/fedora-system:def/model#hasModel> $type_for_query
+  ?s <info:fedora/fedora-system:def/model#hasModel> fedora-system:ContentModel-3.0
 }";
-  $results = $tuque->repository->ri->sparqlQuery($sparql_query, 'unlimited');
-  $ret = array();
-  foreach ($results as $member) {
-    $pid = $member['s']['value'];
-    $label = $member['o']['value'];
-    // We don't want the root collection.
-    if ($pid == 'islandora:root') {
-      $label = 'Islandora Root Collection';
-    }
-    $ret[$pid] = $label;
+      // Query the rindex to get content models.
+      $tuque = islandora_get_tuque_connection();
+      $results = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+      $ret = array();
+      foreach ($results as $member) {
+        $pid = $member['s']['value'];
+        $label = $member['o']['value'];
+        // We don't want the root collection.
+        if ($pid == 'islandora:root') {
+          $label = 'Islandora Root Collection';
+        }
+        $ret[$pid] = $label;
+      }
+      return $ret;
+      break;
+
+    case 'collections':
+      // Switch to using a solr query, which automatically invokes xacml filters.
+      $qp = new IslandoraSolrQueryProcessor();
+      $query = 'RELS_EXT_hasModel_uri_s: "info:fedora/islandora:collectionCModel"';
+      $qp->buildQuery($query);
+      $qp->solrParams['sort'] = "fgs_label_s ASC";
+      $qp->solrLimit = 500;
+
+      // Deal with namespace restrictions.
+      $enforced = variable_get('islandora_namespace_restriction_enforced', FALSE);
+      if ($enforced) {
+        module_load_include('inc', 'islandora', 'includes/utilities');
+        $namespace_array = islandora_get_allowed_namespaces();
+        foreach ($namespace_array as $key => $namespace) {
+          $namespace_array[$key] = 'PID:' . $namespace . '\:*';
+        }
+        $qp->solrParams['fq'][] = implode(' OR ', $namespace_array);
+      }
+
+      $qp->executeQuery();
+
+      // Build return array, and return it.
+      $ret = array();
+      if (!empty($qp->islandoraSolrResult['response']['objects'])) {
+        foreach ($qp->islandoraSolrResult['response']['objects'] as $result) {
+          $ret[$result['PID']] = $result['object_label'];
+        }
+      }
+      return $ret;
+      break;
+
+    default:
+      // Unsupported type. Return no result.
+      return array();
+      break;
+
   }
-  return $ret;
 }
 
 
