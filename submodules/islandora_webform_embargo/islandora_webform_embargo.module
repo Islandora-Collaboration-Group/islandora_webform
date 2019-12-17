@@ -1,4 +1,6 @@
 <?php
+module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
+module_load_include('inc', 'islandora_webform_embargo', 'components/embargo');
 
 /**
  * Returns stored settings for the islandora webemabrgo module
@@ -13,23 +15,14 @@ function _get_islandora_webform_embargo_settings($nid, $sid = FALSE) {
   if ($nid) {
     $defaults = db_select('islandora_webform_embargo', 'w')
       ->fields('w')
-      ->condition('w.nid', $nid)
-      ->execute()->fetchAllAssoc('id');
-  }
-  // check if the default has a sid stored, otherwise we apply globals
-  foreach ($defaults as $single_record) {
+      ->condition('w.nid', $nid);
     if ($sid) {
-      if ($single_record['sid'] && $single_record['sid'] ==  $sid) {
-        return $single_record;
-      } else {
-        continue;
-      }
+      $defaults->condition('w.sid', $sid);
     }
-    // if ths particular record has no sid, just return it
-    return $single_record;
+    $single_record = $defaults->execute()->fetchObject();
   }
 
-  return $defaults ?? FALSE;
+  return $single_record ?? FALSE;
 }
 
 /**
@@ -38,9 +31,6 @@ function _get_islandora_webform_embargo_settings($nid, $sid = FALSE) {
  * Implements hook_form_alter().
  */
 function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
-  module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
-  module_load_include('inc', 'islandora_webform_embargo', 'components/embargo');
-
   if ($form_id == 'islandora_webform_configure_stepped_form') {
     $date = new dateTime();
     $date = $date->format('M d, Y ');
@@ -48,7 +38,7 @@ function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
     $defaults = _get_islandora_webform_embargo_settings((isset($form['nid']) && !empty($form['nid']['#value'])) ? $form['nid']['#value'] : FALSE);
     // Load helpers
 
-    $form['islandora_embargo'] = _islandora_webform_embargo_form_array($defaults);
+    $form['islandora_embargo'] = _islandora_webform_embargo_form_array([$defaults]);
   }
   if (isset($form_state['webform'])) {
     //Update display on the embargo fieldb
@@ -265,18 +255,24 @@ function islandora_webform_embargo_islandora_webform_submission_ingested($submis
       $defaults = _get_islandora_webform_embargo_settings($submission->nid, $submission->sid);
       // If there's a valid submissions set the embargo settings, no-embargo won't save anything to the DB
       if ($defaults) {
-        if ($defaults['set_date_options'] == 1) {
+        if (property_exists($defaults, 'set_date_options') && $defaults->set_date_options == 1) {
           $end = 'indefinite';
         }
         else {
-          $time = $defaults['embargo_date'];
-          $end = gmdate("Y-m-d\TH:i:s\Z", strtotime($time));
+          if (property_exists($defaults, 'embargo_date')) {
+            // if no date is provided use now, this can be changed by the user later
+            $time = $defaults->embargo_date ?? time();
+            $end = gmdate("Y-m-d\TH:i:s\Z", strtotime($time));
+          }
+
         }
         // Set stream IDs to null to embargo the full object
         $dsids = NULL;
         // Save embargo settings for this object
-        islandora_scholar_embargo_set_embargo($pid, $dsids, $end);
-        islandora_scholar_embargo_set_display_message($pid, $dsids, $end);
+        if (!empty($pid) && !empty($end)) {
+          islandora_scholar_embargo_set_embargo($pid, $dsids, $end);
+          islandora_scholar_embargo_set_display_message($pid, $dsids, $end);
+        }
       }
     }
   }

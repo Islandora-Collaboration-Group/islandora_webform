@@ -168,18 +168,21 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
         $dsindex = $mapping->data['datastream'] ?? FALSE;
 
         if ($dsid) {
-          $islandora_webform_values[$dsid]['data_values'][] = array(
-            'path' => $mapping->data['field'],
-            'input_value' => array(
-              '#default_value' => $submitted_value[0],
-              '#attributes' => array(
-                'class' => array(
-                  'submitted-value',
+          $submitted_value =  array_pop($submitted_value);
+          if ($submitted_value) {
+            $islandora_webform_values[$dsid]['data_values'][] = array(
+              'path' => $mapping->data['field'],
+              'input_value' => array(
+                '#default_value' => $submitted_value,
+                '#attributes' => array(
+                  'class' => array(
+                    'submitted-value',
+                  ),
                 ),
               ),
-            ),
-            'mode' => $mapping->data['mode'],
-          );
+              'mode' => $mapping->data['mode'],
+            );
+          }
         }
       }
 
