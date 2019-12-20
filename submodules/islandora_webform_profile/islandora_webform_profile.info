@@ -1,0 +1,6 @@
+name = Islandora Webform Profile Integration
+description = Adds U1 and U2 fields to webforms
+core = 7.x
+package = Islandora
+dependencies[] = islandora_webform
+dependencies[] = islandora_scholar_profile

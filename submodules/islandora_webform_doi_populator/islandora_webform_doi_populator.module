@@ -1,0 +1,199 @@
+<?php
+// Constants
+define('DOI_AUTHOR_SEPARATOR', ", ");
+define('DOI_AUTHOR_NAMEPART_SEPARATOR', " ");
+
+/**
+ * Implements hook_components_types_alter().
+ */
+function islandora_webform_doi_populator_components_types_alter(&$eligible_component_types) {
+  $eligible_component_types[] = 'doi';
+}
+
+/**
+ * Implements hook_components_mime_alter().
+ */
+function islandora_webform_doi_populator_components_mime_alter(&$mime_types) {
+  $mime_types['doi'] = array('text/plain');
+}
+
+/**
+ * Implements hook_webform_component_info
+ *
+ * @return array
+ */
+function islandora_webform_doi_populator_webform_component_info() {
+  $components = [];
+  $components['doi'] = [
+    'label' => t('DOI'),
+    'description' => t('Create a DOI field.'),
+    'features' => [
+      'csv' => TRUE,
+      'email' => TRUE,
+      'email_address' => FALSE,
+      'email_name' => FALSE,
+      'required' => FALSE,
+      'title_display' => FALSE,
+      'title_inline' => FALSE,
+      'conditional' => FALSE,
+      'group' => FALSE,
+      'spam_analysis' => FALSE,
+      'attachment' => FALSE,
+      'private' => FALSE,
+    ],
+    'file' => 'components/doi.inc',
+  ];
+  return $components;
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Adds new submit handler
+ */
+function islandora_webform_doi_populator_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'webform_component_edit_form' && !empty($form['cid']['#value'])) {
+    // Replace default handler with our custom implementation, this allows for components with multiple fields
+    $index = array_search('iwi_webform_component_edit_form_submit', $form['#submit']);
+    if ($index) {
+      // Delete old function if found, note this might prove to be a really bad idea
+      unset($form['#submit'][$index]);
+    }
+      $form['#submit'][] = 'islandora_webform_doi_populator_webform_component_edit_form_submit';
+  }
+}
+
+/**
+ * @param $form
+ * @param $form_state
+ * @param $submission
+ */
+function islandora_webform_doi_populator_iwi_set_form_alter(&$form, $form_state, $submission) {
+  //find whether if this submission comes from a field with a DOI field
+  foreach ($submission->data as $component) {
+    if (array_key_exists('doi', $component)) {
+      // has a doi field, in this particular case doi adds the option to ingest multiple users at once
+      if (isset($form['authors'])) {
+        // Split current authors, and add them to different tabs
+        $all_authors = (isset($form['authors'][0]['family']['#default_value']) ? $form['authors'][0]['family']['#default_value'] : FALSE);
+        if ($all_authors) {
+          $all_authors = explode(DOI_AUTHOR_SEPARATOR, $all_authors);
+          $base_node = $form['authors'][0];
+          // Remove hash
+          $attributes = array(
+            'class' => array(
+              'submitted-value',
+            )
+          );
+
+          foreach ($all_authors as $id => $single_author) {
+            $author_name_parts = explode(DOI_AUTHOR_NAMEPART_SEPARATOR , $single_author);
+            // Generate a slightly different hash
+            $offset = md5(uniqid('offset', TRUE));
+            $mode = 'append';
+
+            $input_value = array(
+              '#attributes' => $attributes,
+            );
+            // Replace first element, and append the rest
+            if ($id == 0) {
+              $offset = $base_node['#hash'];
+            }
+            // use the mapping to populate this field here
+            $input_value['#default_value'] = $author_name_parts[1] ?? '';
+            iwi_set_form_element_byhash($form, $form_state, "authors:0:family", $input_value, $mode, $offset);
+            $input_value['#default_value'] = $author_name_parts[0] ?? '';
+            iwi_set_form_element_byhash($form, $form_state, "authors:0:qualified_name", $input_value, $mode, $offset);
+            $input_value['#default_value'] = $single_author ?? '';
+            iwi_set_form_element_byhash($form, $form_state, "authors:0:given", $input_value, $mode, $offset);
+          }
+        }
+      }
+    }
+  }
+  // Use of this hook requires having a lot of specific understanding of both
+  // the webform that is serving as the data source, and the MODS form, which
+  // is the destination.
+  //
+  // The basic idea is that you inspect the $submission variable for the
+  // raw user input, do whatever modifications you want to do to that input,
+  // and then use iwi_set_form_element_byhash to insert that data into a field
+  // in the MODS form.
+
+  // Restrict to a particular webform
+  return $form;
+}
+
+/**
+ * Form submit hook for islandora_ingest-enabled webform_component_edit_form.
+ * Sets mapping for our custom fields
+ *
+ * @param array $form
+ *   The webform_component_edit_form form array
+ * @param array $form_state
+ *   The webform_component_edit_form form_state array
+ *
+ * @throws \Exception
+ */
+function islandora_webform_doi_populator_webform_component_edit_form_submit($form, &$form_state) {
+  form_load_include($form_state, 'inc', 'islandora_webform_ingest', 'includes/utilities');
+
+  $nid = $form['nid']['#value'];
+  $cid = $form['cid']['#value'];
+  $mode = !empty($form_state['values']['ingest']['mode']) ? $form_state['values']['ingest']['mode'] : '';
+  $datastream_label = !empty($form_state['values']['ingest']['datastream']) ? $form_state['values']['ingest']['datastream'] : '';
+  $datastream_parts = explode(' ', $datastream_label);
+  $datastream_id = $datastream_parts[0];
+  if ($form_state['values']['type'] == 'doi') {
+    form_load_include($form_state, 'inc', 'islandora_webform_doi_populator', 'components/doi');
+    $doi_component = _webform_render_doi(FALSE);
+    if (!empty($mode) && !empty($datastream_id) && !empty($datastream_label)) {
+      if (!empty($doi_component) && is_array($doi_component)) {
+        // Build new $data array to be serialized
+        foreach ($doi_component as $part_name => $part_value) {
+          // Ignore fields that are not mapped
+          if (isset($part_value['#mapping'])) {
+            $data[] = [
+              // Use mode defined in the mapping
+              'mode' => $part_value['#mapping']['mode'],
+              'datastream' => $datastream_label,
+              'datastream_id' => $datastream_id,
+              'field' => ($part_value['#mapping']['field']) ? $part_value['#mapping']['field'] : '',
+              'component_name' => $part_name
+            ];
+          }
+        }
+      }
+    }
+  } else {
+    // Regular component
+    $field = !empty($form_state['values']['ingest']['fields_wrapper']['fields']) ? $form_state['values']['ingest']['fields_wrapper']['fields'] : '';
+    $data = [
+      'mode' => $mode,
+      'datastream' => $datastream_label,
+      'datastream_id' => $datastream_id,
+      'field' => $field,
+    ];
+  }
+  // does this one mapping already exists?
+  $id = db_select('islandora_webform_ingest_map', 'm')
+    ->fields('m', ['id'])
+    ->condition('m.nid', $nid)
+    ->condition('m.cid', $cid)
+    ->execute()->fetchField();
+
+  if ($id) {
+    // Empty mode means "do not ingest", so remove the mapping.
+    if (empty($mode)) {
+      db_delete('islandora_webform_ingest_map')
+        ->condition('id', $id)
+        ->execute();
+    }
+  }
+  // Update or insert
+  db_merge('islandora_webform_ingest_map')
+    ->fields( array( 'data' => serialize($data) ))
+    ->key( array( 'nid' => $nid, 'cid' => $cid ))
+    ->execute();
+
+}

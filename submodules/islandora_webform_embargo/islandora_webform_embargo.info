@@ -1,0 +1,6 @@
+name = Islandora Webform embargo
+description = Adds new SIMPLIFIED embargo settings for ingested objects
+core = 7.x
+package = Islandora
+dependencies[] = islandora_webform
+dependencies[] = islandora_scholar_embargo

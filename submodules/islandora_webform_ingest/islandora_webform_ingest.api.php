@@ -121,6 +121,19 @@ function hook_iwi_set_form_alter(&$form, $form_state, $submission) {
 }
 
 /**
+ * Modifies the list of potentially allowed fields to be mapped to a webform
+ * Elements added via this hook must exists in webform_components() or will be ignored
+ *
+ * @param array $types
+ *
+ * @return array
+ */
+function hook_components_types_alter(&$types) {
+  // new array must contain the field type and its mime
+  return array_merge(['doi' =>  array('text/plain')], $types);
+}
+
+/**
  * Include TRANSCRIPT in IWI target datastreams.
  *
  * return an array with a minimum of 'dsid' and 'mime' values.
