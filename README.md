@@ -9,6 +9,7 @@
 4. [How to Create a Webform using the Islandora Webform module](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_creation.md)
 5. [For End Users: How to Use an Islandora Webform](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_for_users.md)
 6. [Use Case: Islandora Webform for Transcriptions (DHi@Hamilton College)](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/7.x/docs/help_with_icg_webform_transcriptions.md)
+7. [Use Case: Islandora Webform for Self-Deposit](https://github.com/Islandora-Collaboration-Group/islandora_webform/blob/self-deposit-rebase/docs/help_with_icg_webform_selfsubmit.md)
 
 ***
 
