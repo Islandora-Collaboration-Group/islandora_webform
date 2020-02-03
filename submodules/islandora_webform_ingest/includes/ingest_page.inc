@@ -128,31 +128,77 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
   foreach ($mappings as $mapping) {
     // Check if we have submitted data for this component, if not, skip it
     // entirely.
-    if (isset($submission->data[$mapping->cid][0])) {
-      $submitted_value = $submission->data[$mapping->cid][0];
-      $dsid = $mapping->data['datastream_id'];
-      $dsindex = $mapping->data['datastream'];
-      $association = $datastreams[$dsindex];
-      //Only store datastream associations for fields we actually have
-      $used_associations[$dsindex]=$association;
-      // Store all our submited values.
-      $islandora_webform_values[$dsid]['association'] = $association;
-      $islandora_webform_values[$dsid]['data_values'][] = array(
-        'path' => $mapping->data['field'],
-        'input_value' => array(
-          '#default_value' => $submitted_value,
-          '#attributes' => array(
-            'class' => array(
-              'submitted-value',
-            ),
-          ),
-        ),
-        'mode' => $mapping->data['mode'],
-      );
-      $islandora_webform_values[$dsid]['component'] = $webform->webform['components'][$mapping->cid];
+    $submission_data = $submission->data[$mapping->cid];
+    if (isset($submission_data)) {
+      // if we have multiple values show them, if data is an array of values it means that we have submissions from multiple components
+      if (count($submission_data) >= 2) {
+        // Kind of a hack, if the first key of the array is not a number we;re dealing with an array with multiple values
+        $submitted_value = $submission->data[$mapping->cid];
+        // Grab metadata from first element as it is the same for all
+        $matching_components = [];
+        if (!empty($mapping->data)){
+          foreach ($submitted_value as $item => $_submission) {
+
+            $matching_components = array_filter($mapping->data, function ($element) use ($item) {
+              return ($element['component_name'] == $item);
+            });
+            if (!empty($matching_components)) {
+              $dsid =  $mapping->data[key($matching_components)]['datastream_id'];
+              $dsindex =  $mapping->data[key($matching_components)]['datastream'];
+              $default_value = $submitted_value[$item];
+              // if at least 1 item matches with the current component name, add it to the processing queue
+              $islandora_webform_values[$dsid]['data_values'][] = array(
+                'path' => $mapping->data[key($matching_components)]['field'],
+                'input_value' => array(
+                  '#default_value' => $default_value,
+                  '#attributes' => array(
+                    'class' => array(
+                      'submitted-value',
+                    ),
+                  ),
+                ),
+                'mode' => $mapping->data[key($matching_components)]['mode'],
+              );
+            }
+          }
+        }
+      } else {
+        $submitted_value = $submission->data[$mapping->cid];
+        $dsid = $mapping->data['datastream_id'] ?? FALSE;
+        $dsindex = $mapping->data['datastream'] ?? FALSE;
+
+        if ($dsid) {
+          $submitted_value =  array_pop($submitted_value);
+          if ($submitted_value) {
+            $islandora_webform_values[$dsid]['data_values'][] = array(
+              'path' => $mapping->data['field'],
+              'input_value' => array(
+                '#default_value' => $submitted_value,
+                '#attributes' => array(
+                  'class' => array(
+                    'submitted-value',
+                  ),
+                ),
+              ),
+              'mode' => $mapping->data['mode'],
+            );
+          }
+        }
+      }
+
+      //if dsindex is empty we want to ignore this non mapped field.
+      if (!empty($dsindex)) {
+        $association = $datastreams[$dsindex];
+        //Only store datastream associations for fields we actually have
+        $used_associations[$dsindex]=$association;
+        // Store all our submitted values.
+        $islandora_webform_values[$dsid]['association'] = $association;
+        $islandora_webform_values[$dsid]['component'] = $webform->webform['components'][$mapping->cid];
+      }
     }
   }
   //set our mapped dsid and associations
+  $form_state['islandora_webform'] = TRUE;
   $form_state['datastreams'] =  $used_associations;
   // We need to preserve the original $form_state to pass it to
   // xml_form_builder_get_form.
@@ -223,18 +269,21 @@ function iwi_preview_ingest_submission_form($form, &$form_state, $sid) {
       );
 
       // Display the component using webform defaults.
-      $data = $submission->data[$dsid_values['component']['cid']];
-      $new_form['component'] = webform_component_invoke($dsid_values['component']['type'], 'display', $dsid_values['component'], $data);
+      if (isset($dsid_values['component'])) {
+        $data = $submission->data[$dsid_values['component']['cid']];
+        $new_form['component'] = webform_component_invoke($dsid_values['component']['type'], 'display', $dsid_values['component'], $data);
 
-      if (!empty($new_form['component']['#value']->fid)) {
-        // Include the file id in a hidden field.
-        $new_form['fid'] = array(
-          '#type' => 'hidden',
-          '#value' => $new_form['component']['#value']->fid,
-        );
+        if (!empty($new_form['component']['#value']->fid)) {
+          // Include the file id in a hidden field.
+          $new_form['fid'] = array(
+            '#type' => 'hidden',
+            '#value' => $new_form['component']['#value']->fid,
+          );
+        }
+
+        $form[$dsid] = $new_form;
       }
 
-      $form[$dsid] = $new_form;
     }
   }
 
@@ -410,14 +459,21 @@ function iwi_ingest_page_form_submit($form, &$form_state) {
     $link = l($url, $url);
     if (($new_object) && ($datastream_count > 0)) {
       // Finally, add the Object to the repo.
-      islandora_add_object($object);
+      try {
+        islandora_add_object($object);
 
-      // Report new object created.
-      drupal_set_message(t('New @cmodel object with PID @pid was ingested: !link', array(
-        '@cmodel' => $form['#ingest_cmodel']->label,
-        '@pid' => $object->id,
-        '!link' => $link,
-      )));
+        // Report new object created.
+        drupal_set_message(t('New @cmodel object with PID @pid was ingested: !link', array(
+          '@cmodel' => $form['#ingest_cmodel']->label,
+          '@pid' => $object->id,
+          '!link' => $link,
+        )));
+
+      } catch (Exception $e) {
+        drupal_set_message(t('Error when trying to ingest @cmodel, please contact the administrator'), array(
+          '@cmodel' => $form['#ingest_cmodel']->label
+        ));
+      }
     }
     else {
       // Report original object modified.

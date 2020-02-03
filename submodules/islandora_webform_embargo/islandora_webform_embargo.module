@@ -1,0 +1,279 @@
+<?php
+module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
+module_load_include('inc', 'islandora_webform_embargo', 'components/embargo');
+
+/**
+ * Returns stored settings for the islandora webemabrgo module
+ *
+ * @param $nid
+ * @param $sid
+ *
+ * @return bool
+ */
+function _get_islandora_webform_embargo_settings($nid, $sid = FALSE) {
+  // Get previously stored values for this webform
+  if ($nid) {
+    $defaults = db_select('islandora_webform_embargo', 'w')
+      ->fields('w')
+      ->condition('w.nid', $nid);
+    if ($sid) {
+      $defaults->condition('w.sid', $sid);
+    }
+    $single_record = $defaults->execute()->fetchObject();
+  }
+
+  return $single_record ?? FALSE;
+}
+
+/**
+ * Adds quick embargo options to the ingest form
+ *
+ * Implements hook_form_alter().
+ */
+function islandora_webform_embargo_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'islandora_webform_configure_stepped_form') {
+    $date = new dateTime();
+    $date = $date->format('M d, Y ');
+
+    $defaults = _get_islandora_webform_embargo_settings((isset($form['nid']) && !empty($form['nid']['#value'])) ? $form['nid']['#value'] : FALSE);
+    // Load helpers
+
+    $form['islandora_embargo'] = _islandora_webform_embargo_form_array($defaults);
+  }
+  if (isset($form_state['webform'])) {
+    //Update display on the embargo fieldb
+    if (isset($form['submitted']['islandora_embargo'])) {
+      //Include helpers
+      module_load_include('inc', 'islandora_scholar_embargo', 'includes/embargo');
+      unset($form['submitted']['islandora_embargo']);
+      $form['submitted']['islandora_embargo_form'] = _islandora_webform_embargo_form_array(FALSE);
+      // Delete things we do not need
+      unset($form['submitted']['islandora_embargo_form']['enable_component']);
+      unset($form['submitted']['islandora_embargo_form']['submit']);
+      unset($form['submitted']['islandora_embargo_form']['remove_embargo']);
+      // Set custom submit to save embargo settings
+      // Override Jquery
+      $form['submitted']['islandora_embargo_form']['embargo_date']['#states']['visible'] = [':input[name="submitted[islandora_embargo_form][set_date_options]"]' => ['value' => 'set_embargo_date']];
+      $form['#submit'][] = 'islandora_webform_embargo_form_submit';
+    }
+  }
+}
+
+function _islandora_webform_embargo_form_array($defaults) {
+  $arr = [
+    '#type' => 'fieldset',
+    '#title' => 'Islandora Embargo Settings',
+    '#collapsible' => TRUE,
+    '#tree' => TRUE,
+    '#group' => 'additional_settings',
+    'embargo_type' => [
+      '#markup' => t('Embargo type: <strong>Object-level embargo</strong>'),
+    ],
+    'enable_component' => [
+      '#type' => 'checkbox',
+      '#title' => t('Add embargo field to the form'),
+    ],
+    'set_date_options' => [
+      '#type' => 'radios',
+      '#title' => check_plain(t('Embargo Options')),
+      '#options' => [
+        'no_embargo' => t('Do not set an embargo date'),
+        'set_embargo_date' => t('Set the embargo date'),
+        'indefinite_embargo' => t('Embargo indefinitely (Indefinite embargoes must be lifted manually).'),
+      ],
+      '#default_value' => ($defaults && $defaults->embargo_type == 1) ? 'indefinite_embargo' : ($defaults && $defaults->embargo_type == 0) ? 'no_embargo' : 'set_embargo_date',
+    ],
+    'embargo_date' => [
+      '#type' => 'date',
+      '#title' => t('Embargo date'),
+      '#description' => t('A date until which this item should be embargoed.'),
+      '#default_value' => ($defaults && $defaults->embargo_type == 0) ? date_parse($defaults->embargo_date ?? "now") : NULL,
+      '#after_build' => ['_embargo_set_year_range'],
+      '#states' => [
+        'visible' => [
+          // Only show this item when the data has to be set by the user
+          ':input[name="islandora_embargo[set_date_options]"]' => ['value' => 'set_embargo_date'],
+        ],
+      ],
+    ],
+    'submit' => [
+      '#type' => 'submit',
+      '#value' => t('Save Embargo Settings'),
+      '#submit' => ['islandora_webform_embargo_form_submit'],
+      '#prefix' => t('After <strong>creating</strong> or <strong>updating</strong> an object, the above settings will be applied. Embargo Settings can be changed later inside of the object management section, including all embargo options. <br />When <strong>removing</strong> an existing embargo setting from the form, items previously created with this form will retain their embargo status<br /><br />'),
+      '#weight' => 102,
+    ],
+    'remove_embargo' => [
+      '#type' => 'submit',
+      '#value' => t('Remove Embargo Settings'),
+      '#submit' => ['islandora_webform_embargo_form_remove_submit'],
+      '#weight' => 103,
+    ],
+  ];
+
+  return $arr;
+}
+
+/**
+ * Remove existing embargo configurations from this webform
+ *
+ * @param $form
+ * @param $form_state
+ * @param bool $node
+ */
+function islandora_webform_embargo_form_remove_submit($form, &$form_state, $node = FALSE) {
+  $nid = $form_state['values']['nid'];
+  $webform = node_load($nid);
+  // Remove field
+  foreach ($webform->webform['components'] as $component) {
+    if ($component['form_key'] == 'islandora_embargo') {
+      webform_component_delete($node, $component);
+    }
+  }
+  // Remove settings
+  db_delete('islandora_webform_embargo')
+    ->condition('nid', $nid)
+    ->execute();
+
+  drupal_set_message(t('Deleted Islandora Embargo configuration.'));
+}
+
+/**
+ * Save configurations
+ *
+ * @param $form
+ * @param $form_state
+ * @param bool $node
+ *
+ * @throws \InvalidMergeQueryException
+ * @throws \Exception
+ */
+function islandora_webform_embargo_form_submit($form, &$form_state, $node = FALSE) {
+  //Determine submission type
+  if (isset($form['submitted']) && is_array($form['submitted'])) {
+    $time = $form['submitted']['islandora_embargo_form']['embargo_date']['#value'];
+    $date_option = $form['submitted']['islandora_embargo_form']['set_date_options']['#value'];
+    $nid = $form_state['values']['details']['nid'];
+  }
+  elseif (isset($form_state['values'])) {
+    $time = $form_state['values']['islandora_embargo']['embargo_date'];
+    $nid = $form_state['values']['nid'];
+    $date_option = $form_state['values']['islandora_embargo']['set_date_options'];
+    //if the checkbox is set, add embargo field
+    if ($form_state['values']['islandora_embargo']['enable_component']) {
+      _islandora_webform_embargo_insert_embargo_component($form_state['values']['nid']);
+      drupal_set_message(t('Islandora Embargo field added.'));
+    }
+  }
+
+  if ($date_option != 'no_embargo') {
+    $date_string = $time['year'] . '-' . $time['month'] . '-' . $time['day'];
+    if (db_merge('islandora_webform_embargo')
+      ->key(['sid' => $nid, 'nid' => $nid])
+      ->fields([
+        'embargo_type' => ($date_option == 'indefinite_embargo') ? 1 : 0,
+        'embargo_date' => $date_string,
+        'nid' => $nid,
+        //if NO SID is given, this implies that we're updating the settings form and is a global change
+        'sid' => $form_state['values']['details']['sid'] ?? NULL,
+      ])
+      ->execute()
+    ) {
+      drupal_set_message(t('Islandora Embargo configuration saved.'));
+    }
+    else {
+      drupal_set_message(t('Islandora Embargo configuration could not be saved.'));
+    }
+  }
+}
+
+
+/**
+ * Adds an islandora_object_pid textfield to a webform.
+ *
+ * Only add if one does not already exist.
+ *
+ * @param int $nid
+ *   The node id for the webform
+ *
+ * @throws Exception
+ */
+function _islandora_webform_embargo_insert_embargo_component($nid) {
+
+  $webform = node_load($nid);
+  if ($webform) {
+    $component = FALSE;
+
+    // Look to see if the component already exists, if so, then do nothing.
+    if (!empty($webform->webform['components'])) {
+      foreach ($webform->webform['components'] as $test_component) {
+        if ($test_component['form_key'] == 'islandora_embargo') {
+          $component = $test_component;
+          break;
+        }
+      }
+    }
+
+    // If no component found, then add it and save.
+    if (!$component) {
+      $component = [
+        'nid' => $nid,
+        'name' => 'Islandora Embargo',
+        'form_key' => 'islandora_embargo',
+        'type' => 'textfield',
+        'mandatory' => 0,
+        'weight' => 15,
+        'pid' => 0,
+        'extra' => [
+          'title_display' => 'inline',
+          'private' => 0,
+        ],
+      ];
+      webform_ensure_record($webform);
+      webform_component_defaults($component);
+      // Automatically add to webform
+      webform_component_insert($component);
+    }
+  }
+}
+
+/**
+ * Implements hook islandora_webform_submission_ingested
+ *
+ * sets the embargo to the newly ingested object
+ *
+ * @param $submission
+ * @param $object
+ */
+function islandora_webform_embargo_islandora_webform_submission_ingested($submission, $object) {
+  $pid = $object->id;
+  // Get an object, sometimes if the ingest file $Object won't be real
+  $object = islandora_object_load($pid);
+  if ($object) {
+    if ($submission) {
+      // Get embargo settings for this particular submission's parent webform
+      $defaults = _get_islandora_webform_embargo_settings($submission->nid, $submission->sid);
+      // If there's a valid submissions set the embargo settings, no-embargo won't save anything to the DB
+      if ($defaults) {
+        if (property_exists($defaults, 'set_date_options') && $defaults->set_date_options == 1) {
+          $end = 'indefinite';
+        }
+        else {
+          if (property_exists($defaults, 'embargo_date')) {
+            // if no date is provided use now, this can be changed by the user later
+            $time = $defaults->embargo_date ?? time();
+            $end = gmdate("Y-m-d\TH:i:s\Z", strtotime($time));
+          }
+
+        }
+        // Set stream IDs to null to embargo the full object
+        $dsids = NULL;
+        // Save embargo settings for this object
+        if (!empty($pid) && !empty($end)) {
+          islandora_scholar_embargo_set_embargo($pid, $dsids, $end);
+          islandora_scholar_embargo_set_display_message($pid, $dsids, $end);
+        }
+      }
+    }
+  }
+}
