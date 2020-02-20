@@ -73,6 +73,32 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
       'field' => 'titleInfo:title'
     )
   );
+  $form['host.title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Journal/Host Publication Title'),
+    '#attributes' => $isReadOnly,
+    '#description' => t('The title of the host document for this publication. This will be the book title in the case of book chapters or the journal title in the case of journal articles.'),
+    '#default_value' => $filter ? webform_replace_tokens($value['host.title']) : $value['host.title'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'host:title'
+    )
+  );
+  $form['abstract'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Abstract'),
+    '#description' => t('A summary of the content of the resource.'),
+    '#attributes' => $isReadOnly,
+    '#default_value' => $filter ? webform_replace_tokens($value['abstract']) : $value['abstract'],
+    '#mapping' => array(
+      'mode' => 'replace',
+      'datastream' => 'MODS (Citation MODS form)',
+      'data_stream_id' => 'MODS',
+      'field' => 'abstract'
+    )
+  );
     $form['identifier-uri'] = array(
     '#type' => 'textfield',
     '#title' => t('Identifier: URI'),
@@ -86,6 +112,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
         'field' => 'identifiers:uri'
       )
   );
+
 
   $form['identifier-issn'] = array(
     '#type' => 'textfield',
@@ -227,7 +254,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
           return (!empty($carry)) ? (($glue) ? implode($glue, $carry) : $carry) : '';
         };
 
-        $getRawValue = function ($query, $position = 0) use ($mods_data) {
+        $getRawValue = function ($query, $position = 0) use ($mods_data, $mods) {
           $res = $mods_data->query($query);
           if ($res) {
             return $res[$position]->nodeValue;
@@ -246,6 +273,8 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
         $form['pages.end']['#value'] = $getRawValue('part/extent[@unit="page"]/end');
         $form['volume']['#value'] = $getRawValue('part/detail[@type="volume"]/number');
         $form['issue']['#value'] = $getRawValue('part/detail[@type="issue"]/number');
+        $form['host.title']['#value'] = $getRawValue('relatedItem[@type="host"]/titleInfo/title');
+        $form['abstract']['#value'] = $getRawValue('abstract');
         $authors = $getMultiple($mods_data->query('name[@type="personal"][descendant::text()[contains(.,"author")]]'), FALSE);
 
         $all_authors = [];
