@@ -83,7 +83,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
       'mode' => 'replace',
       'datastream' => 'MODS (Citation MODS form)',
       'data_stream_id' => 'MODS',
-      'field' => 'host.title'
+      'field' => 'host:title'
     )
   );
   $form['abstract'] = array(
