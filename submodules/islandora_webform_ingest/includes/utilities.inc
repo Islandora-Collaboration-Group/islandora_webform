@@ -877,11 +877,11 @@ EOQ;
   $query_filters[] = "!bound(?collection)";
 
   $query = format_string($query, array(
-    '!optionals' => !empty($query_optionals) ? ('OPTIONAL {{' . implode('} UNION {', $query_optionals) . '}}') : '',
+    '!optionals' => !empty($query_optionals) ? ('OPTIONAL {{' . implode('} UNION {', $query_optionals) . '}} . ') : '',
     '!filters' => implode(' ', array_map($filter_map, $query_filters)),
   ));
   $query = format_string($query, array(
-    '!optexclude' => !empty($query_unbound_optionals) ? ('. OPTIONAL { ' . $query_unbound_optionals . '}') : '',
+    '!optexclude' => !empty($query_unbound_optionals) ? ('OPTIONAL { ' . $query_unbound_optionals . '} .') : '',
   ));
 
   // Include paging parameters if provided.
