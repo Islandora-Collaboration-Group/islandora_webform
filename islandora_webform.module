@@ -99,7 +99,7 @@ function islandora_webform_menu() {
 
   // Ajax version of the previous.
   $items['islandora_webform/retrieve_form/%node/ajax'] = array(
-     'delivery callback' => 'ajax_deliver',  
+     'delivery callback' => 'ajax_deliver',
   )+ $items['islandora_webform/retrieve_form/%node/nojs'];
 
   // Callback for displaying a webform with previously submitted data.
@@ -740,7 +740,9 @@ function islandora_webform_modules_enabled($modules) {
     _islandora_webform_schema_alter($schema);
     foreach ($schema as $table => $table_def) {
       foreach ($table_def['fields'] as $field => $spec) {
-        db_add_field($table, $field, $spec);
+        if(!db_field_exists($table, $field)) {
+          db_add_field($table, $field, $spec);
+        }
       }
     }
   }
