@@ -22,7 +22,7 @@ function _get_islandora_webform_embargo_settings($nid, $sid = FALSE) {
     $single_record = $defaults->execute()->fetchObject();
   }
 
-  return $single_record ?? FALSE;
+  return isset($single_record) ? $single_record) : FALSE;
 }
 
 /**
