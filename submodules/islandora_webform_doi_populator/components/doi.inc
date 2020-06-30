@@ -257,7 +257,7 @@ function _webform_render_doi($component, $value = NULL, $filter = TRUE) {
         $getRawValue = function ($query, $position = 0) use ($mods_data, $mods) {
           $res = $mods_data->query($query);
           if ($res) {
-            return $res[$position]->nodeValue;
+            $res[$position] ? return $res[$position]->nodeValue : return NULL;
           }
           else {
             return NULL;
